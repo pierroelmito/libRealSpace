@@ -10,6 +10,8 @@
 
 #include <cstring>
 
+#include "Base.h"
+
 char textIDs[5];
 char* GetChunkTextID(uint32_t id){
     char* cursor = (char*)&id;
@@ -74,7 +76,7 @@ bool IffLexer::InitFromFile(const char* filepath){
     char fullPath[512] ;
     fullPath[0] = '\0';
     
-    //strcat(fullPath, GetBase());
+    strcat(fullPath, GetBase());
     strcat(fullPath, filepath);
     
     
