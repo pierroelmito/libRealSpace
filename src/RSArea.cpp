@@ -37,7 +37,7 @@ void RSArea::ParseMetadata(){
     lexer.InitFromRAM(entry->data, entry->size);
     lexer.List(stdout);
     
-    IffChunk* tera = lexer.GetChunkByID('TERA');
+    IffChunk* tera = lexer.GetChunkByID("TERA");
     if (tera == NULL) {
         printf("Error while parsing Metadata: Cannot find a TERA chunk in first file: Is this really an AREA PAK ?!?!?\n");
         return;
@@ -45,7 +45,7 @@ void RSArea::ParseMetadata(){
 
     
     //Parse BLOX containing the Elevation, Triangles and OBJS.
-    IffChunk* blox = lexer.GetChunkByID('BLOX');
+    IffChunk* blox = lexer.GetChunkByID("BLOX");
     if (blox == NULL) {
         printf("Error while parsing Metadata: Cannot find a BLOX chunk.\n");
         return;
@@ -75,7 +75,7 @@ void RSArea::ParseMetadata(){
     //13 bytes: A filename
     //13 bytes: An other filename
     
-    IffChunk* elev = lexer.GetChunkByID('ELEV');
+    IffChunk* elev = lexer.GetChunkByID("ELEV");
     printf("Content of elevation chunk:\n");
     size_t numEleRecords = elev->size / 46;
     ByteStream elevStream(elev->data);
@@ -107,7 +107,7 @@ void RSArea::ParseMetadata(){
    
     
     
-    IffChunk* atri = lexer.GetChunkByID('ATRI');
+    IffChunk* atri = lexer.GetChunkByID("ATRI");
     printf("Content of trigo chunk:\n");
     
     ByteStream triStream(atri->data);
@@ -124,7 +124,7 @@ void RSArea::ParseMetadata(){
     
     
     
-    //IffChunk* objs = lexer.GetChunkByID('OBJS');
+    //IffChunk* objs = lexer.GetChunkByID("OBJS");
     /*
      OBJS format:
       4 bytes unknown :
@@ -136,7 +136,7 @@ void RSArea::ParseMetadata(){
     
     
     
-    IffChunk* txms = lexer.GetChunkByID('TXMS');
+    IffChunk* txms = lexer.GetChunkByID("TXMS");
     if (txms == NULL) {
         printf("Error while parsing Metadata: Cannot find a TXMS chunk.\n");
         return;

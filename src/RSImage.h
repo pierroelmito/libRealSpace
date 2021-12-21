@@ -9,7 +9,10 @@
 #ifndef __libRealSpace__RSImage__
 #define __libRealSpace__RSImage__
 
+#include "Texture.h"
+
 class RSPalette;
+class VGAPalette;
 
 class RSImage{
     

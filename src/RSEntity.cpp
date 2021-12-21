@@ -8,6 +8,11 @@
 
 #include "RSEntity.h"
 
+#include <cfloat>
+
+#include "RSImage.h"
+#include "IffLexer.h"
+
 
 RSEntity::RSEntity() :
     prepared(false)
@@ -65,7 +70,7 @@ void RSEntity::ParseTXMS(IffChunk* chunk){
     
     for(int i =1; i < chunk->childs.size() ; i++){
         IffChunk* maybeTXMS = chunk->childs[i];
-        if (maybeTXMS->id == 'TXMP')
+        if (maybeTXMS->id == IdToUInt("TXMP"))
             ParseTXMP(maybeTXMS);
     }
     
@@ -195,27 +200,27 @@ void RSEntity::InitFromIFF(IffLexer* lexer){
     
     IffChunk* chunk;
     
-    chunk = lexer->GetChunkByID('UVXY');
+    chunk = lexer->GetChunkByID("UVXY");
     ParseUVXY(chunk);
     
-    chunk = lexer->GetChunkByID('VTRI');
+    chunk = lexer->GetChunkByID("VTRI");
     ParseVTRI(chunk);
     
-    chunk = lexer->GetChunkByID('VERT');
+    chunk = lexer->GetChunkByID("VERT");
     ParseVERT(chunk);
     
-    chunk = lexer->GetChunkByID('TXMS');
+    chunk = lexer->GetChunkByID("TXMS");
     ParseTXMS(chunk);
     
-    chunk = lexer->GetChunkByID('LVL0');
+    chunk = lexer->GetChunkByID("LVL0");
     if (chunk!= NULL)
         ParseLVL(chunk);
     
-    chunk = lexer->GetChunkByID('LVL1');
+    chunk = lexer->GetChunkByID("LVL1");
     if (chunk!= NULL)
         ParseLVL(chunk);
     
-    chunk = lexer->GetChunkByID('LVL2');
+    chunk = lexer->GetChunkByID("LVL2");
     if (chunk!= NULL)
         ParseLVL(chunk);
     

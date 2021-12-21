@@ -68,7 +68,7 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer){
     const char* OBJ_PATH = "..\\..\\DATA\\OBJECTS\\";
     const char* OBJ_EXTENSION = ".IFF";
     
-    IffChunk* chunk = lexer->GetChunkByID('OBJS');
+    IffChunk* chunk = lexer->GetChunkByID("OBJS");
     if (chunk == NULL){
         printf("**Error: Cannot parse Object List (Missing OBJS chunk).\n");
         return;

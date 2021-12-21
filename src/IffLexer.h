@@ -9,7 +9,22 @@
 #ifndef __libRealSpace__IffLexer__
 #define __libRealSpace__IffLexer__
 
+#include "ByteStream.h"
 
+#include <cstdint>
+#include <cstddef>
+#include <cstdio>
+#include <vector>
+#include <map>
+
+constexpr uint32_t IdToUInt(const char id[5])
+{
+	uint8_t a = id[0];
+	uint8_t b = id[1];
+	uint8_t c = id[2];
+	uint8_t d = id[3];
+	return (a << 24) | (b << 16) | (c << 8) | d;
+}
 
 class IffChunk{
     
@@ -50,7 +65,7 @@ public:
 
     void List(FILE* output);
     
-    IffChunk* GetChunkByID(uint32_t id);
+    IffChunk* GetChunkByID(const char id[5]);
     
     inline const char* GetName(void){ return this->path;}
     

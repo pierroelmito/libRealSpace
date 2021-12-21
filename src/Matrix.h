@@ -9,6 +9,7 @@
 #ifndef __libRealSpace__Matrix__
 #define __libRealSpace__Matrix__
 
+#include "Math.h"
 
 #define DEG_TO_RAD (2.0f*M_PI/360.0f)
 

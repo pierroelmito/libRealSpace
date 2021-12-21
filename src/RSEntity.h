@@ -9,11 +9,22 @@
 #ifndef __libRealSpace__RSEntity__
 #define __libRealSpace__RSEntity__
 
+#include <cstdint>
+#include <cstddef>
+#include <cstdio>
+#include <vector>
+#include <map>
+
+#include "Matrix.h"
+#include "Quaternion.h"
+
+class RSImage;
+class IffChunk;
+class IffLexer;
+
 #define LOD_LEVEL_MAX 0
 #define LOD_LEVEL_MED 1
 #define LOD_LEVEL_MIN 2
-
-
 
 typedef struct MapVertex{
     Point3D v;

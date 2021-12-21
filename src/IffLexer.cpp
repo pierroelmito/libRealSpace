@@ -8,6 +8,8 @@
 
 #include "IffLexer.h"
 
+#include <cstring>
+
 char textIDs[5];
 char* GetChunkTextID(uint32_t id){
     char* cursor = (char*)&id;
@@ -72,7 +74,7 @@ bool IffLexer::InitFromFile(const char* filepath){
     char fullPath[512] ;
     fullPath[0] = '\0';
     
-    strcat(fullPath, GetBase());
+    //strcat(fullPath, GetBase());
     strcat(fullPath, filepath);
     
     
@@ -156,13 +158,13 @@ size_t IffLexer::ParseChunk(IffChunk* chunk){
     chunk->id = peek.ReadUInt32BE();
     
     switch (chunk->id) {
-        case 'FORM':
+        case IdToUInt("FORM"):
             return ParseFORM(chunk);
             break;
-        case 'CAT ':
+        case IdToUInt("CAT "):
             return ParseFORM(chunk);
             break;
-        case 'LIST':
+        case IdToUInt("LIST"):
             return ParseFORM(chunk);
             break;
         default:
@@ -208,9 +210,9 @@ void IffLexer::Parse(void){
     uint32_t header = peek.ReadUInt32BE();
     
     switch (header) {
-        case 'FORM':
-        case 'CAR ':
-        case 'LIST':
+        case IdToUInt("FORM"):
+        case IdToUInt("CAR "):
+        case IdToUInt("LIST"):
             break;
         default:
         {
@@ -238,8 +240,8 @@ void IffLexer::Parse(void){
 
 }
 
-IffChunk* IffLexer::GetChunkByID(uint32_t id){
-    return this->chunksHashTable[id];
+IffChunk* IffLexer::GetChunkByID(const char id[5]){
+    return this->chunksHashTable[IdToUInt(id)];
 }
 
 void Tab(int tab){

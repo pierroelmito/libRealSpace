@@ -259,18 +259,18 @@ void ConvAssetManager::BuildDB(void){
     convDataLexer.InitFromRAM(convDataEntry->data, convDataEntry->size);
     //convDataLexer.List(stdout);
     
-    ReadBackGrounds(convDataLexer.GetChunkByID('BCKS'));
+    ReadBackGrounds(convDataLexer.GetChunkByID("BCKS"));
     
-    ReadFaces(convDataLexer.GetChunkByID('FACE'));  //PAK id for Face image collection
+    ReadFaces(convDataLexer.GetChunkByID("FACE"));  //PAK id for Face image collection
     
-    ReadFigures(convDataLexer.GetChunkByID('FIGR')); //PAK id for Figures image
+    ReadFigures(convDataLexer.GetChunkByID("FIGR")); //PAK id for Figures image
     
-    ReadPFigures(convDataLexer.GetChunkByID('PFIG')); // ??!? Maybe Palette figure ???!?!
+    ReadPFigures(convDataLexer.GetChunkByID("PFIG")); // ??!? Maybe Palette figure ???!?!
     
     //I have no idea what is in there.
-    ReadFCPL(convDataLexer.GetChunkByID('FCPL'));  //Face Conv Palette normal and night
+    ReadFCPL(convDataLexer.GetChunkByID("FCPL"));  //Face Conv Palette normal and night
 
     //I have no idea what is in there.
-    ReadFGPL(convDataLexer.GetChunkByID('FGPL'));  //Face Game palette normal
+    ReadFGPL(convDataLexer.GetChunkByID("FGPL"));  //Face Game palette normal
 
 }

@@ -9,6 +9,8 @@
 #ifndef __iff__Texture__
 #define __iff__Texture__
 
+#include "ByteStream.h"
+
 typedef struct {
     uint8_t r;
     uint8_t g;

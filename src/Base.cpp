@@ -8,6 +8,9 @@
 
 #include "Base.h"
 
+#include <cstring>
+#include <cstdio>
+
 static char base[512];
 
 const char* GetBase(void){

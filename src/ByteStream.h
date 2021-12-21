@@ -9,6 +9,9 @@
 #ifndef __pak__Stream__
 #define __pak__Stream__
 
+#include <cstdint>
+#include <cstddef>
+
 /*
  
  This is the class used to parse all byte streams.

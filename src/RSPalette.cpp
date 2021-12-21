@@ -110,19 +110,19 @@ void RSPalette::InitFromIFF(IffLexer* lexer){
     bool foundPalette = false;
     IffChunk* chunk = NULL;
     
-    chunk = lexer->GetChunkByID('PALT');
+    chunk = lexer->GetChunkByID("PALT");
     if (chunk != NULL){
         foundPalette = true;
         this->ParsePALT(chunk);
     }
     
-    chunk = lexer->GetChunkByID('BLWH');
+    chunk = lexer->GetChunkByID("BLWH");
     if (chunk != NULL){
         foundPalette = true;
         this->ParseBLWH(chunk);
     }
     
-    chunk = lexer->GetChunkByID('CMAP');
+    chunk = lexer->GetChunkByID("CMAP");
     if (chunk != NULL){
         foundPalette = true;
         this->ParseCMAP(chunk);
