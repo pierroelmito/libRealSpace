@@ -9,12 +9,12 @@
 #include "precomp.h"
 
 
-RSPalette::RSPalette(){
-
+RSPalette::RSPalette()
+{
 }
 
-RSPalette::~RSPalette(){
-    
+RSPalette::~RSPalette()
+{
 }
 
 VGAPalette* RSPalette::GetColorPalette(void){
@@ -33,33 +33,31 @@ void RSPalette::SetBWFlag(uint32_t flag){
     this->bwFlag  =flag;
 }
 
-void RSPalette::ParsePALT(IffChunk* chunk){
-    
-    ByteStream stream(chunk->data);
-    
-    this->colorFlag = stream.ReadUInt32LE();
+void RSPalette::ParsePALT(IffChunk* chunk)
+{
+	ByteStream stream(chunk->data);
 
-    Texel texel;
-    
-    
-    for(int i = 0 ; i < 256 ; i++){
-        texel.r = stream.ReadByte();
-        texel.g = stream.ReadByte();
-        texel.b = stream.ReadByte();
-        
-        if (i == 255)
-            texel.a = 0;
-        else
-            texel.a = 255;
-        
-        //Since VGA palette RGB are on 6 bits and not 8, we need to adjust
-        texel.r *= 255/63.0f;
-        texel.g *= 255/63.0f;
-        texel.b *= 255/63.0f;
-        
-        colors.SetColor(i, &texel);
-    }
-    
+	this->colorFlag = stream.ReadUInt32LE();
+
+	Texel texel;
+
+	for(int i = 0 ; i < 256 ; i++){
+		texel.r = stream.ReadByte();
+		texel.g = stream.ReadByte();
+		texel.b = stream.ReadByte();
+
+		if (i == 255)
+			texel.a = 0;
+		else
+			texel.a = 255;
+
+		//Since VGA palette RGB are on 6 bits and not 8, we need to adjust
+		texel.r *= 255/63.0f;
+		texel.g *= 255/63.0f;
+		texel.b *= 255/63.0f;
+
+		colors.SetColor(i, &texel);
+	}
 }
 
 void RSPalette::ParseBLWH(IffChunk* chunk){

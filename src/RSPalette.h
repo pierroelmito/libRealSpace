@@ -6,44 +6,37 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __iff__RealSpacePaletteObject__
-#define __iff__RealSpacePaletteObject__
+#pragma once
 
+#include <cstdint>
 
+#include "Texture.h"
 
+class IffLexer;
+class IffChunk;
 
-
-class RSPalette{
-    
+class RSPalette
+{
 public:
-    
-    RSPalette();
-    ~RSPalette();
-    
-    void InitFromIFF(IffLexer* lexer);
-    
-    
-    
-    
-    
-    VGAPalette* GetColorPalette(void);
-    void SetColorFlag(uint32_t flag);
-    
-    VGAPalette* GetBWPalette(void);
-    void SetBWFlag(uint32_t flag);
-    
-    
-private:
-    
-    void ParsePALT(IffChunk* chunk);
-    void ParseBLWH(IffChunk* chunk);
-    void ParseCMAP(IffChunk* chunk);
-    
-    uint32_t colorFlag;
-    VGAPalette colors;
-    
-    uint32_t bwFlag;
-    VGAPalette bwColors;
-};
+	RSPalette();
+	~RSPalette();
 
-#endif /* defined(__iff__RealSpacePaletteObject__) */
+	void InitFromIFF(IffLexer* lexer);
+
+	VGAPalette* GetColorPalette(void);
+	void SetColorFlag(uint32_t flag);
+
+	VGAPalette* GetBWPalette(void);
+	void SetBWFlag(uint32_t flag);
+
+private:
+	void ParsePALT(IffChunk* chunk);
+	void ParseBLWH(IffChunk* chunk);
+	void ParseCMAP(IffChunk* chunk);
+
+	uint32_t colorFlag;
+	VGAPalette colors;
+
+	uint32_t bwFlag;
+	VGAPalette bwColors;
+};

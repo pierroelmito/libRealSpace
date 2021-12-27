@@ -14,66 +14,58 @@
 #include "IffLexer.h"
 
 
-RSEntity::RSEntity() :
-    prepared(false)
+RSEntity::RSEntity()
 {
-    
 }
 
-RSEntity::~RSEntity(){
-    while(!images.empty()){
-        RSImage* image = images.back();
-        images.pop_back();
-        delete image;
-    }
+RSEntity::~RSEntity()
+{
+	while(!images.empty()){
+		RSImage* image = images.back();
+		images.pop_back();
+		delete image;
+	}
 }
 
+void RSEntity::ParseTXMP(IffChunk* chunk)
+{
+	ByteStream stream(chunk->data);
 
+	RSImage* image = new RSImage();
 
-void RSEntity::ParseTXMP(IffChunk* chunk){
+	char name[8];
+	for(int i=0; i < 8 ; i++)
+		name[i] = stream.ReadByte();
 
+	uint32_t width = stream.ReadShort();
+	uint32_t height= stream.ReadShort();
 
-    ByteStream stream(chunk->data);
-    
-    RSImage* image = new RSImage();
-    
-    char name[8];
-    
-    for(int i=0; i < 8 ; i++)
-        name[i] = stream.ReadByte();
-    
-    uint32_t width = stream.ReadShort();
-    uint32_t height= stream.ReadShort();
-    
-    image->Create(name, width, height);
-    image->UpdateContent(stream.GetPosition());
-    
-    AddImage(image);
+	image->Create(name, width, height);
+	image->UpdateContent(stream.GetPosition());
 
+	AddImage(image);
 }
 
-void RSEntity::ParseTXMS(IffChunk* chunk){
-    
-    if (chunk==NULL)
-        return;
-    
-    if (chunk->childs.size() <1 ){
-        //That is not expected, at minimun we should have an INFO chunk.
-        printf("Error: This TXMS doesn't even have an INFO chunk.");
-        return;
-    }
-    
-    
-    ByteStream stream(chunk->childs[0]->data);
-    /*uint32_t version =*/ stream.ReadUInt32LE();
-    //printf("TXMS Version: %u.\n",);
-    
-    for(int i =1; i < chunk->childs.size() ; i++){
-        IffChunk* maybeTXMS = chunk->childs[i];
-        if (maybeTXMS->id == IdToUInt("TXMP"))
-            ParseTXMP(maybeTXMS);
-    }
-    
+void RSEntity::ParseTXMS(IffChunk* chunk)
+{
+	if (chunk==NULL)
+		return;
+
+	if (chunk->childs.size() <1 ){
+		//That is not expected, at minimun we should have an INFO chunk.
+		printf("Error: This TXMS doesn't even have an INFO chunk.");
+		return;
+	}
+
+	ByteStream stream(chunk->childs[0]->data);
+	/*uint32_t version =*/ stream.ReadUInt32LE();
+	//printf("TXMS Version: %u.\n",);
+
+	for(int i =1; i < chunk->childs.size() ; i++){
+		IffChunk* maybeTXMS = chunk->childs[i];
+		if (maybeTXMS->id == IdToUInt("TXMP"))
+			ParseTXMP(maybeTXMS);
+	}
 }
 
 void RSEntity::ParseVERT(IffChunk* chunk)
@@ -95,187 +87,142 @@ void RSEntity::ParseVERT(IffChunk* chunk)
 	}
 }
 
-void RSEntity::ParseLVL(IffChunk* chunk){
-    
-    if (chunk==NULL)
-        return;
-    
-    ByteStream stream(chunk->data);
-    
-    Lod lod ;
-    
-    lod.numTriangles = (chunk->size-4)/2;
-    
-    lod.dist = stream.ReadUInt32LE();
-   
-    for (int i = 0 ; i < lod.numTriangles ; i++) {
-        lod.triangleIDs[i] = stream.ReadUShort();
-    }
-    
-    AddLod(&lod);
+void RSEntity::ParseLVL(IffChunk* chunk)
+{
+	if (chunk==NULL)
+		return;
+
+	ByteStream stream(chunk->data);
+
+	Lod lod;
+	lod.numTriangles = (chunk->size - 4) / 2;
+	lod.dist = stream.ReadUInt32LE();
+
+	for (int i = 0 ; i < lod.numTriangles ; i++)
+		lod.triangleIDs[i] = stream.ReadUShort();
+
+	AddLod(&lod);
+}
+
+void RSEntity::ParseVTRI(IffChunk* chunk)
+{
+	if (chunk==NULL)
+		return;
+
+	size_t numTriangle= chunk->size / 8;
+	ByteStream stream(chunk->data);
+
+	Triangle triangle ;
+	for (int i = 0; i < numTriangle ; i++) {
+		triangle.property = stream.ReadByte();
+
+		triangle.ids[0] = stream.ReadByte();
+		triangle.ids[1] = stream.ReadByte();
+		triangle.ids[2] = stream.ReadByte();
+
+		triangle.color = stream.ReadByte();
+
+		triangle.flags[0] = stream.ReadByte();
+		triangle.flags[1] = stream.ReadByte();
+		triangle.flags[2] = stream.ReadByte();
+
+		AddTriangle(&triangle);
+	}
+}
+
+void RSEntity::ParseUVXY(IffChunk* chunk)
+{
+	if (chunk==NULL)
+		return;
+
+	ByteStream stream(chunk->data);
+	const size_t numEntries = chunk->size/8;
+
+	uvxyEntry uvEntry;
+	for (size_t i=0; i < numEntries; i++) {
+
+		uvEntry.triangleID = stream.ReadByte();
+		uvEntry.textureID =  stream.ReadByte();
+
+		uvEntry.uvs[0].u = stream.ReadByte();
+		uvEntry.uvs[0].v = stream.ReadByte();
+
+		uvEntry.uvs[1].u = stream.ReadByte();
+		uvEntry.uvs[1].v = stream.ReadByte();
+
+		uvEntry.uvs[2].u = stream.ReadByte();
+		uvEntry.uvs[2].v = stream.ReadByte();
+
+		AddUV(&uvEntry);
+	}
 }
 
 
-void RSEntity::ParseVTRI(IffChunk* chunk){
-    
-    if (chunk==NULL)
-        return;
-    
-    size_t numTriangle= chunk->size/8;
-    ByteStream stream(chunk->data);
-    
-    Triangle triangle ;
-    for (int i = 0; i < numTriangle ; i++) {
-        
-        triangle.property = stream.ReadByte();
-        
-        
-        
-        triangle.ids[0] = stream.ReadByte();
-        triangle.ids[1] = stream.ReadByte();
-        triangle.ids[2] = stream.ReadByte();
-        
-        
-        triangle.color = stream.ReadByte();
-        
-        triangle.flags[0] = stream.ReadByte();
-        triangle.flags[1] = stream.ReadByte();
-        triangle.flags[2] = stream.ReadByte();
-        
-        AddTriangle(&triangle);
-    }
-    
+void RSEntity::InitFromRAM(uint8_t* data, size_t size)
+{
+	IffLexer lexer;
+	lexer.InitFromRAM(data,size);
+	InitFromIFF(&lexer);
 }
 
-void RSEntity::ParseUVXY(IffChunk* chunk){
-    
-    if (chunk==NULL)
-        return;
-    
-    ByteStream stream(chunk->data);
-    
-    size_t numEntries = chunk->size/8;
-    
-    uvxyEntry uvEntry;
-    for (size_t i=0; i < numEntries; i++) {
-        
-        uvEntry.triangleID = stream.ReadByte();
-        uvEntry.textureID =  stream.ReadByte();
-        
-        
-        uvEntry.uvs[0].u = stream.ReadByte();
-        uvEntry.uvs[0].v = stream.ReadByte();
-        
-        uvEntry.uvs[1].u = stream.ReadByte();
-        uvEntry.uvs[1].v = stream.ReadByte();
-        
-        uvEntry.uvs[2].u = stream.ReadByte();
-        uvEntry.uvs[2].v = stream.ReadByte();
-        
-        AddUV(&uvEntry);
-        
-    }
+void RSEntity::InitFromIFF(IffLexer* lexer)
+{
+	IffChunk* chunk;
+
+	chunk = lexer->GetChunkByID("UVXY");
+	ParseUVXY(chunk);
+
+	chunk = lexer->GetChunkByID("VTRI");
+	ParseVTRI(chunk);
+
+	chunk = lexer->GetChunkByID("VERT");
+	ParseVERT(chunk);
+
+	chunk = lexer->GetChunkByID("TXMS");
+	ParseTXMS(chunk);
+
+	chunk = lexer->GetChunkByID("LVL0");
+	if (chunk!= NULL)
+		ParseLVL(chunk);
+
+	chunk = lexer->GetChunkByID("LVL1");
+	if (chunk!= NULL)
+		ParseLVL(chunk);
+
+	chunk = lexer->GetChunkByID("LVL2");
+	if (chunk!= NULL)
+		ParseLVL(chunk);
+
+	CalcBoundingBox();
 }
 
-
-void RSEntity::InitFromRAM(uint8_t* data, size_t size){
-    
-    IffLexer lexer;
-    lexer.InitFromRAM(data,size);
-    InitFromIFF(&lexer);
-}
-
-void RSEntity::InitFromIFF(IffLexer* lexer){
-    
-    
-    IffChunk* chunk;
-    
-    chunk = lexer->GetChunkByID("UVXY");
-    ParseUVXY(chunk);
-    
-    chunk = lexer->GetChunkByID("VTRI");
-    ParseVTRI(chunk);
-    
-    chunk = lexer->GetChunkByID("VERT");
-    ParseVERT(chunk);
-    
-    chunk = lexer->GetChunkByID("TXMS");
-    ParseTXMS(chunk);
-    
-    chunk = lexer->GetChunkByID("LVL0");
-    if (chunk!= NULL)
-        ParseLVL(chunk);
-    
-    chunk = lexer->GetChunkByID("LVL1");
-    if (chunk!= NULL)
-        ParseLVL(chunk);
-    
-    chunk = lexer->GetChunkByID("LVL2");
-    if (chunk!= NULL)
-        ParseLVL(chunk);
-    
-    
-    CalcBoundingBox();
-}
-
-
-BoudingBox* RSEntity::GetBoudingBpx(void){
-    return &this->bb;
-}
-
-
-void RSEntity::CalcBoundingBox(void){
-    
+void RSEntity::CalcBoundingBox(void)
+{
 	this->bb.min.X = FLT_MAX;
 	this->bb.min.Y = FLT_MAX;
 	this->bb.min.Z = FLT_MAX;
-    
+
 	this->bb.max.X = FLT_MIN;
 	this->bb.max.Y = FLT_MIN;
 	this->bb.max.Z = FLT_MIN;
-    
-    
-    for(size_t i =0; i < this->vertices.size() ; i++){
-        
-        Point3D vertex = vertices[i];
-        
+
+	for(size_t i =0; i < this->vertices.size() ; i++) {
+		Point3D vertex = vertices[i];
+
 		if (bb.min.X > vertex.X)
 			bb.min.X = vertex.X;
 		if (bb.min.Y > vertex.Y)
 			bb.min.Y = vertex.Y;
 		if (bb.min.Z > vertex.Z)
 			bb.min.Z = vertex.Z;
-        
+
 		if (bb.max.X < vertex.X)
 			bb.max.X = vertex.X;
 		if (bb.max.Y < vertex.Y)
 			bb.max.Y = vertex.Y;
 		if (bb.max.Z < vertex.Z)
 			bb.max.Z = vertex.Z;
-        
-    }
-
-}
-
-
-size_t RSEntity::NumImages(void){
-    return this->images.size();
-}
-
-size_t RSEntity::NumVertice(void){
-    return this->vertices.size();
-}
-
-size_t RSEntity::NumUVs(void){
-    return this->uvs.size();
-}
-
-size_t RSEntity::NumLods(void){
-    return this->lods.size();
-}
-
-size_t RSEntity::NumTriangles(void){
-    return this->triangles.size();
+	}
 }
 
 void RSEntity::AddImage(RSImage* image){

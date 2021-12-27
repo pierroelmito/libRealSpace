@@ -20,9 +20,8 @@ public:
     SCSelectWeaponF16();
     ~SCSelectWeaponF16();
     
-    void Init( );
-    
-    void RunFrame(void);
+	void Init( ) override;
+	void RunFrame(void) override;
     
 private:
     

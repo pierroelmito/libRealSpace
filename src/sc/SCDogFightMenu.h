@@ -16,8 +16,8 @@ public:
 	SCDogFightMenu();
 	~SCDogFightMenu();
 
-	void Init( );
-	void RunFrame(void);
+	void Init( ) override;
+	void RunFrame(void) override;
 
 private:
 };

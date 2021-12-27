@@ -76,70 +76,48 @@ struct Lod{
 
 
 
-class RSEntity{
-    
+class RSEntity
+{
 public:
-    
-    RSEntity();
-    ~RSEntity();
-    
-    void InitFromRAM(uint8_t* data, size_t size);
-    void InitFromIFF(IffLexer* lexer);
-    
-    void AddImage(RSImage* image);
-    size_t NumImages(void);
-    
-	void AddVertex(const Point3D& vertex);
-    size_t NumVertice(void);
-    
-    void AddUV(uvxyEntry* uv);
-    size_t NumUVs(void);
-    
-    void AddLod(Lod* lod);
-    size_t NumLods(void);
-    
-    void AddTriangle(Triangle* triangle);
-    size_t NumTriangles(void);
-    
-    
-    
-    std::vector<RSImage*> images;
-    std::vector<Point3D> vertices;
-    std::vector<uvxyEntry> uvs;
-    std::vector<Lod> lods;
-    std::vector<Triangle> triangles;
+	RSEntity();
+	~RSEntity();
 
-    
-    enum Property { TRANSPARENT = 0x02};
-    
-    BoudingBox* GetBoudingBpx(void);
-    
-    
-    //For rendering
-    Point3D position;
-    Quaternion orientation;
-    
-    inline bool IsPrepared(void){
-        return this->prepared;
-    }
-    
-    bool prepared;
-    
+	void InitFromRAM(uint8_t* data, size_t size);
+	void InitFromIFF(IffLexer* lexer);
+
+	void AddImage(RSImage* image);
+	void AddVertex(const Point3D& vertex);
+	void AddUV(uvxyEntry* uv);
+	void AddLod(Lod* lod);
+	void AddTriangle(Triangle* triangle);
+
+	std::vector<RSImage*> images;
+	std::vector<Point3D> vertices;
+	std::vector<uvxyEntry> uvs;
+	std::vector<Lod> lods;
+	std::vector<Triangle> triangles;
+
+	enum Property { TRANSPARENT = 0x02};
+
+	const BoudingBox& GetBoudingBpx() const { return bb; }
+
+	//For rendering
+	Point3D position;
+	Quaternion orientation;
+
+	bool IsPrepared() const { return prepared; }
+	bool prepared{ false };
+
 private:
-    
-    BoudingBox bb;
-    void CalcBoundingBox(void);
-    
-    //Has the entity been sent to te GPU and is ready to be renderer.
-    
-    
-    void ParseVERT(IffChunk* chunk);
-    void ParseLVL(IffChunk* chunk);
-    void ParseVTRI(IffChunk* chunk);
-    void ParseTXMS(IffChunk* chunk);
-    void ParseUVXY(IffChunk* chunk);
-    void ParseTXMP(IffChunk* chunk);
-    
-    
-    
+	BoudingBox bb;
+	void CalcBoundingBox(void);
+
+	//Has the entity been sent to te GPU and is ready to be renderer.
+
+	void ParseVERT(IffChunk* chunk);
+	void ParseLVL(IffChunk* chunk);
+	void ParseVTRI(IffChunk* chunk);
+	void ParseTXMS(IffChunk* chunk);
+	void ParseUVXY(IffChunk* chunk);
+	void ParseTXMP(IffChunk* chunk);
 };

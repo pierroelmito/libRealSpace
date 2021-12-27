@@ -268,9 +268,8 @@ void ExploreImages(uint8_t* data, size_t size, int numTabs){
         printf("Size == 0 !\n");
         return;
     }
-        
-        
-    //SHP files are PAKs containing direct images.
+
+	//SHP files are PAKs containing direct images.
     PakArchive font;
     font.InitFromRAM("XXXX",data,size);
     if (font.IsReady()){
@@ -278,17 +277,15 @@ void ExploreImages(uint8_t* data, size_t size, int numTabs){
         PrintTabs(numTabs);
         printf("Pak Found\n");
         for(size_t i =0 ; i  < font.GetNumEntries() ; i++){
-            PakEntry* e = font.GetEntry(i);
+			const PakEntry* e = &font.GetEntry(i);
             PrintTabs(numTabs);
             printf("Pak entry %lu\n",i);
             ExploreImages(e->data,e->size,numTabs+1);
-            
         }
         return;
     }
-    
-    
-    //Myabe it is a direct image ?
+
+	//Myabe it is a direct image ?
     RLEShape shape;
     shape.Init(data, size);
     

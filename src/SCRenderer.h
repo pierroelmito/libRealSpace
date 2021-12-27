@@ -11,86 +11,81 @@
 #include <cstdint>
 #include <functional>
 
+#include "Matrix.h"
+#include "Texture.h"
+#include "Camera.h"
+
 class RSEntity;
 
 class Triangle;
 class RSArea;
 class MapVertex;
+class Texture;
 
-void glVertex(const Point3D& p);
-void glLoadMatrixHMM(const Matrix& m);
-
-class SCRenderer{
-    
+class SCRenderer
+{
 public:
-    
-     SCRenderer();
-    ~SCRenderer();
-    
-    void Prepare(void);
-    
-    void Init(int32_t zoom);
-    
-    void Clear(void);
+	 SCRenderer();
+	~SCRenderer();
 
-    void DrawModel(RSEntity* object, size_t lodLevel);
-    void DisplayModel(RSEntity* object,size_t lodLevel);
-
+	void Prepare(void);
+	void Init(int32_t zoom);
+	void Clear(void);
+	void DrawModel(RSEntity* object, size_t lodLevel);
+	void DisplayModel(RSEntity* object,size_t lodLevel);
 	void CreateTextureInGPU(Texture* texture);
-    void UploadTextureContentToGPU(Texture* texture);
-    void DeleteTextureInGPU(Texture* texture);
+	void UploadTextureContentToGPU(Texture* texture);
+	void DeleteTextureInGPU(Texture* texture);
 
-	VGAPalette& GetPalette(void);
+	VGAPalette& GetPalette(void) { return palette; }
 
 	//Map Rendering
-    //For research methods: Those should be deleted soon:
-    void RenderVerticeField(Point3D* vertices, int numVertices);
+	//For research methods: Those should be deleted soon:
+	void RenderVerticeField(Point3D* vertices, int numVertices);
 
-	void RenderWorldPoints(RSArea* area, int LOD, int verticesPerBlock);
+	void RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock);
 
-    void RenderTexturedTriangle(MapVertex* tri0,MapVertex* tri1,MapVertex* tri2,RSArea* area,int triangleType);
-    void RenderColoredTriangle (MapVertex* tri0,MapVertex* tri1,MapVertex* tri2);
-    bool IsTextured(MapVertex* tri0,MapVertex* tri1,MapVertex* tri2);
-    void RenderQuad(MapVertex* currentVertex,
-                           MapVertex* rightVertex,
-                           MapVertex* bottomRightVertex,
-                           MapVertex* bottomVertex,
-                           RSArea* area,bool renderTexture);
-    
-    void RenderBlock(RSArea* area,int LOD, int blockID,bool renderTexture);
-    void RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock);
+	void RenderTexturedTriangle(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2,const RSArea& area,int triangleType);
+	void RenderColoredTriangle (const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
+	bool IsTextured(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
+	void RenderQuad(
+		const MapVertex* currentVertex,
+		const MapVertex* rightVertex,
+		const MapVertex* bottomRightVertex,
+		const MapVertex* bottomVertex,
+		const RSArea& area,
+		bool renderTexture
+	);
 
-	void RenderObjects(RSArea* area,size_t blockID);
+	void RenderBlock(const RSArea& area,int LOD, int blockID,bool renderTexture);
+	void RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock);
+	void RenderObjects(const RSArea& area,size_t blockID);
+	void RenderJets(const RSArea& area);
 
-	void RenderJets(RSArea* area);
-
-	struct Render3DParams
-	{
-	};
+	struct Render3DParams {};
 	void SetProj(const Matrix& m);
 	void SetView(const Matrix& m);
 	void Draw3D(const Render3DParams& params, std::function<void()>&& f);
 
-	Camera& GetCamera(void);
+	Camera& GetCamera(void) { return camera; }
 	void SetLight(const Point3D& position);
 
-	inline bool IsPaused(void){
-        return this->paused;
-    }
-    
-    inline void Pause(void){
-        this->paused = true;
-    }
+	inline bool IsPaused(void) const {
+		return paused;
+	}
 
-    void SetClearColor(uint8_t red, uint8_t green, uint8_t blue);
-    
-    void Prepare(RSEntity* object);
+	inline void Pause(void){
+		paused = true;
+	}
+
+	void SetClearColor(uint8_t red, uint8_t green, uint8_t blue);
+	void Prepare(RSEntity* object);
 
 private:
 
 	bool initialized{ false };
 
-	Vector3D GetNormal(RSEntity* object, Triangle* triangle);
+	Vector3D GetNormal(RSEntity* object, const Triangle* triangle);
 
 	VGAPalette palette;
 	bool running;

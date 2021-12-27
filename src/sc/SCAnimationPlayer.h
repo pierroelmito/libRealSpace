@@ -12,15 +12,14 @@
 
 #include "IActivity.h"
 
-class SCAnimationPlayer: public IActivity {
-    public :
-    SCAnimationPlayer(int32_t animationID, int32_t backgroundID);
-    ~SCAnimationPlayer();
-    
-    void Init( );
-    
-    void RunFrame(void);
-    
+class SCAnimationPlayer: public IActivity
+{
+	public :
+	SCAnimationPlayer(int32_t animationID, int32_t backgroundID);
+	~SCAnimationPlayer();
+
+	void Init() override;
+	void RunFrame(void) override;
+
 private:
-    
 };

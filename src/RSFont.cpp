@@ -10,23 +10,25 @@
 
 #include "precomp.h"
 
-RSFont::RSFont(){
-    
+RSFont::RSFont()
+{
 }
 
-RSFont::~RSFont(){
-    
+RSFont::~RSFont()
+{
 }
 
-RLEShape* RSFont::GetShapeForChar(char c){
-    return this->letters[c];
+RLEShape* RSFont::GetShapeForChar(char c)
+{
+	return this->letters[c];
 }
 
-void RSFont::InitFromPAK(const PakArchive& fontArchive){
+void RSFont::InitFromPAK(const PakArchive& fontArchive)
+{
 	for (size_t i = 0 ; i < fontArchive.GetNumEntries(); i++) {
-		PakEntry* entry = fontArchive.GetEntry(i);
-        RLEShape* s = new RLEShape();
-        s->Init(entry->data,entry->size);
-        letters.push_back(s);
-    }
+		const PakEntry& entry = fontArchive.GetEntry(i);
+		RLEShape* s = new RLEShape();
+		s->Init(entry);
+		letters.push_back(s);
+	}
 }

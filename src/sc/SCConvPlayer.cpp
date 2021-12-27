@@ -199,7 +199,7 @@ void SCConvPlayer::ReadNextFrame(void){
     this->currentFrame.SetExpired(false);
 }
 
-void SCConvPlayer::SetArchive(PakEntry* convPakEntry){
+void SCConvPlayer::SetArchive(const PakEntry* convPakEntry){
     
     if (convPakEntry->size == 0){
         Game.Log("Conversation entry is empty: Unable to load it.\n");
@@ -236,7 +236,7 @@ void SCConvPlayer::SetID(int32_t id){
         return;
     }
     
-    SetArchive(convPak.GetEntry(id));
+	SetArchive(&convPak.GetEntry(id));
     
 }
 
@@ -408,21 +408,16 @@ void SCConvPlayer::RunFrame(void){
         
         
         ByteStream paletteReader;
-        paletteReader.Set(convPals.GetEntry(currentFrame.facePaletteID)->data); //mountains Good but not sky
+		paletteReader.Set(convPals.GetEntry(currentFrame.facePaletteID).data); //mountains Good but not sky
         this->palette.ReadPatch(&paletteReader);
-        
-        
-        
-        int32_t pos = 0 ;
-        
-        if (currentFrame.mode == ConvFrame::CONV_CLOSEUP)
-        {
-            if (currentFrame.facePosition == ConvFrame::FACE_LEFT)
-                pos = -30;
 
-            if (currentFrame.facePosition == ConvFrame::FACE_RIGHT)
-                pos =  30;
-        }
+		int32_t pos = 0 ;
+		if (currentFrame.mode == ConvFrame::CONV_CLOSEUP) {
+			if (currentFrame.facePosition == ConvFrame::FACE_LEFT)
+				pos = -30;
+			if (currentFrame.facePosition == ConvFrame::FACE_RIGHT)
+				pos =  30;
+		}
         
         if (currentFrame.face == NULL)
             goto afterFace;

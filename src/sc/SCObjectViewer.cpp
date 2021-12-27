@@ -142,10 +142,10 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     
     //Identified as OBJECT VIEWER STATIC TITLE
     
-    PakEntry* entry0 = archive->GetEntry(0);
+	const PakEntry& entry0 = archive->GetEntry(0);
     PakArchive file0;
-    file0.InitFromRAM("OBJVIEW.PAK: file 0",entry0->data, entry0->size);
-    title.Init(file0.GetEntry(0)->data, file0.GetEntry(0)->size);
+	file0.InitFromPakEntry("OBJVIEW.PAK: file 0", entry0);
+	title.Init(file0.GetEntry(0));
 
     
     //Identified as TRAINING MISSION TITLE
@@ -176,22 +176,21 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     */
     
     //Identified as BUTTONS OBJ VIEWER
-    PakEntry* objButtonEntry = archive->GetEntry(4);
+	const PakEntry& objButtonEntry = archive->GetEntry(4);
     PakArchive objButtons;
-    objButtons.InitFromRAM("OBJVIEW.PAK: file 4",objButtonEntry->data, objButtonEntry->size);
+	objButtons.InitFromPakEntry("OBJVIEW.PAK: file 4", objButtonEntry);
     objButtons.List(stdout);
     
     SCButton* button;
     Point2D boardPosition = {4, 155} ;
-    
-    
-    //EXIT BUTTON
+
+	//EXIT BUTTON
     button = new SCButton();
     Point2D exitDimension = {30, 15} ;
     Point2D exitPosition = {boardPosition.x+268,boardPosition.y+15};
 	button->InitBehavior(exitPosition,exitDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(14)->data, objButtons.GetEntry(14)->size,&exitPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(15)->data, objButtons.GetEntry(15)->size,&exitPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(14).data, objButtons.GetEntry(14).size,&exitPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(15).data, objButtons.GetEntry(15).size,&exitPosition);
     buttons.push_back(button);
     
     
@@ -204,24 +203,24 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     
     Point2D rotRightButtonPosition = {boardPosition.x+232,boardPosition.y+12};
 	button->InitBehavior(rotRightButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(12)->data, objButtons.GetEntry(12)->size,&rotRightButtonPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(13)->data, objButtons.GetEntry(13)->size,&rotRightButtonPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(12).data, objButtons.GetEntry(12).size,&rotRightButtonPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(13).data, objButtons.GetEntry(13).size,&rotRightButtonPosition);
     buttons.push_back(button);
     
     //ROT LEFT OBJ BUTTON
     button = new SCButton();
     Point2D rotLeftButtonPosition = {boardPosition.x+174,boardPosition.y+12};
 	button->InitBehavior(rotLeftButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(10)->data, objButtons.GetEntry(10)->size,&rotLeftButtonPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(11)->data, objButtons.GetEntry(11)->size,&rotLeftButtonPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(10).data, objButtons.GetEntry(10).size,&rotLeftButtonPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(11).data, objButtons.GetEntry(11).size,&rotLeftButtonPosition);
     buttons.push_back(button);
     
     //ROT DOWN OBJ BUTTON
     button = new SCButton();
     Point2D rotDownButtonPosition = {boardPosition.x+198,boardPosition.y+24};
 	button->InitBehavior(rotDownButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(8)->data, objButtons.GetEntry(8)->size,&rotDownButtonPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(9)->data, objButtons.GetEntry(9)->size,&rotDownButtonPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(8).data, objButtons.GetEntry(8).size,&rotDownButtonPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(9).data, objButtons.GetEntry(9).size,&rotDownButtonPosition);
     buttons.push_back(button);
     
     
@@ -229,8 +228,8 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     button = new SCButton();
     Point2D rotUpButtonPosition = {boardPosition.x+198,boardPosition.y+6};
 	button->InitBehavior(rotUpButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(6)->data, objButtons.GetEntry(6)->size,&rotUpButtonPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(7)->data, objButtons.GetEntry(7)->size,&rotUpButtonPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(6).data, objButtons.GetEntry(6).size,&rotUpButtonPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(7).data, objButtons.GetEntry(7).size,&rotUpButtonPosition);
     buttons.push_back(button);
     
 
@@ -239,16 +238,16 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     button = new SCButton();
     Point2D zoomOutButtonPosition = {boardPosition.x+122,boardPosition.y+25};
 	button->InitBehavior(zoomOutButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(4)->data, objButtons.GetEntry(4)->size,&zoomOutButtonPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(5)->data, objButtons.GetEntry(5)->size,&zoomOutButtonPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(4).data, objButtons.GetEntry(4).size,&zoomOutButtonPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(5).data, objButtons.GetEntry(5).size,&zoomOutButtonPosition);
     buttons.push_back(button);
     
     //ZOOM IN OBJ BUTTON
     button = new SCButton();
     Point2D zoomInButtonPosition = {boardPosition.x+121,boardPosition.y+7};
 	button->InitBehavior(zoomInButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(2)->data, objButtons.GetEntry(2)->size,&zoomInButtonPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(3)->data, objButtons.GetEntry(3)->size,&zoomInButtonPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(2).data, objButtons.GetEntry(2).size,&zoomInButtonPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(3).data, objButtons.GetEntry(3).size,&zoomInButtonPosition);
     buttons.push_back(button);
     
     //NEXT OBJ BUTTON
@@ -256,8 +255,8 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     button = new SCButton();
     Point2D nextButtonPosition = {boardPosition.x+10,boardPosition.y+15};
 	button->InitBehavior(nextButtonPosition,nextDimension, [this] { NextObject(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(0)->data, objButtons.GetEntry(0)->size,&nextButtonPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(1)->data, objButtons.GetEntry(1)->size,&nextButtonPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(0).data, objButtons.GetEntry(0).size,&nextButtonPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(1).data, objButtons.GetEntry(1).size,&nextButtonPosition);
     buttons.push_back(button);
     
     
@@ -295,14 +294,12 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     
     //Identified as blue background
     
-    PakEntry* entry8 = archive->GetEntry(8);
-    PakArchive file8;
-    file8.InitFromRAM("OBJVIEW.PAK: file 8",entry8->data, entry8->size);
-    bluePrint.Init(file8.GetEntry(0)->data, file8.GetEntry(0)->size);
-    
-    
-    
-    //Unknown content
+	const PakEntry& entry8 = archive->GetEntry(8);
+	PakArchive file8;
+	file8.InitFromPakEntry("OBJVIEW.PAK: file 8", entry8);
+	bluePrint.Init(file8.GetEntry(0));
+
+	//Unknown content
     /*
     PakEntry* entry9 = archive->GetEntry(9);
     PakArchive file9;

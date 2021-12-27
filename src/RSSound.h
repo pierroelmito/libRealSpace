@@ -6,13 +6,14 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__RSSound__
-#define __libRealSpace__RSSound__
+#pragma once
 
-class RSSound{
-    
+#include <cstdint>
+
+class PakArchive;
+
+class RSSound
+{
 public:
-    void InitFromPAK(PakArchive* archive, uint32_t index);
+	void InitFromPAK(PakArchive* archive, uint32_t index);
 };
-
-#endif /* defined(__libRealSpace__RSSound__) */

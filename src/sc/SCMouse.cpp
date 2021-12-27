@@ -34,7 +34,7 @@ void SCMouse::Init(void){
     
     for (int i = 0 ; i < 4; i++) {
         shape = new RLEShape();
-        shape->Init(cursors.GetEntry(i)->data, cursors.GetEntry(i)->size);
+		shape->Init(cursors.GetEntry(i));
         appearances[i] = shape;
     }
 }

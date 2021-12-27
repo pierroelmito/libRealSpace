@@ -11,20 +11,20 @@
 #include <cstdint>
 #include <vector>
 
-class PakEntry;
+#include "PakArchive.h"
+
 class RLEShape;
 
 class RSImageSet
 {
 public:
-    RSImageSet();
-    ~RSImageSet();
-    
-    void InitFromPakEntry(PakEntry* entry);
-    
+	RSImageSet();
+	~RSImageSet();
+
+	void InitFromPakEntry(const ByteSlice& entry);
 	const std::vector<RLEShape*>& GetShapes() const { return shapes; }
-    void Add(RLEShape* shape);
+	void Add(RLEShape* shape);
 
 private:
-    std::vector<RLEShape*> shapes;
+	std::vector<RLEShape*> shapes;
 };

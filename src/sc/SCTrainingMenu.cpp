@@ -27,27 +27,23 @@ void SCTrainingMenu::Init()
     
     //Load palette
     ByteStream paletteReader;
-    paletteReader.Set(assets.GetEntry(7)->data);
+	paletteReader.Set(assets.GetEntry(7).data);
     this->palette.ReadPatch(&paletteReader);
-    
-    
-    
-    PakEntry* backgroundPakEntry = assets.GetEntry(6);
+
+	const PakEntry& backgroundPakEntry = assets.GetEntry(6);
     //Identified as Dodge Fight background
     PakArchive bgPack;
-    bgPack.InitFromRAM("OBJVIEW.PAK: file 6",backgroundPakEntry->data, backgroundPakEntry->size);
-    background.Init(bgPack.GetEntry(0)->data, bgPack.GetEntry(0)->size);
+	bgPack.InitFromPakEntry("OBJVIEW.PAK: file 6",backgroundPakEntry);
+	background.Init(bgPack.GetEntry(0));
 
-    
-    
-    PakEntry* titlePackEntry = assets.GetEntry(1);
+	const PakEntry& titlePackEntry = assets.GetEntry(1);
     PakArchive titlePack;
-    titlePack.InitFromRAM("",titlePackEntry->data, titlePackEntry->size);
-    title.Init(titlePack.GetEntry(0)->data, titlePack.GetEntry(0)->size);
+	titlePack.InitFromPakEntry("", titlePackEntry);
+	title.Init(titlePack.GetEntry(0));
     Point2D positionTitle = {4,0};
     title.SetPosition(&positionTitle);
-    
-    /*
+
+	/*
     PakEntry* ue = assets.GetEntry(8);
     PakArchive up;
     up.InitFromRAM("OBJVIEW.PAK: file 5",ue->data, ue->size);
@@ -61,28 +57,28 @@ void SCTrainingMenu::Init()
     trButtonsPack.InitFromRAM("TM.SHP",trButtonsEntry->data, trButtonsEntry->size);
     
     Point2D positionBoard = {6,150};
-    board.Init(trButtonsPack.GetEntry(0)->data, trButtonsPack.GetEntry(0)->size);
+	board.Init(trButtonsPack.GetEntry(0));
     board.SetPosition(&positionBoard);
     
     //Search and destroy button
     SCButton* button;
     button = new SCButton();
-    Point2D sandDDimension = {130, 15} ;
+	Point2D sandDDimension = {130, 15};
     Point2D sanDPosition = {positionBoard.x+16,positionBoard.y+9};
 	button->InitBehavior(sanDPosition,sandDDimension, [] {
 		//Game.MakeActivity<SCSelectWeaponF16>();
 		Game.MakeActivity<SCStrike>();
 	});
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(1)->data, trButtonsPack.GetEntry(1)->size,&sanDPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(2)->data, trButtonsPack.GetEntry(2)->size,&sanDPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(1).data, trButtonsPack.GetEntry(1).size,&sanDPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(2).data, trButtonsPack.GetEntry(2).size,&sanDPosition);
     buttons.push_back(button);
     
     button = new SCButton();
     Point2D dogDDimension = {130, 15} ;
     Point2D dogDPosition = {positionBoard.x+155,positionBoard.y+9};
 	button->InitBehavior(dogDPosition,dogDDimension, [] {});
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(3)->data, trButtonsPack.GetEntry(3)->size,&dogDPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(4)->data, trButtonsPack.GetEntry(4)->size,&dogDPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(3).data, trButtonsPack.GetEntry(3).size,&dogDPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(4).data, trButtonsPack.GetEntry(4).size,&dogDPosition);
     button->SetEnable(false);
     buttons.push_back(button);
     
@@ -90,8 +86,8 @@ void SCTrainingMenu::Init()
     Point2D exitDDimension = {60, 15} ;
     Point2D exitDPosition = {positionBoard.x+155,positionBoard.y+23};
 	button->InitBehavior(exitDPosition,exitDDimension, [] { Game.StopTopActivity(); });
-    button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(5)->data, trButtonsPack.GetEntry(5)->size,&exitDPosition);
-    button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(6)->data, trButtonsPack.GetEntry(6)->size,&exitDPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(5).data, trButtonsPack.GetEntry(5).size,&exitDPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(6).data, trButtonsPack.GetEntry(6).size,&exitDPosition);
     buttons.push_back(button);
 }
 

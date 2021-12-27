@@ -10,20 +10,20 @@
 
 #include "precomp.h"
 
-SCStrike::SCStrike(){
-    
+SCStrike::SCStrike()
+{
 }
 
-SCStrike::~SCStrike(){
-    
+SCStrike::~SCStrike()
+{
 }
 
-void SCStrike::Init(void ){
-    area.InitFromPAKFileName("ARENA.PAK");
+void SCStrike::Init(void )
+{
+	area.InitFromPAKFileName("ARENA.PAK");
 }
 
-void SCStrike::RunFrame(void){
-    
-    Renderer.RenderWorldSolid(&area,BLOCK_LOD_MAX,400);
-    
+void SCStrike::RunFrame(void)
+{
+	Renderer.RenderWorldSolid(area,BLOCK_LOD_MAX,400);
 }

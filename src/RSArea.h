@@ -12,6 +12,8 @@
 
 class RSMapTextureSet;
 class TreArchive;
+class PakEntry;
+class PakArchive;
 
 //DIRTY HACK !!! DELETE ME ASAP
 #define  HEIGHT_DIVIDER 17
@@ -33,7 +35,7 @@ struct AreaBlock
 	//To be delete later when we can parse it properly
 	MapVertex vertice[400];
 
-	inline MapVertex* GetVertice(int x, int y){
+	inline const MapVertex* GetVertice(int x, int y) const {
 		return &vertice[x + y * this->sideSize];
 	}
 };
@@ -47,43 +49,43 @@ struct AreaBlock
 #define BLOCK_PER_MAP_SIDE 18
 #define BLOCKS_PER_MAP (BLOCK_PER_MAP_SIDE*BLOCK_PER_MAP_SIDE)
 
-class RSArea{
+class RSArea
+{
 public:
-    
-    RSArea();
-    ~RSArea();
-    
-    void InitFromPAKFileName(const char* pakFilename);
-    
-    inline AreaBlock* GetAreaBlockByID(int lod,int blockID){
-        return &this->blocks[lod][blockID];
-    }
-    
-    inline AreaBlock* GetAreaBlockByCoo(int lod, int x, int y){
-        return &this->blocks[lod][x + y * BLOCK_PER_MAP_SIDE];
-    }
-    
-    RSImage* GetImageByID(size_t ID);
-    
-    //Per block objects list
-    std::vector<MapObject> objects[BLOCKS_PER_MAP];
-    float elevation[BLOCKS_PER_MAP];
+	RSArea();
+	~RSArea();
+
+	void InitFromPAKFileName(const char* pakFilename);
+
+	inline const AreaBlock* GetAreaBlockByID(int lod,int blockID) const {
+		return &this->blocks[lod][blockID];
+	}
+
+	inline const AreaBlock* GetAreaBlockByCoo(int lod, int x, int y) const {
+		return &this->blocks[lod][x + y * BLOCK_PER_MAP_SIDE];
+	}
+
+	RSImage* GetImageByID(size_t ID) const;
+
+	//Per block objects list
+	std::vector<MapObject> objects[BLOCKS_PER_MAP];
+	float elevation[BLOCKS_PER_MAP];
 
 	const std::vector<RSEntity*>& GetJets() const { return jets; }
-    
+
 private:
     
     void ParseMetadata(void );
     void ParseObjects(void );
     
     void ParseTrigo(void );
-    void ParseTriFile(PakEntry* entry);
+	void ParseTriFile(const PakEntry* entry);
     
     //Temporary name: I don't know yet what is in there.
     void ParseHeightMap(void);
-    void ParseBlocks(size_t lod,PakEntry* entry,size_t verticePerBlock);
+	void ParseBlocks(size_t lod,const PakEntry* entry,size_t verticePerBlock);
     
-    void ParseElevations(void);
+	void ParseElevations();
     
     std::vector<RSMapTextureSet*> textures;
     PakArchive* archive;

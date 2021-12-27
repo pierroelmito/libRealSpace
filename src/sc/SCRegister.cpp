@@ -61,50 +61,40 @@ void SCRegister::Init( ){
     pak.InitFromRAM("",entryMountain->data,entryMountain->size);
     
     PakArchive bookPak;
-    bookPak.InitFromRAM("subPak board",
-                            pak.GetEntry(OptionShapeID::START_GAME_REGISTRATION)->data ,
-                            pak.GetEntry(OptionShapeID::START_GAME_REGISTRATION)->size);
-    book.Init(bookPak.GetEntry(0)->data, bookPak.GetEntry(0)->size);
+	bookPak.InitFromPakEntry("subPak board", pak.GetEntry(OptionShapeID::START_GAME_REGISTRATION));
+	book.Init(bookPak.GetEntry(0));
 
-    
-    
     //Load palette
 	this->palette = VGA.GetPalette();
-
 
     TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK");
     PakArchive palettesPak;
     palettesPak.InitFromRAM("OPTSHPS.PAK",palettesEntry->data,palettesEntry->size);
-    
-     ByteStream paletteReader;
-    paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_STARTGAME_REGISTRATION)->data);
+
+	ByteStream paletteReader;
+	paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_STARTGAME_REGISTRATION).data);
     this->palette.ReadPatch(&paletteReader);
-
-    
-
-    
 }
 
-void SCRegister::RunFrame(void){
-    CheckButtons();
-    CheckKeyboard();
-    
-    VGA.Activate();
-    VGA.Clear();
-    
+void SCRegister::RunFrame(void)
+{
+	CheckButtons();
+	CheckKeyboard();
+
+	VGA.Activate();
+	VGA.Clear();
+
 	VGA.SetPalette(this->palette);
-    
-    //Draw static
+
+	//Draw static
 	VGA.DrawShape(book);
 
-    
-    DrawButtons();
-    
-    //Draw Mouse
-    Mouse.Draw();
-    
-    //Check Mouse state.
-    
-    VGA.VSync();
+	DrawButtons();
 
+	//Draw Mouse
+	Mouse.Draw();
+
+	//Check Mouse state.
+
+	VGA.VSync();
 }

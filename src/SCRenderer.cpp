@@ -55,14 +55,6 @@ SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 	glDisable(GL_DEPTH_TEST);
 }
 
-Camera& SCRenderer::GetCamera(void){
-	return camera;
-}
-
-VGAPalette& SCRenderer::GetPalette(void){
-	return palette;
-}
-
 void SCRenderer::Init(int32_t zoomFactor)
 {
 	int32_t width  = 320 * zoomFactor;
@@ -147,46 +139,43 @@ void SCRenderer::DeleteTextureInGPU(Texture* texture){
 }
 
 
-Vector3D SCRenderer::GetNormal(RSEntity* object,Triangle* triangle)
+Vector3D SCRenderer::GetNormal(RSEntity* object, const Triangle* triangle)
 {
-	Vector3D normal;
-
 	//Calculate the normal for this triangle
-	Vector3D edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
-	Vector3D edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
-	normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
+	const Vector3D edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
+	const Vector3D edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
+	Vector3D normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
 
 	// All normals are supposed to point outward in modern GPU but SC triangles
-    // don't have consistent winding. They can be CW or CCW (the back governal of a jet  is
-    // typically one triangle that must be visible from both sides !
-    // As a result, gouraud shading was probably performed in screen space.
-    // How can we replicate this ?
-    //        - Take the normal and compare it to the sign of the direction to the camera.
-    //        - If the signs don't match: reverse the normal.
+	// don't have consistent winding. They can be CW or CCW (the back governal of a jet  is
+	// typically one triangle that must be visible from both sides !
+	// As a result, gouraud shading was probably performed in screen space.
+	// How can we replicate this ?
+	//        - Take the normal and compare it to the sign of the direction to the camera.
+	//        - If the signs don't match: reverse the normal.
 	const Point3D& cameraPosition = camera.position;
 	const Point3D& vertexOnTriangle = object->vertices[triangle->ids[0]];
-	Point3D cameraDirection = HMM_NormalizeVec3(cameraPosition - vertexOnTriangle);
+	const Point3D cameraDirection = HMM_NormalizeVec3(cameraPosition - vertexOnTriangle);
 	if (HMM_Dot(cameraDirection, normal) < 0)
 		normal *= -1.0f;
 
 	return normal;
 }
 
-void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
+void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel )
+{
+	if (!initialized)
+		return;
 
-    if (!initialized)
-        return;
-    
-    if (lodLevel >= object->NumLods()){
-        printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n",
-               std::min(0UL,object->NumLods()-1));
-        return;
-    }
-    
-    
-    float ambientLamber = 0.4f;
-    
-	Lod* lod = &object->lods[lodLevel];
+	if (lodLevel >= object->lods.size()){
+		printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n",
+			std::min(0UL, object->lods.size() - 1));
+		return;
+	}
+
+	const float ambientLamber = 0.4f;
+
+	const Lod* lod = &object->lods[lodLevel];
 
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
@@ -195,54 +184,48 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
 	glDepthFunc(GL_LESS);
 
 	//Texture pass
-    if (lodLevel == 0){
-        glEnable(GL_TEXTURE_2D);
-        
-        //glDepthFunc(GL_EQUAL);
-        
-        glAlphaFunc ( GL_GREATER, 0.0 ) ;
-        glEnable ( GL_ALPHA_TEST ) ;
-        
-        
-        for (int i=0 ; i < object->NumUVs(); i++) {
-            
-            uvxyEntry* textInfo = &object->uvs[i];
-            
-            //Seems we have a textureID that we don't have :( !
-            if (textInfo->textureID >= object->images.size())
-                continue;
-            
-            RSImage* image = object->images[textInfo->textureID];
-            
-            Texture* texture = image->GetTexture();
-            
-            glBindTexture(GL_TEXTURE_2D, texture->id);
-            
-            Triangle* triangle = &object->triangles[textInfo->triangleID];
-            
+	if (lodLevel == 0){
+		glEnable(GL_TEXTURE_2D);
+		//glDepthFunc(GL_EQUAL);
+		glAlphaFunc ( GL_GREATER, 0.0 ) ;
+		glEnable ( GL_ALPHA_TEST ) ;
+
+		for (const uvxyEntry& textInfo : object->uvs) {
+			//Seems we have a textureID that we don't have :( !
+			if (textInfo.textureID >= object->images.size())
+				continue;
+
+			RSImage* image = object->images[textInfo.textureID];
+
+			const Texture* texture = image->GetTexture();
+
+			glBindTexture(GL_TEXTURE_2D, texture->id);
+
+			const Triangle* triangle = &object->triangles[textInfo.triangleID];
+
 			const Vector3D normal = GetNormal(object, triangle);
 
 			glBegin(GL_TRIANGLES);
-            for(int j=0 ; j < 3 ; j++){
+			for(int j=0 ; j < 3 ; j++){
 				Point3D vertice = object->vertices[triangle->ids[j]];
 				Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
 
 				float lambertianFactor = HMM_Dot(lighDirection, normal);
-                if (lambertianFactor < 0  )
-                    lambertianFactor = 0;
-                lambertianFactor+= ambientLamber;
-                if (lambertianFactor > 1)
-                    lambertianFactor = 1;
+				if (lambertianFactor < 0  )
+					lambertianFactor = 0;
+				lambertianFactor+= ambientLamber;
+				if (lambertianFactor > 1)
+					lambertianFactor = 1;
 
 				glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
-                glTexCoord2f(textInfo->uvs[j].u/(float)texture->width, textInfo->uvs[j].v/(float)texture->height);
+				glTexCoord2f(textInfo.uvs[j].u/(float)texture->width, textInfo.uvs[j].v/(float)texture->height);
 				glVertex(object->vertices[triangle->ids[j]]);
-            }
-            glEnd();
+			}
+			glEnd();
 		}
-        glDisable(GL_TEXTURE_2D);
-        glDisable(GL_BLEND);
-    }
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
+	}
 
 	//Pass 3: Let's draw the transparent stuff render RSEntity::TRANSPARENT)
 	glDisable(GL_TEXTURE_2D);
@@ -252,173 +235,140 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
 	//glDepthFunc(GL_LESS);
 
 	for(int i = 0 ; i < lod->numTriangles ; i++) {
-        uint16_t triangleID = lod->triangleIDs[i];
-        Triangle* triangle = &object->triangles[triangleID];
+		uint16_t triangleID = lod->triangleIDs[i];
+		Triangle* triangle = &object->triangles[triangleID];
 
 		if (triangle->property != RSEntity::TRANSPARENT)
-            continue;
+			continue;
 
 		const Vector3D normal = GetNormal(object,triangle);
 
 		glBegin(GL_TRIANGLES);
 
 		for(int j=0 ; j < 3 ; j++) {
-            Point3D vertice = object->vertices[triangle->ids[j]];
+			Point3D vertice = object->vertices[triangle->ids[j]];
 			Vector3D sunDirection = HMM_NormalizeVec3(light - vertice);
 
 			float lambertianFactor = HMM_Dot(sunDirection, normal);
-            if (lambertianFactor < 0  )
-                lambertianFactor = 0;
-            lambertianFactor=0.2f;
+			if (lambertianFactor < 0  )
+				lambertianFactor = 0;
+			lambertianFactor=0.2f;
 
 			//int8_t gouraud = 255 * lambertianFactor;
 			//gouraud = 255;
-            glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
+			glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
 			glVertex(vertice);
-        }
+		}
 
 		glEnd();
-    }
+	}
 
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
 
 	//Pass 1, draw color
-    for(int i = 0 ; i < lod->numTriangles ; i++){
-        //for(int i = 60 ; i < 62 ; i++){  //Debug purpose only back governal of F-16 is 60-62
-        
-        uint16_t triangleID = lod->triangleIDs[i];
-        
-        Triangle* triangle = &object->triangles[triangleID];
-        
-        if (triangle->property == RSEntity::TRANSPARENT)
-            continue;
-        
+	for(int i = 0 ; i < lod->numTriangles ; i++){
+		//for(int i = 60 ; i < 62 ; i++){  //Debug purpose only back governal of F-16 is 60-62
+
+		uint16_t triangleID = lod->triangleIDs[i];
+
+		Triangle* triangle = &object->triangles[triangleID];
+
+		if (triangle->property == RSEntity::TRANSPARENT)
+			continue;
+
 		const Vector3D normal = GetNormal(object, triangle);
 
 		glBegin(GL_TRIANGLES);
-        for(int j=0 ; j < 3 ; j++){
+		for(int j=0 ; j < 3 ; j++){
 			Point3D vertice = object->vertices[triangle->ids[j]];
 			Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
 
 			float lambertianFactor = HMM_Dot(lighDirection, normal);
-            if (lambertianFactor < 0  )
-                lambertianFactor = 0;
-            lambertianFactor+= ambientLamber;
-            if (lambertianFactor > 1)
-                lambertianFactor = 1;
-            
-            const Texel* texel = palette.GetRGBColor(triangle->color);
-            
-            glColor4f(texel->r/255.0f*lambertianFactor, texel->g/255.0f*lambertianFactor, texel->b/255.0f*lambertianFactor,1);
-            //glColor4f(texel->r/255.0f, texel->g/255.0f, texel->b/255.0f,1);
+			if (lambertianFactor < 0  )
+				lambertianFactor = 0;
+			lambertianFactor+= ambientLamber;
+			if (lambertianFactor > 1)
+				lambertianFactor = 1;
+
+			const Texel* texel = palette.GetRGBColor(triangle->color);
+
+			glColor4f(texel->r/255.0f*lambertianFactor, texel->g/255.0f*lambertianFactor, texel->b/255.0f*lambertianFactor,1);
+			//glColor4f(texel->r/255.0f, texel->g/255.0f, texel->b/255.0f,1);
 
 			glVertex(object->vertices[triangle->ids[j]]);
-        }
-        glEnd();
-    }
-    
-
+		}
+		glEnd();
+	}
 }
 
 void SCRenderer::SetLight(const Point3D& l){
 	this->light = l;
 }
 
-void SCRenderer::Prepare(RSEntity* object){
-    
-    for (size_t i = 0; i < object->NumImages(); i++) {
-        object->images[i]->SyncTexture();
-    }
-    
-    object->prepared = true;
+void SCRenderer::Prepare(RSEntity* object)
+{
+	for (RSImage* img : object->images)
+		img->SyncTexture();
+	object->prepared = true;
 }
 
-void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel){
-    
-    if (!initialized)
-        return;
-    
-    if (object->IsPrepared())
-        Prepare(object);
-    
-    glMatrixMode(GL_PROJECTION);
-	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
-	//glLoadMatrixf(projectionMatrix->ToGL());
-	glLoadMatrixHMM(camera.proj);
+void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel)
+{
+	if (!initialized)
+		return;
 
-    running = true;
-    float counter=0;
-    while (running) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	if (object->IsPrepared())
+		Prepare(object);
 
-		glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        Matrix* modelViewMatrix;
-        
-		light = { 20*cos(counter), 10, 20*sin(counter) };
-        counter += 0.02;
-        
-        //camera.SetPosition(position);
-        
-		//modelViewMatrix = camera.GetViewMatrix();
-		//glLoadMatrixf(modelViewMatrix->ToGL());
-		glLoadMatrixHMM(camera.getView());
+	SetProj(camera.proj);
 
-        DrawModel(object, lodLevel );
-        
-        //Render light
-        
-        glDisable(GL_TEXTURE_2D);
-        glDisable(GL_BLEND);
-        glDisable(GL_DEPTH_TEST);
-        glPointSize(6);
-        
-        glBegin(GL_POINTS);
-            glColor4f(1, 1,0 , 1);
+	running = true;
+	float counter = 0;
+	while (running) {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		light = { 20 * cos(counter), 10, 20 * sin(counter) };
+		counter += 0.02;
+
+		//camera.SetPosition(position);
+
+		SetView(camera.getView());
+
+		DrawModel(object, lodLevel);
+
+		//Render light
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
+		glDisable(GL_DEPTH_TEST);
+		glPointSize(6);
+		glBegin(GL_POINTS);
+			glColor4f(1, 1,0 , 1);
 			glVertex(light);
-        glEnd();
-        
-       
-    }
-
+		glEnd();
+	}
 }
-
-
 
 void SCRenderer::RenderVerticeField(Point3D* vertices, int numVertices)
 {
-	glMatrixMode(GL_PROJECTION);
-	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
-	//glLoadMatrixf(projectionMatrix->ToGL());
-	glLoadMatrixHMM(camera.proj);
+	SetProj(camera.proj);
 
 	running = true;
-    float counter=0;
-    while (running) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
-		Point3D newPosition;
-		newPosition.X = 256*cos(counter);
-		newPosition.Y = 0;
-		newPosition.Z = 256*sin(counter);
-        counter += 0.02;
+	float counter = 0;
+	while (running) {
+		const Point3D newPosition{ 256 * cos(counter), 0, 256 * sin(counter) };
+		counter += 0.02;
 
 		camera.SetPosition(newPosition);
-		//Matrix* modelViewMatrix = camera.GetViewMatrix();
-		//glLoadMatrixf(modelViewMatrix->ToGL());
-		glLoadMatrixHMM(camera.getView());
+		SetView(camera.getView());
 
-		glClear(GL_COLOR_BUFFER_BIT);
-        glPointSize(5);
-        glBegin(GL_POINTS);
-        for(int i=0; i < numVertices ; i ++)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glPointSize(5);
+		glBegin(GL_POINTS);
+		for(int i=0; i < numVertices ; i ++)
 			glVertex(vertices[i]);
-        glEnd();
-    }
+		glEnd();
+	}
 }
 
 #define TEX_ZERO (0/64.0f)
@@ -427,124 +377,102 @@ void SCRenderer::RenderVerticeField(Point3D* vertices, int numVertices)
 // What is this offset ? It is used to get rid of the red delimitations
 // in the 64x64 textures.
 #define OFFSET (1/64.0f)
-float textTrianCoo64[2][3][2] = {
-    
-    {{TEX_ZERO,TEX_ZERO+OFFSET},    {TEX_ONE-2*OFFSET,TEX_ONE-OFFSET},    {TEX_ZERO,TEX_ONE-OFFSET} }, // LOWER_TRIANGE
-    
-    {{TEX_ZERO+2*OFFSET,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ONE-OFFSET} }  //UPPER_TRIANGE
+
+const float textTrianCoo64[2][3][2] = {
+	{{TEX_ZERO,TEX_ZERO+OFFSET},    {TEX_ONE-2*OFFSET,TEX_ONE-OFFSET},    {TEX_ZERO,TEX_ONE-OFFSET} }, // LOWER_TRIANGE
+	{{TEX_ZERO+2*OFFSET,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ONE-OFFSET} }  //UPPER_TRIANGE
 };
 
-float textTrianCoo[2][3][2] = {
-    
-    {{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ONE},    {TEX_ZERO,TEX_ONE} }, // LOWER_TRIANGE
-    
-    {{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ZERO},    {TEX_ONE,TEX_ONE} }  //UPPER_TRIANGE
+const float textTrianCoo[2][3][2] = {
+	{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ONE},    {TEX_ZERO,TEX_ONE} }, // LOWER_TRIANGE
+	{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ZERO},    {TEX_ONE,TEX_ONE} }  //UPPER_TRIANGE
 };
-
 
 #define LOWER_TRIANGE 0
 #define UPPER_TRIANGE 1
 
-void SCRenderer::RenderTexturedTriangle(MapVertex* tri0,
-                                     MapVertex* tri1,
-                                     MapVertex* tri2,
-                                     RSArea* area,
-									  int triangleType)
+void SCRenderer::RenderTexturedTriangle(
+	const MapVertex* tri0,
+	const MapVertex* tri1,
+	const MapVertex* tri2,
+	const RSArea& area,
+	int triangleType)
 {
 	const float white[4] { 1, 1, 1, 1 };
-    glColor4fv(white);
-    
-    RSImage* image = NULL;
-    if (triangleType == LOWER_TRIANGE)
-        image = area->GetImageByID(tri0->lowerImageID);
-    if (triangleType == UPPER_TRIANGE)
-        image = area->GetImageByID(tri0->upperImageID);
-    
-    
-    if (image == NULL){
-        printf("This should never happen: Put a break point here.\n");
-        return;
-    }
-        
-    
+	glColor4fv(white);
 
-    
-    glBindTexture(GL_TEXTURE_2D,image->GetTexture()->GetTextureID());
-    
-    glBegin(GL_TRIANGLES);
-    
-    if (image->width == 64){
-        glTexCoord2fv(textTrianCoo64[triangleType][0]);
-		glVertex(tri0->v);
-    
-        glTexCoord2fv(textTrianCoo64[triangleType][1]);
-		glVertex(tri1->v);
-    
-        glTexCoord2fv(textTrianCoo64[triangleType][2]);
-		glVertex(tri2->v);
-	} else{
-        glTexCoord2fv(textTrianCoo[triangleType][0]);
-		glVertex(tri0->v);
-        
-        glTexCoord2fv(textTrianCoo[triangleType][1]);
-		glVertex(tri1->v);
-        
-        glTexCoord2fv(textTrianCoo[triangleType][2]);
-		glVertex(tri2->v);
+	RSImage* image = NULL;
+	if (triangleType == LOWER_TRIANGE)
+		image = area.GetImageByID(tri0->lowerImageID);
+	if (triangleType == UPPER_TRIANGE)
+		image = area.GetImageByID(tri0->upperImageID);
+
+	if (image == NULL){
+		printf("This should never happen: Put a break point here.\n");
+		return;
 	}
 
+	// switch tex coord depending on texture size
+	const bool is64 = image->width == 64;
+	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
+
+	glBindTexture(GL_TEXTURE_2D,image->GetTexture()->GetTextureID());
+	glBegin(GL_TRIANGLES);
+	glTexCoord2fv(ttc[triangleType][0]);
+	glVertex(tri0->v);
+	glTexCoord2fv(ttc[triangleType][1]);
+	glVertex(tri1->v);
+	glTexCoord2fv(ttc[triangleType][2]);
+	glVertex(tri2->v);
 	glEnd();
 }
 
 
-bool SCRenderer::IsTextured(MapVertex* tri0,MapVertex* tri1,MapVertex* tri2){
-    return
-            // tri0->type != tri1->type ||
-           //tri0->type != tri2->type ||
-    tri0->upperImageID == 0xFF || tri0->lowerImageID == 0xFF ;
-    
+bool SCRenderer::IsTextured(const MapVertex* tri0, const MapVertex* tri1, const MapVertex* tri2)
+{
+	return
+		// tri0->type != tri1->type ||
+		//tri0->type != tri2->type ||
+		tri0->upperImageID == 0xFF || tri0->lowerImageID == 0xFF ;
 }
-void SCRenderer::RenderColoredTriangle(MapVertex* tri0,
-                                     MapVertex* tri1,
-                                     MapVertex* tri2){
-    
 
+void SCRenderer::RenderColoredTriangle(
+	const MapVertex* tri0,
+	const MapVertex* tri1,
+	const MapVertex* tri2)
+{
 	if (tri0->type != tri1->type || tri0->type != tri2->type) {
-        if (tri1->type > tri0->type)
-            if (tri1->type > tri2->type)
-                glColor4fv(tri1->color);
-            else
-                glColor4fv(tri2->color);
-        else
-            if (tri0->type > tri2->type)
-                glColor4fv(tri0->color);
-            else
-                glColor4fv(tri2->color);
+		if (tri1->type > tri0->type)
+			if (tri1->type > tri2->type)
+				glColor4fv(tri1->color);
+			else
+				glColor4fv(tri2->color);
+		else
+			if (tri0->type > tri2->type)
+				glColor4fv(tri0->color);
+			else
+				glColor4fv(tri2->color);
 		glVertex(tri0->v);
 		glVertex(tri1->v);
 		glVertex(tri2->v);
-    }
-    else{
-        glColor4fv(tri0->color);
+	}
+	else{
+		glColor4fv(tri0->color);
 		glVertex(tri0->v);
-        
-        glColor4fv(tri1->color);
+		glColor4fv(tri1->color);
 		glVertex(tri1->v);
-        
-        glColor4fv(tri2->color);
+		glColor4fv(tri2->color);
 		glVertex(tri2->v);
-    }
-    
-   
+	}
 }
-
-
 
 void SCRenderer::RenderQuad(
-	MapVertex* currentVertex,
-	MapVertex* rightVertex,
-	MapVertex* bottomRightVertex,
-	MapVertex* bottomVertex,RSArea* area,bool renderTexture)
+	const MapVertex* currentVertex,
+	const MapVertex* rightVertex,
+	const MapVertex* bottomRightVertex,
+	const MapVertex* bottomVertex,
+	const RSArea& area,
+	bool renderTexture)
 {
 	//Render lower triangle
 	if (!renderTexture){
@@ -569,89 +497,74 @@ void SCRenderer::RenderQuad(
 	}
 }
 
-void SCRenderer::RenderBlock(RSArea* area, int LOD, int i, bool renderTexture){
-    
-    
-    AreaBlock* block = area->GetAreaBlockByID(LOD, i);
-    
-    uint32_t sideSize = block->sideSize;
-    
-    for (size_t x=0 ; x < sideSize-1 ; x ++){
-        for (size_t y=0 ; y < sideSize-1 ; y ++){
-            
-            
-            MapVertex* currentVertex     =   &block->vertice[x+y*sideSize];
-            MapVertex* rightVertex       =   &block->vertice[(x+1)+y*sideSize];
-            MapVertex* bottomRightVertex =   &block->vertice[(x+1)+(y+1)*sideSize];
-            MapVertex* bottomVertex      =   &block->vertice[x+(y+1)*sideSize];
-            
-            
-			RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
-        }
-        
-        
-    }
-    
-    
-    //Inter-block right side
-    if ( i % 18 != 17){
-        AreaBlock* currentBlock = area->GetAreaBlockByID(LOD, i);
-        AreaBlock* rightBlock = area->GetAreaBlockByID(LOD, i+1);
-        
-        for (int y=0 ; y < sideSize-1 ; y ++){
-            MapVertex* currentVertex     =   currentBlock->GetVertice(currentBlock->sideSize-1, y);
-            MapVertex* rightVertex       =   rightBlock->GetVertice(0, y);
-            MapVertex* bottomRightVertex =   rightBlock->GetVertice(0, y+1);
-            MapVertex* bottomVertex      =   currentBlock->GetVertice(currentBlock->sideSize-1, y+1);
-            
-			RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
-        }
-    }
-    
-    //Inter-block bottom side
-    if ( i / 18 != 17){
-        
-        AreaBlock* currentBlock = area->GetAreaBlockByID(LOD, i);
-        AreaBlock* bottomBlock = area->GetAreaBlockByID(LOD, i+BLOCK_PER_MAP_SIDE);
-        
-        for (int x=0 ; x < sideSize-1 ; x++){
-            MapVertex* currentVertex     =   currentBlock->GetVertice(x,currentBlock->sideSize-1);
-            MapVertex* rightVertex       =   currentBlock->GetVertice(x+1,currentBlock->sideSize-1);
-            MapVertex* bottomRightVertex =   bottomBlock->GetVertice(x+1,0);
-            MapVertex* bottomVertex      =   bottomBlock->GetVertice(x,0);
-            
-            RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
-        }
-    }
-    
-    
-    
-    //Inter bottom-right quad
-    if ( i % 18 != 17 && i / 18 != 17){
-        
-        AreaBlock* currentBlock = area->GetAreaBlockByID(LOD, i);
-        AreaBlock* rightBlock = area->GetAreaBlockByID(LOD, i+1);
-        AreaBlock* rightBottonBlock = area->GetAreaBlockByID(LOD, i+1+BLOCK_PER_MAP_SIDE);
-        AreaBlock* bottomBlock = area->GetAreaBlockByID(LOD, i+BLOCK_PER_MAP_SIDE);
-        
-        MapVertex* currentVertex     =   currentBlock->GetVertice(currentBlock->sideSize-1,currentBlock->sideSize-1);
-        MapVertex* rightVertex       =   rightBlock->GetVertice(0,currentBlock->sideSize-1);
-        MapVertex* bottomRightVertex =   rightBottonBlock->GetVertice(0,0);
-        MapVertex* bottomVertex      =   bottomBlock->GetVertice(currentBlock->sideSize-1,0);
-        
-        RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
-        
-        
-    }
+void SCRenderer::RenderBlock(const RSArea& area, int LOD, int i, bool renderTexture)
+{
+	const AreaBlock* block = area.GetAreaBlockByID(LOD, i);
 
-    
+	uint32_t sideSize = block->sideSize;
+
+	for (size_t x=0 ; x < sideSize-1 ; x ++){
+		for (size_t y=0 ; y < sideSize-1 ; y ++){
+			const MapVertex* currentVertex     =   &block->vertice[x+y*sideSize];
+			const MapVertex* rightVertex       =   &block->vertice[(x+1)+y*sideSize];
+			const MapVertex* bottomRightVertex =   &block->vertice[(x+1)+(y+1)*sideSize];
+			const MapVertex* bottomVertex      =   &block->vertice[x+(y+1)*sideSize];
+
+			RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
+		}
+	}
+
+	//Inter-block right side
+	if ( i % 18 != 17){
+		const AreaBlock* currentBlock = area.GetAreaBlockByID(LOD, i);
+		const AreaBlock* rightBlock = area.GetAreaBlockByID(LOD, i+1);
+
+		for (int y=0 ; y < sideSize-1 ; y ++){
+			const MapVertex* currentVertex     =   currentBlock->GetVertice(currentBlock->sideSize-1, y);
+			const MapVertex* rightVertex       =   rightBlock->GetVertice(0, y);
+			const MapVertex* bottomRightVertex =   rightBlock->GetVertice(0, y+1);
+			const MapVertex* bottomVertex      =   currentBlock->GetVertice(currentBlock->sideSize-1, y+1);
+
+			RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
+		}
+	}
+
+	//Inter-block bottom side
+	if ( i / 18 != 17) {
+		const AreaBlock* currentBlock = area.GetAreaBlockByID(LOD, i);
+		const AreaBlock* bottomBlock = area.GetAreaBlockByID(LOD, i+BLOCK_PER_MAP_SIDE);
+
+		for (int x=0 ; x < sideSize-1 ; x++){
+			const MapVertex* currentVertex     =   currentBlock->GetVertice(x,currentBlock->sideSize-1);
+			const MapVertex* rightVertex       =   currentBlock->GetVertice(x+1,currentBlock->sideSize-1);
+			const MapVertex* bottomRightVertex =   bottomBlock->GetVertice(x+1,0);
+			const MapVertex* bottomVertex      =   bottomBlock->GetVertice(x,0);
+
+			RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
+		}
+	}
+
+	//Inter bottom-right quad
+	if ( i % 18 != 17 && i / 18 != 17) {
+		const AreaBlock* currentBlock = area.GetAreaBlockByID(LOD, i);
+		const AreaBlock* rightBlock = area.GetAreaBlockByID(LOD, i+1);
+		const AreaBlock* rightBottonBlock = area.GetAreaBlockByID(LOD, i+1+BLOCK_PER_MAP_SIDE);
+		const AreaBlock* bottomBlock = area.GetAreaBlockByID(LOD, i+BLOCK_PER_MAP_SIDE);
+
+		const MapVertex* currentVertex     =   currentBlock->GetVertice(currentBlock->sideSize-1,currentBlock->sideSize-1);
+		const MapVertex* rightVertex       =   rightBlock->GetVertice(0,currentBlock->sideSize-1);
+		const MapVertex* bottomRightVertex =   rightBottonBlock->GetVertice(0,0);
+		const MapVertex* bottomVertex      =   bottomBlock->GetVertice(currentBlock->sideSize-1,0);
+
+		RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
+	}
 }
 
-void SCRenderer::RenderJets(RSArea* area)
+void SCRenderer::RenderJets(const RSArea& area)
 {
 	glMatrixMode(GL_MODELVIEW);
 
-	for(RSEntity* entity : area->GetJets())
+	for(RSEntity* entity : area.GetJets())
 	{
 		Matrix objMatrix = HMM_QuaternionToMat4(entity->orientation);
 
@@ -667,7 +580,7 @@ void SCRenderer::RenderJets(RSArea* area)
 	}
 }
 
-void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock)
+void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock)
 {
 	glMatrixMode(GL_PROJECTION);
 	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
@@ -763,79 +676,73 @@ void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock)
 	RenderJets(area);
 }
 
-void SCRenderer::RenderObjects(RSArea* area,size_t blockID){
-    
-    float color[3] = {1,0,0};
-    
-    
-    std::vector<MapObject> *objects = &area->objects[blockID];
-    
-    glColor3fv(color);
-    glPointSize(3);
-    glDisable(GL_DEPTH_TEST);
-    glBegin(GL_POINTS);
-    
-    for (size_t i =8 ; i < 9; i++) {
-        MapObject object = objects->at(i);
-        
-        int32_t offset[3];
-        
-        #define BLOCK_WIDTH (512)
-        
-        offset[0] = blockID % 18 * BLOCK_WIDTH ;
-        offset[1] = area->elevation[blockID];
-        offset[2] = (int32_t)blockID / 18 * BLOCK_WIDTH;
-        
-        /*
-        glVertex3d(object.position[0]/255*BLOCK_WIDTH+offset[0],
-                   object.position[1]+offset[1],
-                   object.position[2]/255*BLOCK_WIDTH+offset[2]);
-        */
-        int32_t localDelta[3];
-        localDelta[0] = object.position[0]/65355.0f*BLOCK_WIDTH;
-        localDelta[1] = object.position[1];/// HEIGHT_DIVIDER                   ;
-        localDelta[2] = object.position[2]/65355.0f*BLOCK_WIDTH;
-        
-        
-        size_t toDraw[3];
-        toDraw[0] = localDelta[0]+offset[0];
-        toDraw[1] = offset[1];
-        toDraw[2] = localDelta[2]+offset[2];
-        
-        glVertex3d(toDraw[0],
-                   toDraw[1],
-                   toDraw[2]);
+void SCRenderer::RenderObjects(const RSArea& area,size_t blockID)
+{
+	float color[3] = { 1, 0, 0 };
 
-    }
-    
-    glEnd();
-    
+	const std::vector<MapObject> *objects = &area.objects[blockID];
+
+	glColor3fv(color);
+	glPointSize(3);
+	glDisable(GL_DEPTH_TEST);
+	glBegin(GL_POINTS);
+
+	const uint32_t BLOCK_WIDTH = 512;
+
+	for (size_t i =8 ; i < 9; i++) {
+		MapObject object = objects->at(i);
+
+		int32_t offset[3];
+		offset[0] = blockID % 18 * BLOCK_WIDTH ;
+		offset[1] = area.elevation[blockID];
+		offset[2] = (int32_t)blockID / 18 * BLOCK_WIDTH;
+
+		/*
+		glVertex3d(object.position[0]/255*BLOCK_WIDTH+offset[0],
+				   object.position[1]+offset[1],
+				   object.position[2]/255*BLOCK_WIDTH+offset[2]);
+		*/
+
+		int32_t localDelta[3];
+		localDelta[0] = object.position[0]/65355.0f*BLOCK_WIDTH;
+		localDelta[1] = object.position[1];/// HEIGHT_DIVIDER                   ;
+		localDelta[2] = object.position[2]/65355.0f*BLOCK_WIDTH;
+
+		size_t toDraw[3];
+		toDraw[0] = localDelta[0]+offset[0];
+		toDraw[1] = offset[1];
+		toDraw[2] = localDelta[2]+offset[2];
+
+		glVertex3d(toDraw[0], toDraw[1], toDraw[2]);
+	}
+
+	glEnd();
 }
 
-void SCRenderer::RenderWorldPoints(RSArea* area, int LOD, int verticesPerBlock)
+void SCRenderer::RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock)
 {
 	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    
+	glLoadIdentity();
+
 	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
 	//glLoadMatrixf(projectionMatrix->ToGL());
 	glLoadMatrixHMM(camera.proj);
 
-    glPointSize(4);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+	glPointSize(4);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
 
-    running = true;
-    
-    static float counter = 0;
-    
-    while (running) {
-        glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+	running = true;
+
+	static float counter = 0;
+
+	while (running) {
+		glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 
 		glMatrixMode(GL_MODELVIEW);
-        
-        Point3D lookAt = { 256*16,100,256*16 };
-        
+
+		Point3D lookAt = { 256*16,100,256*16 };
+
 		Renderer.GetCamera().LookAt(lookAt);
 
 		Point3D newPosition = camera.position;
@@ -848,21 +755,20 @@ void SCRenderer::RenderWorldPoints(RSArea* area, int LOD, int verticesPerBlock)
 		//glLoadMatrixf(modelViewMatrix->ToGL());
 		glLoadMatrixHMM(camera.getView());
 
-        glBegin(GL_POINTS);
-
-		for(int i=0 ; i < 324 ; i++){
-        //for(int i=96 ; i < 99 ; i++){
-            AreaBlock* block = area->GetAreaBlockByID(LOD, i);
-            for (size_t i=0 ; i < verticesPerBlock ; i ++){
-                MapVertex* v = &block->vertice[i];
-                glColor3fv(v->color);
+		glBegin(GL_POINTS);
+		for(int i=0 ; i < 324 ; i++) {
+		//for(int i=96 ; i < 99 ; i++) {
+			const AreaBlock* block = area.GetAreaBlockByID(LOD, i);
+			for (size_t i=0 ; i < verticesPerBlock ; i ++){
+				const MapVertex* v = &block->vertice[i];
+				glColor3fv(v->color);
 				glVertex(v->v);
-            }
-        }
+			}
+		}
 		glEnd();
 
 		//Render objects on the map
-        for(int i=0 ; i < 324 ; i++)
-            RenderObjects(area,i);
-    }
+		for(int i=0 ; i < 324 ; i++)
+			RenderObjects(area,i);
+	}
 }

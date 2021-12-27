@@ -17,8 +17,8 @@ public:
     SCObjectViewer();
     ~SCObjectViewer();
     
-    void Init( );
-    void RunFrame(void);
+	void Init( ) override;
+	void RunFrame(void) override;
     void NextObject(void);
 
 private:

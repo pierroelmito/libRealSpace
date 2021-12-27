@@ -17,8 +17,8 @@ public:
 	SCStrike();
 	~SCStrike();
 
-	void Init( );
-	void RunFrame(void);
+	void Init( ) override;
+	void RunFrame(void) override;
 
 private:
 	RSArea area;

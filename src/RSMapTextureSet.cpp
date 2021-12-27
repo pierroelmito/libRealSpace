@@ -45,19 +45,19 @@ void RSMapTextureSet::Parse(PakArchive* archive){
         if (i == 229 || i ==  230)
             printf("Intersest !\n");
         
-        PakEntry* entry = archive->GetEntry(i);
+		const PakEntry& entry = archive->GetEntry(i);
         
-        if (entry->size == 0)
+		if (entry.size == 0)
             continue;
         
-        ByteStream stream(entry->data);
+		ByteStream stream(entry.data);
         
         uint16_t width = stream.ReadUShort();
         uint16_t height = stream.ReadUShort();
       
         uint32_t size = width*height;
         
-        if (entry->size-4 == size){
+		if (entry.size-4 == size){
             //That does look like a map texture !
             RSImage* image = new RSImage();
             
@@ -67,7 +67,7 @@ void RSMapTextureSet::Parse(PakArchive* archive){
             //printf("RSMapTextureSet img [%3zu] is %lux%lu.\n",i,image->width,image->height);
         }
         else
-            printf("Cannot make sense of entry %lu:\n REASON: (entry size is %lu but advertised is %d).\n",i,entry->size,size);
+			printf("Cannot make sense of entry %lu:\n REASON: (entry size is %lu but advertised is %d).\n",i,entry.size,size);
     }
     
     printf("RSMapTextureSet found %lu textures in %s.\n",archive->GetNumEntries(),archive->GetName());

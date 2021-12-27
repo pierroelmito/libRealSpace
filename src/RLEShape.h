@@ -13,6 +13,7 @@
 
 #include "Math.h"
 #include "ByteStream.h"
+#include "PakArchive.h"
 
 class RLEShape{
 
@@ -21,8 +22,9 @@ public:
     
      RLEShape();
     ~RLEShape();
-    
-    void Init(uint8_t* data, size_t size);
+
+	void Init(const ByteSlice& bytes);
+	void Init(uint8_t* data, size_t size);
     void InitWithPosition(uint8_t* data, size_t size,Point2D* position );
     
     bool Expand(uint8_t* dst, size_t* byteRead);
@@ -50,7 +52,7 @@ private:
     
     ByteStream stream;
     size_t size;
-    Point2D position;
+	Point2D position{ 0, 0 };
     
     uint8_t* data;
     
@@ -75,7 +77,7 @@ private:
     int16_t rightDist;
     int16_t botDist;
     
-    uint8_t colorOffset;
+	uint8_t colorOffset{ 0 };
     bool WriteColor(uint8_t* dst,int16_t dx, int16_t dy, uint8_t color);
 };
 

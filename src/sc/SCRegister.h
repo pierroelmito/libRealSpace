@@ -17,8 +17,8 @@ public:
 	~SCRegister();
 
 	void CheckKeyboard(void);
-	void Init( );
-	void RunFrame(void);
+	void Init( ) override;
+	void RunFrame(void) override;
 
 private:
 	RLEShape book;

@@ -13,20 +13,15 @@
 class SCTrainingMenu : public IActivity
 {
 public:
-    
-    SCTrainingMenu();
-    ~SCTrainingMenu();
-    
-    void Init( );
-    
-    void RunFrame(void);
-    
-    
+	SCTrainingMenu();
+	~SCTrainingMenu();
+
+	void Init( ) override;
+	void RunFrame(void) override;
+
 private:
-    
-    RLEShape title;
-    RLEShape background;
-    
-    RLEShape board;
+	RLEShape title;
+	RLEShape background;
+	RLEShape board;
 };
 

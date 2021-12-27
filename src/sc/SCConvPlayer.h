@@ -56,14 +56,14 @@ class SCConvPlayer: public IActivity {
 public :
     SCConvPlayer();
     ~SCConvPlayer();
-    void Init( );
-    void RunFrame(void);
+	void Init( ) override;
+	void RunFrame(void) override;
 	void SetID(int32_t id);
-    virtual void Focus(void)  ;
+	virtual void Focus(void) override;
 
 private:
     void ReadNextFrame(void);
-	void SetArchive(PakEntry* conv);
+	void SetArchive(const PakEntry* conv);
     void ReadtNextFrame(void);
     void DrawText(void);
 	void CheckFrameExpired(void);
