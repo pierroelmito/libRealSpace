@@ -25,8 +25,9 @@ public:
 
 	void Init(const ByteSlice& bytes);
 	void Init(uint8_t* data, size_t size);
-    void InitWithPosition(uint8_t* data, size_t size,Point2D* position );
-    
+	void InitWithPositionOld(uint8_t* data, size_t size,Point2D* position );
+	void InitWithPosition(const ByteSlice& bytes,Point2D* position );
+
     bool Expand(uint8_t* dst, size_t* byteRead);
     
     inline void SetPosition(Point2D* position){

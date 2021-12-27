@@ -41,8 +41,8 @@ CharFace* ConvAssetManager::GetCharFace(char* name)
 	return npc;
 }
 
-ConvBackGround* ConvAssetManager::GetBackGround(char* name){
-
+ConvBackGround* ConvAssetManager::GetBackGround(char* name)
+{
 	ConvBackGround* shape = this->backgrounds[name];
 
 	if (shape == NULL){
@@ -58,17 +58,18 @@ ConvBackGround* ConvAssetManager::GetBackGround(char* name){
 	return shape;
 }
 
-CharFigure* ConvAssetManager::GetFigure(char* name){
+CharFigure* ConvAssetManager::GetFigure(char* name)
+{
 	return NULL;
 }
 
-uint8_t ConvAssetManager::GetFacePaletteID(char* name){
+uint8_t ConvAssetManager::GetFacePaletteID(char* name)
+{
 	return this->facePalettes[name]->index;
 }
 
-void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround* back )
+void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround* back)
 {
-
 	ByteStream dataReader ;
 	dataReader.Set(data + 5 * layerID);
 
@@ -91,7 +92,6 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 		paletteArchive = &this->optPals;
 	}
 
-
 	//Debug Display
 	/*
 		printf("\n%8s layer %lu :",back->name,layerID);
@@ -99,10 +99,6 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 			printf("%3d ",*(data + 5 * layerID+x));
 		}
 	*/
-
-
-
-
 
 	/*
 	// The pack features some duplicate entries.
@@ -137,9 +133,8 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 	back->palettes.push_back(paletteArchive->GetEntry(paletteID).data);
 }
 
-
-void ConvAssetManager::ReadBackGrounds(const IffChunk* chunkRoot){
-
+void ConvAssetManager::ReadBackGrounds(const IffChunk* chunkRoot)
+{
 	for(size_t i = 0 ; i < chunkRoot->childs.size() ; i ++){
 		IffChunk* chunk = chunkRoot->childs[i];
 		if (chunk->id != IdToUInt("FORM")){
@@ -203,12 +198,13 @@ void ConvAssetManager::ReadFigures(const IffChunk* root){
 }
 
 //PFIG
-void ConvAssetManager::ReadPFigures(const IffChunk* root){
-
+void ConvAssetManager::ReadPFigures(const IffChunk* root)
+{
 }
 
 //Face palettes FCPL
-void ConvAssetManager::ReadFCPL(const IffChunk* root){
+void ConvAssetManager::ReadFCPL(const IffChunk* root)
+{
 	for(size_t i=0 ; i < root->childs.size() ; i ++){
 		//Game.Log("FCPL %lu: %s %2X\n",root->childs[i]->size,root->childs[i]->data,*(root->childs[i]->data+8));
 		FacePalette* pal = new FacePalette();
@@ -217,18 +213,15 @@ void ConvAssetManager::ReadFCPL(const IffChunk* root){
 		pal->index = *(root->childs[i]->data+8);
 		this->facePalettes[pal->name] = pal;
 	}
-
 }
 
 //FGPL I have no idea what is in there.
-void ConvAssetManager::ReadFGPL(const IffChunk* root){
-
+void ConvAssetManager::ReadFGPL(const IffChunk* root)
+{
 }
 
-
-
-void ConvAssetManager::BuildDB(void){
-
+void ConvAssetManager::BuildDB()
+{
 	//This is were the background shapes are stored.
 	TreEntry* convShapEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONVSHPS.PAK");
 	convShps.InitFromRAM("CONVSHPS.PAK",convShapEntry->data,convShapEntry->size);
@@ -263,5 +256,4 @@ void ConvAssetManager::BuildDB(void){
 	ReadFCPL(convDataLexer.GetChunkByID("FCPL"));  //Face Conv Palette normal and night
 	//I have no idea what is in there.
 	ReadFGPL(convDataLexer.GetChunkByID("FGPL"));  //Face Game palette normal
-
 }

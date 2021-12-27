@@ -69,16 +69,16 @@ void SCTrainingMenu::Init()
 		//Game.MakeActivity<SCSelectWeaponF16>();
 		Game.MakeActivity<SCStrike>();
 	});
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(1).data, trButtonsPack.GetEntry(1).size,&sanDPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(2).data, trButtonsPack.GetEntry(2).size,&sanDPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(1),&sanDPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(2),&sanDPosition);
     buttons.push_back(button);
     
     button = new SCButton();
     Point2D dogDDimension = {130, 15} ;
     Point2D dogDPosition = {positionBoard.x+155,positionBoard.y+9};
 	button->InitBehavior(dogDPosition,dogDDimension, [] {});
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(3).data, trButtonsPack.GetEntry(3).size,&dogDPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(4).data, trButtonsPack.GetEntry(4).size,&dogDPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(3),&dogDPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(4),&dogDPosition);
     button->SetEnable(false);
     buttons.push_back(button);
     
@@ -86,8 +86,8 @@ void SCTrainingMenu::Init()
     Point2D exitDDimension = {60, 15} ;
     Point2D exitDPosition = {positionBoard.x+155,positionBoard.y+23};
 	button->InitBehavior(exitDPosition,exitDDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(5).data, trButtonsPack.GetEntry(5).size,&exitDPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(6).data, trButtonsPack.GetEntry(6).size,&exitDPosition);
+	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(5),&exitDPosition);
+	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(6),&exitDPosition);
     buttons.push_back(button);
 }
 

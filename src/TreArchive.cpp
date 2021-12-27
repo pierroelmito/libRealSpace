@@ -9,68 +9,61 @@
 #include "precomp.h"
 
 
-TreArchive::TreArchive():
-    initalizedFromFile(false),
-    valid(false)
+TreArchive::TreArchive()
 {
-
     this->path[0] = '\0';
 }
 
-TreArchive::~TreArchive(){
-    
+TreArchive::~TreArchive()
+{
     if (initalizedFromFile)
         delete[] this->data;
-    
-    for(size_t i=0 ; i < entries.size() ; i++){
+	for(size_t i=0 ; i < entries.size() ; i++){
         delete entries[i];
     }
 }
 
-bool TreArchive::InitFromFile(const char* filepath){
-    
+bool TreArchive::InitFromFile(const char* filepath)
+{
     char fullPath[512] ;
     fullPath[0] = '\0';
-    
-    strcat(fullPath, GetBase());
+
+	strcat(fullPath, GetBase());
     strcat(fullPath, filepath);
-    
-    
-    FILE* file = fopen(fullPath, "r");
-    
-    if (!file){
+
+	FILE* file = fopen(fullPath, "r");
+
+	if (!file){
         printf("Unable to open TRE archive: '%s'.\n",filepath);
         return false;
     }
-    
-    fseek(file, 0,SEEK_END);
+
+	fseek(file, 0,SEEK_END);
     size_t fileSize = ftell(file);
     fseek(file,0 ,SEEK_SET);
     
     uint8_t* fileData = new uint8_t[fileSize];
     fread(fileData, 1, fileSize, file);
-    
-    
-    InitFromRAM(filepath,fileData,fileSize);
-    
-    
-    fclose(file);
-    
-    return true;
+
+	InitFromRAM(filepath,fileData,fileSize);
+
+	fclose(file);
+
+	return true;
 }
 
-void TreArchive::InitFromRAM(const char* name,uint8_t* data, size_t size){
-    
+void TreArchive::InitFromRAM(const char* name,uint8_t* data, size_t size)
+{
     strcpy(this->path, name);
-    
-    this->data = data;
+
+	this->data = data;
     this->size = size;
-    
-    Parse();
+
+	Parse();
 }
 
-
-void TreArchive::ReadEntry(ByteStream* stream, TreEntry* entry){
+void TreArchive::ReadEntry(ByteStream* stream, TreEntry* entry)
+{
     /*The format of a TRE entry is (see doc/p1_tre_format.txt):
      
      data type    |     size      |       description

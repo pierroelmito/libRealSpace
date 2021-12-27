@@ -9,6 +9,11 @@
 #pragma once
 
 #include <cstring>
+#include <cstdint>
+#include <cstdio>
+
+#include <vector>
+#include <map>
 
 struct Char_String_Comparator
 {
@@ -18,19 +23,17 @@ struct Char_String_Comparator
     }
 };
 
-struct TreEntry{
-    uint8_t     unknownFlag;
-    char        name[65];
-    size_t      size;
-    uint8_t*    data;
+struct TreEntry
+{
+	uint8_t* data{ nullptr };
+	size_t size{ 0 };
+	uint8_t unknownFlag{ 0 };
+	char name[65]{};
 };
 
-
-
-class TreArchive{
-    
+class TreArchive
+{
 public:
-    
      TreArchive();
     ~TreArchive();
  
@@ -63,24 +66,21 @@ public:
     inline bool IsValid(void){ return this->valid;}
     
 private:
-    
-    bool valid;
-    
-    std::vector<TreEntry*> entries;
-    
-    void ReadEntry(ByteStream* stream, TreEntry* entry);
+
+	bool valid{ false };
+
+	std::vector<TreEntry*> entries;
+
+	void ReadEntry(ByteStream* stream, TreEntry* entry);
     void Parse(void);
-    
-    //
+
+	//
     char path[512];
     uint8_t* data;
     size_t   size;
-    
-    
-    
-    // allows to know if we should free the TRE data
-    bool initalizedFromFile ;
-    
+
+	// allows to know if we should free the TRE data
+	bool initalizedFromFile{ false };
 
     std::map<const char*,TreEntry*,Char_String_Comparator> mappedEntries;
 };

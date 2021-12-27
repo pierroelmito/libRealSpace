@@ -110,8 +110,12 @@ void RLEShape::Init(uint8_t* idata, size_t isize)
 	data = stream.GetPosition();
 }
 
+void RLEShape::InitWithPosition(const ByteSlice& bytes,Point2D* position)
+{
+	return InitWithPositionOld(bytes.data, bytes.size, position);
+}
 
-void RLEShape::InitWithPosition(uint8_t* idata, size_t isize,Point2D* position )
+void RLEShape::InitWithPositionOld(uint8_t* idata, size_t isize,Point2D* position)
 {
 	Init(idata,isize);
 	SetPosition(position);

@@ -12,60 +12,56 @@
 
 const char* const CURSOR_SHAPE_PATH = "..\\..\\DATA\\MOUSE.SHP";
 
-SCMouse::SCMouse() :
-  mode(CURSOR)
+SCMouse::SCMouse()
 {
-    
 }
 
-SCMouse::~SCMouse(){
-    
+SCMouse::~SCMouse()
+{
 }
 
-void SCMouse::Init(void){
-    
-    
-    TreEntry* cursorShape   = Assets.tres[AssetManager::TRE_MISC]->GetEntryByName(CURSOR_SHAPE_PATH);
-    
-    PakArchive cursors ;
-    cursors.InitFromRAM("MOUSE.SHP",cursorShape->data,cursorShape->size);
-    
-    RLEShape* shape;
-    
-    for (int i = 0 ; i < 4; i++) {
-        shape = new RLEShape();
+void SCMouse::Init(void)
+{
+	TreEntry* cursorShape   = Assets.tres[AssetManager::TRE_MISC]->GetEntryByName(CURSOR_SHAPE_PATH);
+
+	PakArchive cursors ;
+	cursors.InitFromRAM("MOUSE.SHP",cursorShape->data,cursorShape->size);
+
+	RLEShape* shape;
+
+	for (int i = 0 ; i < 4; i++) {
+		shape = new RLEShape();
 		shape->Init(cursors.GetEntry(i));
-        appearances[i] = shape;
-    }
+		appearances[i] = shape;
+	}
 }
 
-void SCMouse::Draw(void){
-    
-    if (! IsVisible())
-        return;
-    
-    // We need to draw the cursor a little bit higher left than the mouse
-    // position so it is centered.
-    Point2D cursorPos = this->position;
-    cursorPos.x -= 4;
-    cursorPos.y -= 4;
-    
-    
-    //If the mouse is over a clickable button, the current appearance has already been selected.
-    if (mode == CURSOR){
-        appearances[1]->SetPosition(&cursorPos);
+void SCMouse::Draw()
+{
+	if (! IsVisible())
+		return;
+
+	// We need to draw the cursor a little bit higher left than the mouse
+	// position so it is centered.
+	Point2D cursorPos = this->position;
+	cursorPos.x -= 4;
+	cursorPos.y -= 4;
+
+	//If the mouse is over a clickable button, the current appearance has already been selected.
+	if (mode == CURSOR){
+		appearances[1]->SetPosition(&cursorPos);
 		VGA.DrawShape(*appearances[1]);
-    }
-    
-    if (mode == VISOR){
-        appearances[0]->SetPosition(&cursorPos);
+	}
+
+	if (mode == VISOR){
+		appearances[0]->SetPosition(&cursorPos);
 		VGA.DrawShape(*appearances[0]);
-        
-    }
+	}
 }
 
-void SCMouse::FlushEvents(void){
-    for (size_t i = 0 ; i < 3 ; i++) {
-        buttons[i].event = MouseButton::NONE;
-    }
+void SCMouse::FlushEvents(void)
+{
+	for (size_t i = 0 ; i < 3 ; i++) {
+		buttons[i].event = MouseButton::NONE;
+	}
 }
