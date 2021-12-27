@@ -9,15 +9,12 @@
 #include "precomp.h"
 
 
-SCConvPlayer::SCConvPlayer():
-    conversationID(0),
-    initialized(false)
+SCConvPlayer::SCConvPlayer()
 {
-    
 }
 
-SCConvPlayer::~SCConvPlayer(){
-    
+SCConvPlayer::~SCConvPlayer()
+{
 }
 
 #define GROUP_SHOT              0x00
@@ -239,8 +236,7 @@ void SCConvPlayer::SetID(int32_t id){
 }
 
 void SCConvPlayer::Init( ){
-    VGAPalette* rendererPalette = VGA.GetPalette();
-    this->palette = *rendererPalette;
+	this->palette = VGA.GetPalette();
     
     currentFrame.font = FontManager.GetFont("");
 }
@@ -373,7 +369,7 @@ void SCConvPlayer::RunFrame(void){
         ByteStream paletteReader;
         paletteReader.Set((*currentFrame.bgPalettes)[i]);
         this->palette.ReadPatch(&paletteReader);
-        VGA.SetPalette(&this->palette);
+		VGA.SetPalette(this->palette);
 
     }
     
@@ -381,7 +377,7 @@ void SCConvPlayer::RunFrame(void){
     //Draw static
     for (size_t i = 0; i < currentFrame.bgLayers->size(); i++) {
         RLEShape* shape = (*currentFrame.bgLayers)[i];
-        VGA.DrawShape(shape);
+		VGA.DrawShape(*shape);
     }
     
     
@@ -433,7 +429,7 @@ void SCConvPlayer::RunFrame(void){
         for (size_t i=1; i< 3; i++) {
            RLEShape* s = currentFrame.face->appearances->GetShape(i);
            s->SetPositionX(pos);
-           VGA.DrawShape(s);
+		   VGA.DrawShape(*s);
         }
         
         //Taking animation
@@ -452,7 +448,7 @@ void SCConvPlayer::RunFrame(void){
             
             RLEShape* s = currentFrame.face->appearances->GetShape(3+(SDL_GetTicks()/100)%10);
            s->SetPositionX(pos);
-            VGA.DrawShape(s);
+			VGA.DrawShape(*s);
             
            
         }
@@ -507,7 +503,7 @@ void SCConvPlayer::RunFrame(void){
         //for (size_t i=36; i< 37; i++) {
             RLEShape* s = currentFrame.face->appearances->GetShape(35);
            s->SetPositionX(pos);
-            VGA.DrawShape(s);
+			VGA.DrawShape(*s);
         //}
         
         //38 sunglasses
@@ -516,7 +512,7 @@ void SCConvPlayer::RunFrame(void){
         for (size_t i=41; i< 40; i++) {
             RLEShape* s = currentFrame.face->appearances->GetShape(i);
            s->SetPositionX(pos);
-            VGA.DrawShape(s);
+			VGA.DrawShape(*s);
         }
         
         //40 to 54 ????

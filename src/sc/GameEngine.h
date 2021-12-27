@@ -24,11 +24,17 @@ public:
     void LogError(const char* text, ...);
     
     //Add an activity on the top of the stack.
+	template <class T>
+	void MakeActivity() {
+		T* activity = new T();
+		activity->Init();
+		AddActivity(activity);
+	}
     void AddActivity(IActivity* activity);
     void StopTopActivity(void);
     IActivity* GetCurrentActivity(void);
     
-    void PumpEvents(void);
+	bool PumpEvents(void);
     
 private:
     

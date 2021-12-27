@@ -21,9 +21,9 @@ RLEShape* RSFont::GetShapeForChar(char c){
     return this->letters[c];
 }
 
-void RSFont::InitFromPAK(PakArchive* fontArchive){
-    for (size_t i = 0 ; i < fontArchive->GetNumEntries(); i++) {
-        PakEntry* entry = fontArchive->GetEntry(i);
+void RSFont::InitFromPAK(const PakArchive& fontArchive){
+	for (size_t i = 0 ; i < fontArchive.GetNumEntries(); i++) {
+		PakEntry* entry = fontArchive.GetEntry(i);
         RLEShape* s = new RLEShape();
         s->Init(entry->data,entry->size);
         letters.push_back(s);

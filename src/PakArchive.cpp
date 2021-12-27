@@ -132,6 +132,11 @@ void PakArchive::InitFromRAM(const char* name,uint8_t* data, size_t size){
 
 }
 
+void PakArchive::InitFromPakEntry(const char* name, const PakEntry* pe)
+{
+	InitFromRAM(name, pe->data, pe->size);
+}
+
 bool PakArchive::Decompress(const char* dstDirectory,const char* extension){
     
     const char* suffix = ".CONTENT/";
@@ -200,11 +205,11 @@ bool PakArchive::Decompress(const char* dstDirectory,const char* extension){
     return true;
 }
 
-size_t PakArchive::GetNumEntries(void){
+size_t PakArchive::GetNumEntries(void) const {
     return this->entries.size();
 }
 
-PakEntry* PakArchive::GetEntry(size_t index){
+PakEntry* PakArchive::GetEntry(size_t index) const {
     return this->entries[index];
 }
 

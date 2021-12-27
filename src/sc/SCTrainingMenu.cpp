@@ -9,33 +9,11 @@
 #include "precomp.h"
 
 
-
-
 SCTrainingMenu::SCTrainingMenu(){
 }
 
 SCTrainingMenu::~SCTrainingMenu(){
 }
-
-void OnDogFight(){
-    
-}
-
-void OnSearchAndDestroy(){
-    //SCSelectWeaponF16* select = new SCSelectWeaponF16();
-   // select->Init();
-   // Game.AddActivity(select);
-    
-    
-    SCStrike* strike = new SCStrike();
-    strike->Init();
-    Game.AddActivity(strike);
-}
-
-static void OnExitTraining(void){
-    Game.StopTopActivity();
-}
-
 
 void SCTrainingMenu::Init( ){
 
@@ -90,7 +68,10 @@ void SCTrainingMenu::Init( ){
     button = new SCButton();
     Point2D sandDDimension = {130, 15} ;
     Point2D sanDPosition = {positionBoard.x+16,positionBoard.y+9};
-    button->InitBehavior(OnSearchAndDestroy, sanDPosition,sandDDimension);
+	button->InitBehavior(sanDPosition,sandDDimension, [] {
+		//Game.MakeActivity<SCSelectWeaponF16>();
+		Game.MakeActivity<SCStrike>();
+	});
     button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(1)->data, trButtonsPack.GetEntry(1)->size,&sanDPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(2)->data, trButtonsPack.GetEntry(2)->size,&sanDPosition);
     buttons.push_back(button);
@@ -98,7 +79,7 @@ void SCTrainingMenu::Init( ){
     button = new SCButton();
     Point2D dogDDimension = {130, 15} ;
     Point2D dogDPosition = {positionBoard.x+155,positionBoard.y+9};
-    button->InitBehavior(OnDogFight, dogDPosition,dogDDimension);
+	button->InitBehavior(dogDPosition,dogDDimension, [] {});
     button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(3)->data, trButtonsPack.GetEntry(3)->size,&dogDPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(4)->data, trButtonsPack.GetEntry(4)->size,&dogDPosition);
     button->SetEnable(false);
@@ -107,7 +88,7 @@ void SCTrainingMenu::Init( ){
     button = new SCButton();
     Point2D exitDDimension = {60, 15} ;
     Point2D exitDPosition = {positionBoard.x+155,positionBoard.y+23};
-    button->InitBehavior(OnExitTraining, exitDPosition,exitDDimension);
+	button->InitBehavior(exitDPosition,exitDDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(5)->data, trButtonsPack.GetEntry(5)->size,&exitDPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(6)->data, trButtonsPack.GetEntry(6)->size,&exitDPosition);
     buttons.push_back(button);
@@ -119,14 +100,14 @@ void SCTrainingMenu::RunFrame(void){
     VGA.Activate();
     VGA.Clear();
     
-    VGA.SetPalette(&this->palette);
+	VGA.SetPalette(this->palette);
     
     //Draw static
-    VGA.DrawShape(&background);
-    VGA.DrawShape(&title);
-    VGA.DrawShape(&board);
-    
-    DrawButtons();
+	VGA.DrawShape(background);
+	VGA.DrawShape(title);
+	VGA.DrawShape(board);
+
+	DrawButtons();
     
     //Draw Mouse
     Mouse.Draw();

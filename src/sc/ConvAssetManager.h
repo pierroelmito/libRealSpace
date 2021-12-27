@@ -16,35 +16,35 @@
 #define CONV_INTERLETTER_SPACE  3
 #define CONV_SPACE_SIZE  5
 
-typedef struct CharFace{
+struct CharFace{
     
     char name[9];
     RSImageSet* appearances;
     // size_t paletteID;
-} CharFace;
+};
 
 
-typedef struct FacePalette{
+struct FacePalette{
     
     char name[9];
     uint8_t index;
     
-} FacePalette;
+};
 
-typedef struct CharFigure{
+struct CharFigure{
     
     char name[9];
     RLEShape* appearance;
     size_t paletteID;
     
-} CharFigure;
+};
 
 
-typedef struct ConvBackGround{
+struct ConvBackGround{
     std::vector<RLEShape*> layers;
     std::vector<uint8_t*> palettes;
     char name[9];
-} ConvBackGround;
+};
 
 
 

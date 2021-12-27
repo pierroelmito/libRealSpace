@@ -20,10 +20,10 @@ public:
     void Init(void);
     
     void Activate(void);
-    void SetPalette(VGAPalette* newPalette);
-    VGAPalette* GetPalette(void);
+	void SetPalette(const VGAPalette& newPalette);
+	const VGAPalette& GetPalette() const;
     
-    bool DrawShape(RLEShape* shape);
+	bool DrawShape(RLEShape& shape);
     void DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_t start, uint32_t size,size_t interLetterSpace, size_t spaceSize);
     
     void VSync(void);

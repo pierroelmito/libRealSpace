@@ -11,8 +11,8 @@
 
 //TODO: CHANGE CONSTRUCTORE TO USE IFF and MapImageEntry!!!
 
-typedef struct{
-    
+struct MapImageEntry
+{
     uint16_t startingIDs;
     char name[8];
     
@@ -22,7 +22,7 @@ typedef struct{
     uint8_t unknown2;
     uint8_t unknown3;
     
-} MapImageEntry;
+};
 
 class RSMapTextureSet{
   

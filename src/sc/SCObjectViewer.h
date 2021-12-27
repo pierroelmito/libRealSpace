@@ -26,14 +26,14 @@ public:
 private:
 
     
-    typedef struct RSShowCase{
+	struct RSShowCase{
         
         float cameraDist;
         RSEntity* entity;
         
         char displayName[20];
         
-    } RSShowCase;
+	};
     
     std::vector<RSShowCase> showCases;
     

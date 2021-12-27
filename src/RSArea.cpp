@@ -143,13 +143,13 @@ void RSArea::ParseMetadata(){
     }
     
     IffChunk* txmsInfo = txms->childs[0];
-    if (txmsInfo->id != 'INFO'){
+	if (txmsInfo->id != IdToUInt("INFO")) {
         printf("Error: First child in TXMS is not an INFO chunk ?!\n");
         return;
     }
     
     IffChunk* txmsMaps = txms->childs[1];
-    if (txmsMaps->id != 'MAPS'){
+	if (txmsMaps->id != IdToUInt("MAPS")) {
         printf("Error: Second child in TXMS is not an MAP chunk ?!\n");
         return;
     }
@@ -311,35 +311,28 @@ void RSArea::ParseObjects(){
 }
 
 
-void RSArea::ParseTriFile(PakEntry* entry){
-    
-    Point3D* vertices = new Point3D[300];
-    
-    ByteStream stream(entry->data);
-    
-    stream.ReadInt32LE();
-    stream.ReadInt32LE();
-    
-    for (int i=0 ; i < 300; i++) {
-        Point3D* v = &vertices[i];
-        int32_t coo ;
-        
-        coo = stream.ReadInt32LE();
-        v->x = (coo>>8) + (coo&0x000000FF)/255.0;
-        v->x /= 2000;
-        coo = stream.ReadInt32LE();
-        v->z = (coo>>8) + (coo&0x000000FF)/255.0;
-        v->z /= 2000;
-        
-        coo = stream.ReadInt32LE();
-        v->y =   (coo>>8) + (coo&0x000000FF)/255.0;
-        v->y /= 2000;
-    }
-    
-    //Render them
-    Renderer.RenderVerticeField(vertices,300);
-    
-    delete[] vertices;
+void RSArea::ParseTriFile(PakEntry* entry)
+{
+	const auto readCoord = [] (int32_t coo) -> float {
+		return (coo>>8) + (coo&0x000000FF)/255.0;
+	};
+
+	Point3D* vertices = new Point3D[300];
+
+	ByteStream stream(entry->data);
+	stream.ReadInt32LE();
+	stream.ReadInt32LE();
+	for (int i=0 ; i < 300; i++) {
+		const float x = readCoord(stream.ReadInt32LE()) / 2000;
+		const float z = readCoord(stream.ReadInt32LE()) / 2000;
+		const float y = readCoord(stream.ReadInt32LE()) / 2000;
+		vertices[i] = { x, y, z };
+	}
+
+	//Render them
+	Renderer.RenderVerticeField(vertices, 300);
+
+	delete[] vertices;
 }
 
 
@@ -496,13 +489,12 @@ void RSArea::ParseBlocks(size_t lod,PakEntry* entry, size_t blockDim){
                     - text
             */
             
-            vertex->v.y = height;//-vertex->text * 10;//height ;
+			vertex->v.Y = height;//-vertex->text * 10;//height ;
             
 #define BLOCK_WIDTH (512)
-            vertex->v.x = i % 18 * BLOCK_WIDTH + (vertexID % blockDim ) / (float)(blockDim) * BLOCK_WIDTH ;
-            vertex->v.z = i / 18 * BLOCK_WIDTH + (vertexID / blockDim ) / (float)(blockDim) *BLOCK_WIDTH ;
+			vertex->v.X = i % 18 * BLOCK_WIDTH + (vertexID % blockDim ) / (float)(blockDim) * BLOCK_WIDTH ;
+			vertex->v.Z = i / 18 * BLOCK_WIDTH + (vertexID / blockDim ) / (float)(blockDim) *BLOCK_WIDTH ;
            
-            
             vertex->color[0] = t->r/255.0f;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
             vertex->color[1] = t->g/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
             vertex->color[2] = t->b/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
@@ -587,27 +579,23 @@ void RSArea::AddJet(TreArchive* tre, const char* name, Quaternion* orientation, 
     jets.push_back(entity);
 }
 
-void RSArea::AddJets(void){
-    
-    TreArchive tre;
-    tre.InitFromFile("OBJECTS.TRE");
-    
-    Quaternion rot;
-    Matrix f16m;
-    f16m.Identity();
-    f16m.SetRotationX(0.5f);
-    
-    rot.FromMatrix(&f16m);
-    Point3D pos ;
-    pos = {4066,95,2980};
-    AddJet(&tre,"..\\..\\DATA\\OBJECTS\\F-16DES.IFF",&rot,&pos);
-    
-    
-    f16m.SetRotationX(-0.5f);
-    rot.FromMatrix(&f16m);
-    pos = {4010,100,2990};
-    AddJet(&tre,"..\\..\\DATA\\OBJECTS\\F-22.IFF",&rot,&pos);
-    
+void RSArea::AddJets()
+{
+	TreArchive tre;
+	tre.InitFromFile("OBJECTS.TRE");
+
+	const float angle = 15.0f;
+
+	Matrix f16m = HMM_Rotate(angle, { 1, 0, 0 });
+	Quaternion rot = HMM_Mat4ToQuaternion(f16m);
+	Point3D pos = {4066,95,2980};
+	AddJet(&tre,"..\\..\\DATA\\OBJECTS\\F-16DES.IFF",&rot,&pos);
+
+	f16m = HMM_Rotate(-angle, { 1, 0, 0 });
+	rot = HMM_Mat4ToQuaternion(f16m);
+	pos = {4010,100,2990};
+	AddJet(&tre,"..\\..\\DATA\\OBJECTS\\F-22.IFF",&rot,&pos);
+
     //pos = {3886,300,2886};
     //AddJet(&tre,"..\\..\\DATA\\OBJECTS\\MIG29.IFF",&rot,&pos);
     
@@ -616,7 +604,6 @@ void RSArea::AddJets(void){
     //const char* jetPath = "..\\..\\DATA\\OBJECTS\\YF23.IFF";
     //const char* jetPath = "..\\..\\DATA\\OBJECTS\\MIG21.IFF";
     //const char* jetPath = "..\\..\\DATA\\OBJECTS\\MIG29.IFF";
-
 }
 
 void RSArea::InitFromPAKFileName(const char* pakFilename){
@@ -691,12 +678,4 @@ void RSArea::InitFromPAKFileName(const char* pakFilename){
     AddJets();
     
     
-}
-
-size_t RSArea::GetNumJets(void){
-    return jets.size();
-}
-
-RSEntity* RSArea::GetJet(size_t jetID){
-    return jets[jetID];
 }

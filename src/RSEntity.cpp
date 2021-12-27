@@ -76,33 +76,23 @@ void RSEntity::ParseTXMS(IffChunk* chunk){
     
 }
 
-void RSEntity::ParseVERT(IffChunk* chunk){
-    
-    if (chunk==NULL)
-        return;
-    
-    ByteStream stream(chunk->data);
-    
-    size_t numVertice = chunk->size/12;
-    
-    for (int i = 0; i < numVertice ; i++) {
-        
-        int32_t coo ;
-        
-        
-        Point3D vertex ;
-        
-        coo = stream.ReadInt32LE();
-        vertex.z = (coo>>8) + (coo&0x000000FF)/255.0;
-        
-        coo = stream.ReadInt32LE();
-        vertex.x = (coo>>8) + (coo&0x000000FF)/255.0;
-        
-        coo = stream.ReadInt32LE();
-        vertex.y = (coo>>8) + (coo&0x000000FF)/255.0;
-        AddVertex(&vertex);
-    }
-    
+void RSEntity::ParseVERT(IffChunk* chunk)
+{
+	if (chunk==NULL)
+		return;
+
+	const auto readCoord = [] (int32_t coo) -> float {
+		return (coo>>8) + (coo&0x000000FF)/255.0;
+	};
+
+	ByteStream stream(chunk->data);
+	const size_t numVertice = chunk->size/12;
+	for (int i = 0; i < numVertice ; i++) {
+		const float x = readCoord(stream.ReadInt32LE());
+		const float y = readCoord(stream.ReadInt32LE());
+		const float z = readCoord(stream.ReadInt32LE());
+		AddVertex({ y, z, x }); // Pierro: need to swizzle coord, why?
+	}
 }
 
 void RSEntity::ParseLVL(IffChunk* chunk){
@@ -236,32 +226,32 @@ BoudingBox* RSEntity::GetBoudingBpx(void){
 
 void RSEntity::CalcBoundingBox(void){
     
-    this->bb.min.x = FLT_MAX;
-    this->bb.min.y = FLT_MAX;
-    this->bb.min.z = FLT_MAX;
+	this->bb.min.X = FLT_MAX;
+	this->bb.min.Y = FLT_MAX;
+	this->bb.min.Z = FLT_MAX;
     
-    this->bb.max.x = FLT_MIN;
-    this->bb.max.y = FLT_MIN;
-    this->bb.max.z = FLT_MIN;
+	this->bb.max.X = FLT_MIN;
+	this->bb.max.Y = FLT_MIN;
+	this->bb.max.Z = FLT_MIN;
     
     
     for(size_t i =0; i < this->vertices.size() ; i++){
         
         Point3D vertex = vertices[i];
         
-        if (bb.min.x > vertex.x)
-            bb.min.x = vertex.x;
-        if (bb.min.y > vertex.y)
-            bb.min.y = vertex.y;
-        if (bb.min.z > vertex.z)
-            bb.min.z = vertex.z;
+		if (bb.min.X > vertex.X)
+			bb.min.X = vertex.X;
+		if (bb.min.Y > vertex.Y)
+			bb.min.Y = vertex.Y;
+		if (bb.min.Z > vertex.Z)
+			bb.min.Z = vertex.Z;
         
-        if (bb.max.x < vertex.x)
-            bb.max.x = vertex.x;
-        if (bb.max.y < vertex.y)
-            bb.max.y = vertex.y;
-        if (bb.max.z < vertex.z)
-            bb.max.z = vertex.z;
+		if (bb.max.X < vertex.X)
+			bb.max.X = vertex.X;
+		if (bb.max.Y < vertex.Y)
+			bb.max.Y = vertex.Y;
+		if (bb.max.Z < vertex.Z)
+			bb.max.Z = vertex.Z;
         
     }
 
@@ -292,8 +282,8 @@ void RSEntity::AddImage(RSImage* image){
     this->images.push_back(image);
 }
 
-void RSEntity::AddVertex(Point3D* vertex){
-    this->vertices.push_back(*vertex);
+void RSEntity::AddVertex(const Point3D& vertex){
+	this->vertices.push_back(vertex);
 }
 
 void RSEntity::AddUV(uvxyEntry* uv){

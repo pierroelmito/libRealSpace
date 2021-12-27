@@ -8,6 +8,9 @@
 
 #include "precomp.h"
 
+#include "IActivity.h"
+
+#include "main.h"
 
 IActivity::IActivity(){
     
@@ -67,9 +70,9 @@ void IActivity::DrawButtons(void){
     for(size_t i = 0 ; i < buttons.size() ; i++){
         SCButton* button = buttons[i];
         if (button->IsEnabled())
-            VGA.DrawShape(&button->appearance[button->GetAppearance()]);
+			VGA.DrawShape(button->appearance[button->GetAppearance()]);
         else
-            VGA.DrawShape(&button->appearance[SCButton::Appearance::APR_DOWN]);
+			VGA.DrawShape(button->appearance[SCButton::Appearance::APR_DOWN]);
     }
     
 }

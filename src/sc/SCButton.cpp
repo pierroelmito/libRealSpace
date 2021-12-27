@@ -8,20 +8,18 @@
 
 #include "precomp.h"
 
-
-SCButton::SCButton():
-    enabled(true){
-    
+SCButton::SCButton()
+{
 }
 
-SCButton::~SCButton(){
-    
+SCButton::~SCButton()
+{
 }
 
-void SCButton::InitBehavior(ActionFunction fct, Point2D position,Point2D dimension){
-    this->onClick = fct;
-    this->position = position;
-    this->dimension = dimension;
+void SCButton::InitBehavior(Point2D position, Point2D dimension, ActionFunction&& fct){
+	this->onClick = fct;
+	this->position = position;
+	this->dimension = dimension;
 }
 
 void SCButton::OnAction(void){

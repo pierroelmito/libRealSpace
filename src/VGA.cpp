@@ -24,12 +24,10 @@ void RSVGA::Clear(void){
     //glClear(GL_COLOR_BUFFER_BIT);
 }
 
-bool RSVGA::DrawShape(RLEShape* shape){
-    
-    
+bool RSVGA::DrawShape(RLEShape& shape)
+{
     size_t byteRead;
-    return shape->Expand(GetFrameBuffer(), &byteRead);
-    
+	return shape.Expand(GetFrameBuffer(), &byteRead);
 }
 
 void RSVGA::Init(void){
@@ -84,12 +82,13 @@ void RSVGA::Activate(void){
     glEnable(GL_TEXTURE_2D);
 }
 
-void RSVGA::SetPalette(VGAPalette* newPalette){
-    this->palette = *newPalette;
+void RSVGA::SetPalette(const VGAPalette& newPalette){
+	this->palette = newPalette;
 }
 
-VGAPalette* RSVGA::GetPalette(void){
-    return &palette;
+const VGAPalette& RSVGA::GetPalette() const
+{
+	return palette;
 }
 
 void RSVGA::VSync(void){
@@ -155,7 +154,7 @@ void RSVGA::DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_
             coo->y += 1;
         
         shape->SetPosition(coo);
-        DrawShape(shape);
+		DrawShape(*shape);
         coo->y = lineHeight;
         
         if (chartoDraw == ' ')

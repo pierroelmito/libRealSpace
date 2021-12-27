@@ -42,7 +42,7 @@ void GameEngine::Init(){
     
 }
 
-void GameEngine::PumpEvents(void){
+bool GameEngine::PumpEvents(void){
     
     SDL_PumpEvents();
     
@@ -88,7 +88,10 @@ void GameEngine::PumpEvents(void){
     for(int i= 0 ; i < numKeybEvents ; i++){
         SDL_Event* event = &keybEvents[i];
         switch (event->type) {
-            default:
+			case SDL_KEYDOWN:
+				if (event->key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+				return false;
+			default:
                 break;
         }
     }
@@ -119,13 +122,13 @@ void GameEngine::PumpEvents(void){
                 if (event->window.event == SDL_WINDOWEVENT_ENTER){
                     Mouse.SetVisible(true);
                     SDL_ShowCursor(SDL_DISABLE);
-                    return;
+					return true;
                 }
                 
                 if (event->window.event == SDL_WINDOWEVENT_LEAVE){
                     Mouse.SetVisible(false);
                     SDL_ShowCursor(SDL_ENABLE);
-                    return;
+					return true;
                 }
                         
                
@@ -136,7 +139,7 @@ void GameEngine::PumpEvents(void){
     }
     
     
-    
+	return true;
 }
 
 
@@ -146,7 +149,8 @@ void GameEngine::Run(){
     
     while (activities.size() > 0) {
         
-        PumpEvents();
+		if (!PumpEvents())
+			break;
         
         //Clear the screen
         //enderer.Clear();

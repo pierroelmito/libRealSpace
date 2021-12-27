@@ -6,8 +6,11 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCAnimationPlayer__
-#define __libRealSpace__SCAnimationPlayer__
+#pragma once
+
+#include <cstdint>
+
+#include "IActivity.h"
 
 class SCAnimationPlayer: public IActivity {
     public :
@@ -21,5 +24,3 @@ class SCAnimationPlayer: public IActivity {
 private:
     
 };
-
-#endif /* defined(__libRealSpace__SCAnimationPlayer__) */

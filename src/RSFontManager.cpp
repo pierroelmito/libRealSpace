@@ -40,7 +40,7 @@ void RSFontManager::Init(void){
     //fontArch.List(stdout);
     
     
-    font.InitFromPAK(&fontArch);
+	font.InitFromPAK(fontArch);
 
 }
 

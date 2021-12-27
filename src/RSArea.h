@@ -13,7 +13,7 @@
 #define  HEIGHT_DIVIDER 17
 
 
-typedef struct MapObject{
+struct MapObject{
     
     char name[9];
     char destroyedName[9];
@@ -22,9 +22,9 @@ typedef struct MapObject{
     
     RSEntity* entity;
     
-} MapObject;
+};
 
-typedef struct AreaBlock{
+struct AreaBlock{
     
     size_t width;
     size_t height;
@@ -38,7 +38,7 @@ typedef struct AreaBlock{
         return &vertice[x + y * this->sideSize];
     }
     
-} AreaBlock;
+};
 
 #define BLOCK_LOD_MAX 0
 #define BLOCK_LOD_MED 1
@@ -71,8 +71,7 @@ public:
     std::vector<MapObject> objects[BLOCKS_PER_MAP];
     float elevation[BLOCKS_PER_MAP];
 
-    size_t GetNumJets(void);
-    RSEntity* GetJet(size_t jetID);
+	const std::vector<RSEntity*>& GetJets() const { return jets; }
     
 private:
     
@@ -101,8 +100,9 @@ private:
     char name[16];
     
     void AddJet(TreArchive* tre, const char* name, Quaternion* orientation, Point3D* position);
-    void AddJets(void);
-    std::vector<RSEntity*> jets;
+	void AddJets();
+
+	std::vector<RSEntity*> jets;
 };
 
 #endif /* defined(__libRealSpace__RSMap__) */

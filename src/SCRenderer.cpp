@@ -8,12 +8,20 @@
 
 #include "precomp.h"
 
+void glVertex(const Point3D& p)
+{
+	glVertex3f(p.X, p.Y, p.Z);
+}
 
+void glLoadMatrixHMM(const Matrix& m)
+{
+	float* p = (float*)m.Elements;
+	glLoadMatrixf(p);
+}
 
-SCRenderer::SCRenderer() :
-   initialized(false){
-       
-    
+SCRenderer::SCRenderer()
+: initialized(false)
+{
 }
 
 SCRenderer::~SCRenderer(){
@@ -28,42 +36,32 @@ VGAPalette* SCRenderer::GetPalette(void){
 }
 
 void SCRenderer::Init(int32_t zoomFactor){
-    
-    this->scale =zoomFactor;
-    
-    int32_t width  = 320 * scale;
+	this->scale =zoomFactor;
+
+	int32_t width  = 320 * scale;
     int32_t height = 200 * scale;
-    
-    //Load the default palette
+
+	//Load the default palette
     IffLexer lexer ;
     lexer.InitFromFile("PALETTE.IFF");
     //lexer.List(stdout);
-    
-    RSPalette palette;
+
+	RSPalette palette;
     palette.InitFromIFF(&lexer);
-    this->palette = *palette.GetColorPalette();
-    
+
+	this->palette = *palette.GetColorPalette();
     this->width = width;
     this->height = height;
-    
-  
-	
-    
+
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
 	//glClearDepth(1.0f);								// Depth Buffer Setup
 	glDisable(GL_DEPTH_TEST);							// Disable Depth Testing
-    
-    
-    
-    camera.SetPersective(50.0f,this->width/(float)this->height,10.0f,12000.0f);
-    
-    
-    
-    light.SetWithCoo(300, 300, 300);
-    
-    
-    
-    initialized = true;
+
+	camera.SetPersective(50.0f,this->width/(float)this->height,10.0f,12000.0f);
+
+	light = { 300, 300, 300 };
+
+	initialized = true;
 }
 
 void SCRenderer::SetClearColor(uint8_t red, uint8_t green, uint8_t blue){
@@ -124,45 +122,25 @@ void SCRenderer::DeleteTextureInGPU(Texture* texture){
 }
 
 
-void SCRenderer::GetNormal(RSEntity* object,Triangle* triangle,Vector3D* normal){
-    
-    //Calculate the normal for this triangle
-    Vector3D edge1 ;
-    edge1 = object->vertices[triangle->ids[0]];
-    edge1.Substract(& object->vertices[triangle->ids[1]]);
-    
-    
-    Vector3D edge2 ;
-    edge2 = object->vertices[triangle->ids[2]];
-    edge2.Substract(& object->vertices[triangle->ids[1]]);
-    
-    *normal = edge1;
-    *normal = normal->CrossProduct(&edge2);
-    normal->Normalize();
-    
-    
-    // All normals are supposed to point outward in modern GPU but SC triangles
+void SCRenderer::GetNormal(RSEntity* object,Triangle* triangle,Vector3D* normal)
+{
+	//Calculate the normal for this triangle
+	Vector3D edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
+	Vector3D edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
+	*normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
+
+	// All normals are supposed to point outward in modern GPU but SC triangles
     // don't have consistent winding. They can be CW or CCW (the back governal of a jet  is
     // typically one triangle that must be visible from both sides !
     // As a result, gouraud shading was probably performed in screen space.
     // How can we replicate this ?
     //        - Take the normal and compare it to the sign of the direction to the camera.
     //        - If the signs don't match: reverse the normal.
-    Point3D cameraPosition= camera.GetPosition();
-    
-    
-    Point3D *vertexOnTriangle = &object->vertices[triangle->ids[0]];
-
-    Point3D cameraDirection;
-    cameraDirection = cameraPosition;
-    cameraDirection.Substract(vertexOnTriangle);
-    cameraDirection.Normalize();
-    
-    if (cameraDirection.DotProduct(normal) < 0){
-        normal->Negate();
-    }
-
-    
+	const Point3D& cameraPosition = camera.position;
+	const Point3D& vertexOnTriangle = object->vertices[triangle->ids[0]];
+	Point3D cameraDirection = HMM_NormalizeVec3(cameraPosition - vertexOnTriangle);
+	if (HMM_Dot(cameraDirection, *normal) < 0)
+		*normal *= -1.0f;
 }
 
 void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
@@ -228,99 +206,61 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
             
             glBegin(GL_TRIANGLES);
             for(int j=0 ; j < 3 ; j++){
-                
-                Point3D vertice = object->vertices[triangle->ids[j]];
-                
-                Vector3D lighDirection;
-                lighDirection = light;
-                lighDirection.Substract(&vertice);
-                lighDirection.Normalize();
-                
-                float lambertianFactor = lighDirection.DotProduct(&normal);
+				Point3D vertice = object->vertices[triangle->ids[j]];
+				Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
+
+				float lambertianFactor = HMM_Dot(lighDirection, normal);
                 if (lambertianFactor < 0  )
                     lambertianFactor = 0;
-                
                 lambertianFactor+= ambientLamber;
                 if (lambertianFactor > 1)
                     lambertianFactor = 1;
-                
-                
-                
-                glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
+
+				glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
                 glTexCoord2f(textInfo->uvs[j].u/(float)texture->width, textInfo->uvs[j].v/(float)texture->height);
-                glVertex3f(object->vertices[triangle->ids[j]].x,
-                           object->vertices[triangle->ids[j]].y,
-                           object->vertices[triangle->ids[j]].z);
+				glVertex(object->vertices[triangle->ids[j]]);
             }
             glEnd();
-            
-            
-        }
-        
-        
+		}
         glDisable(GL_TEXTURE_2D);
         glDisable(GL_BLEND);
     }
 
-
-    
-    
-
-   
     //Pass 3: Let's draw the transparent stuff render RSEntity::TRANSPARENT)
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
     glBlendEquation(GL_ADD);
-
     //glDepthFunc(GL_LESS);
-        
-        
-    for(int i = 0 ; i < lod->numTriangles ; i++){
-        
-        uint16_t triangleID = lod->triangleIDs[i];
-        
-        Triangle* triangle = &object->triangles[triangleID];
-        
-        if (triangle->property != RSEntity::TRANSPARENT)
-            continue;
-        
-        
-        Vector3D normal;
-        GetNormal(object,triangle,&normal);
-        
-        glBegin(GL_TRIANGLES);
-        for(int j=0 ; j < 3 ; j++){
-            
-            
-            
-            Point3D vertice = object->vertices[triangle->ids[j]];
-            
-            
-            Vector3D sunDirection;
-            sunDirection = light;
-            sunDirection.Substract(&vertice);
-            sunDirection.Normalize();
 
-            
-            float lambertianFactor = sunDirection.DotProduct(&normal);
+	for(int i = 0 ; i < lod->numTriangles ; i++) {
+        uint16_t triangleID = lod->triangleIDs[i];
+        Triangle* triangle = &object->triangles[triangleID];
+
+		if (triangle->property != RSEntity::TRANSPARENT)
+            continue;
+
+		Vector3D normal;
+        GetNormal(object,triangle,&normal);
+
+		glBegin(GL_TRIANGLES);
+
+		for(int j=0 ; j < 3 ; j++) {
+            Point3D vertice = object->vertices[triangle->ids[j]];
+			Vector3D sunDirection = HMM_NormalizeVec3(light - vertice);
+
+			float lambertianFactor = HMM_Dot(sunDirection, normal);
             if (lambertianFactor < 0  )
                 lambertianFactor = 0;
-            
             lambertianFactor=0.2f;
-            
-            // int8_t gouraud = 255 * lambertianFactor;
-            
-            
-            //gouraud = 255;
-            
+
+			//int8_t gouraud = 255 * lambertianFactor;
+			//gouraud = 255;
             glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
-            
-            glVertex3f(vertice.x,
-                       vertice.y,
-                       vertice.z);
+			glVertex(vertice);
         }
-        glEnd();
+
+		glEnd();
     }
 
     glDisable(GL_TEXTURE_2D);
@@ -347,18 +287,12 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
         
         glBegin(GL_TRIANGLES);
         for(int j=0 ; j < 3 ; j++){
-            
-            Point3D vertice = object->vertices[triangle->ids[j]];
-            
-            Vector3D lighDirection;
-            lighDirection = light;
-            lighDirection.Substract(&vertice);
-            lighDirection.Normalize();
-            
-            float lambertianFactor = lighDirection.DotProduct(&normal);
+			Point3D vertice = object->vertices[triangle->ids[j]];
+			Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
+
+			float lambertianFactor = HMM_Dot(lighDirection, normal);
             if (lambertianFactor < 0  )
                 lambertianFactor = 0;
-            
             lambertianFactor+= ambientLamber;
             if (lambertianFactor > 1)
                 lambertianFactor = 1;
@@ -367,10 +301,8 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
             
             glColor4f(texel->r/255.0f*lambertianFactor, texel->g/255.0f*lambertianFactor, texel->b/255.0f*lambertianFactor,1);
             //glColor4f(texel->r/255.0f, texel->g/255.0f, texel->b/255.0f,1);
-            
-            glVertex3f(object->vertices[triangle->ids[j]].x,
-                       object->vertices[triangle->ids[j]].y,
-                       object->vertices[triangle->ids[j]].z);
+
+			glVertex(object->vertices[triangle->ids[j]]);
         }
         glEnd();
     }
@@ -403,31 +335,28 @@ void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel){
         Prepare(object);
     
     glMatrixMode(GL_PROJECTION);
-    Matrix* projectionMatrix = camera.GetProjectionMatrix();
-    glLoadMatrixf(projectionMatrix->ToGL());
-    
+	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
+	//glLoadMatrixf(projectionMatrix->ToGL());
+	glLoadMatrixHMM(camera.proj);
+
     running = true;
     float counter=0;
     while (running) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
-        glMatrixMode(GL_MODELVIEW);
+
+		glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         Matrix* modelViewMatrix;
         
-        
-        
-        light.x= 20*cos(counter);
-        light.y= 10;
-        light.z= 20*sin(counter);
+		light = { 20*cos(counter), 10, 20*sin(counter) };
         counter += 0.02;
         
         //camera.SetPosition(position);
         
-        
-        modelViewMatrix = camera.GetViewMatrix();
-        glLoadMatrixf(modelViewMatrix->ToGL());
-        
+		//modelViewMatrix = camera.GetViewMatrix();
+		//glLoadMatrixf(modelViewMatrix->ToGL());
+		glLoadMatrixHMM(camera.getView());
+
         DrawModel(object, lodLevel );
         
         //Render light
@@ -439,7 +368,7 @@ void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel){
         
         glBegin(GL_POINTS);
             glColor4f(1, 1,0 , 1);
-            glVertex3f(light.x,light.y, light.z);
+			glVertex(light);
         glEnd();
         
        
@@ -449,48 +378,39 @@ void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel){
 
 
 
-void SCRenderer::RenderVerticeField(Point3D* vertices, int numVertices){
-    
-    glMatrixMode(GL_PROJECTION);
-    Matrix* projectionMatrix = camera.GetProjectionMatrix();
-    glLoadMatrixf(projectionMatrix->ToGL());
-    
-    
-    
-    running = true;
+void SCRenderer::RenderVerticeField(Point3D* vertices, int numVertices)
+{
+	glMatrixMode(GL_PROJECTION);
+	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
+	//glLoadMatrixf(projectionMatrix->ToGL());
+	glLoadMatrixHMM(camera.proj);
+
+	running = true;
     float counter=0;
     while (running) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        Matrix* modelViewMatrix;
-        
-        Point3D newPosition;
-        newPosition.x= 256*cos(counter);
-        newPosition.y= 0;
-        newPosition.z= 256*sin(counter);
+
+		Point3D newPosition;
+		newPosition.X = 256*cos(counter);
+		newPosition.Y = 0;
+		newPosition.Z = 256*sin(counter);
         counter += 0.02;
-        
-        camera.SetPosition(&newPosition);
-        
-        
-        modelViewMatrix = camera.GetViewMatrix();
-        glLoadMatrixf(modelViewMatrix->ToGL());
-        
-        glClear(GL_COLOR_BUFFER_BIT);
+
+		camera.SetPosition(newPosition);
+		//Matrix* modelViewMatrix = camera.GetViewMatrix();
+		//glLoadMatrixf(modelViewMatrix->ToGL());
+		glLoadMatrixHMM(camera.getView());
+
+		glClear(GL_COLOR_BUFFER_BIT);
         glPointSize(5);
         glBegin(GL_POINTS);
         for(int i=0; i < numVertices ; i ++)
-            glVertex3f(vertices[i].x,
-                       vertices[i].y,
-                       vertices[i].z     );
+			glVertex(vertices[i]);
         glEnd();
-        
-        
-
     }
-
 }
 
 #define TEX_ZERO (0/64.0f)
@@ -552,30 +472,25 @@ void SCRenderer::RenderTexturedTriangle(MapVertex* tri0,
     
     if (image->width == 64){
         glTexCoord2fv(textTrianCoo64[triangleType][0]);
-        glVertex3f(tri0->v.x,tri0->v.y,tri0->v.z         );
+		glVertex(tri0->v);
     
-  
         glTexCoord2fv(textTrianCoo64[triangleType][1]);
-        glVertex3f(tri1->v.x,tri1->v.y,tri1->v.z         );
-    
+		glVertex(tri1->v);
     
         glTexCoord2fv(textTrianCoo64[triangleType][2]);
-        glVertex3f(tri2->v.x,tri2->v.y,tri2->v.z         );
-    }
-        else{
+		glVertex(tri2->v);
+	} else{
         glTexCoord2fv(textTrianCoo[triangleType][0]);
-        glVertex3f(tri0->v.x,tri0->v.y,tri0->v.z         );
-        
+		glVertex(tri0->v);
         
         glTexCoord2fv(textTrianCoo[triangleType][1]);
-        glVertex3f(tri1->v.x,tri1->v.y,tri1->v.z         );
-        
+		glVertex(tri1->v);
         
         glTexCoord2fv(textTrianCoo[triangleType][2]);
-        glVertex3f(tri2->v.x,tri2->v.y,tri2->v.z         );
-        }
-    glEnd();
-    
+		glVertex(tri2->v);
+	}
+
+	glEnd();
 }
 
 
@@ -591,10 +506,7 @@ void SCRenderer::RenderColoredTriangle(MapVertex* tri0,
                                      MapVertex* tri2){
     
 
-    if (tri0->type != tri1->type || tri0->type != tri2->type
-        
-        ){
-        
+	if (tri0->type != tri1->type || tri0->type != tri2->type) {
         if (tri1->type > tri0->type)
             if (tri1->type > tri2->type)
                 glColor4fv(tri1->color);
@@ -605,38 +517,19 @@ void SCRenderer::RenderColoredTriangle(MapVertex* tri0,
                 glColor4fv(tri0->color);
             else
                 glColor4fv(tri2->color);
-        
-        
-        
-        glVertex3f(tri0->v.x,
-                   tri0->v.y,
-                   tri0->v.z         );
-        
-        
-        glVertex3f(tri1->v.x,
-                   tri1->v.y,
-                   tri1->v.z         );
-        
-        
-        glVertex3f(tri2->v.x,
-                   tri2->v.y,
-                   tri2->v.z         );
+		glVertex(tri0->v);
+		glVertex(tri1->v);
+		glVertex(tri2->v);
     }
     else{
         glColor4fv(tri0->color);
-        glVertex3f(tri0->v.x,
-                   tri0->v.y,
-                   tri0->v.z         );
+		glVertex(tri0->v);
         
         glColor4fv(tri1->color);
-        glVertex3f(tri1->v.x,
-                   tri1->v.y,
-                   tri1->v.z         );
+		glVertex(tri1->v);
         
         glColor4fv(tri2->color);
-        glVertex3f(tri2->v.x,
-                   tri2->v.y,
-                   tri2->v.z         );
+		glVertex(tri2->v);
     }
     
    
@@ -753,62 +646,49 @@ void SCRenderer::RenderBlock(RSArea* area, int LOD, int i, bool renderTexture){
     
 }
 
-void SCRenderer::RenderJets(RSArea* area){
-    
-    glMatrixMode(GL_MODELVIEW);
-    
-    
-    
-    for(size_t i=0 ; i < area->GetNumJets(); i++){
-        RSEntity* entity = area->GetJet(i);
-    
-        glPushMatrix();
-        
-        Matrix objMatrix = entity->orientation.ToMatrix();
-        Point3D pos = entity->position;
-        objMatrix.v[3][0] = pos.x;
-        objMatrix.v[3][1] = pos.y;
-        objMatrix.v[3][2] = pos.z;
-        
-        glMultMatrixf(objMatrix.ToGL());
-        
-        DrawModel(entity, LOD_LEVEL_MAX);
-        
-        glPopMatrix();
-    }
-    
+void SCRenderer::RenderJets(RSArea* area)
+{
+	glMatrixMode(GL_MODELVIEW);
+
+	for(RSEntity* entity : area->GetJets())
+	{
+		Matrix objMatrix = HMM_QuaternionToMat4(entity->orientation);
+
+		Point3D pos = entity->position;
+		objMatrix.Elements[3][0] = pos.X;
+		objMatrix.Elements[3][1] = pos.Y;
+		objMatrix.Elements[3][2] = pos.Z;
+
+		glPushMatrix();
+		glMultMatrixf((float*)objMatrix.Elements);
+		DrawModel(entity, LOD_LEVEL_MAX);
+		glPopMatrix();
+	}
 }
 
-void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock){
-    
-    
+void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock)
+{
     glMatrixMode(GL_PROJECTION);
-    Matrix* projectionMatrix = camera.GetProjectionMatrix();
-    glLoadMatrixf(projectionMatrix->ToGL());
-    
-    
+	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
+	//glLoadMatrixf(projectionMatrix->ToGL());
+	glLoadMatrixHMM(camera.proj);
+
     running = true;
-    
-    glDisable(GL_CULL_FACE);
-    
-    glEnable(GL_DEPTH_TEST);
+
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    
-    
-    
-   
-    Point3D newPosition;
-    newPosition.x=  4100;//lookAt[0] + 5256*cos(counter/2);
-    newPosition.y= 100;
-    newPosition.z=  3000;//lookAt[2];// + 5256*sin(counter/2);
-    camera.SetPosition(&newPosition);
-    
-    
-    Point3D lookAt = {3856,0,2856};
-    camera.LookAt(&lookAt);
-    
-    
-    GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
+
+	Point3D newPosition;
+	newPosition.X =  4100;//lookAt[0] + 5256*cos(counter/2);
+	newPosition.Y = 100;
+	newPosition.Z =  3000;//lookAt[2];// + 5256*sin(counter/2);
+	camera.SetPosition(newPosition);
+
+	Point3D lookAt = {3856,0,2856};
+	camera.LookAt(lookAt);
+
+	GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
     GLuint fogfilter= 0;                    // Which Fog To Use
     GLfloat fogColor[4]= {1.0f, 1.0f, 1.0f, 1.0f};
     glFogi(GL_FOG_MODE, fogMode[fogfilter]);        // Fog Mode
@@ -818,77 +698,67 @@ void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock){
     glFogf(GL_FOG_START, 600.0f);             // Fog Start Depth
     glFogf(GL_FOG_END, 8000.0f);               // Fog End Depth
     glEnable(GL_FOG);
-    
-    
-        
-        glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-        
-        glMatrixMode(GL_MODELVIEW);
-        Matrix* modelViewMatrix = camera.GetViewMatrix();
-        glLoadMatrixf(modelViewMatrix->ToGL());
 
-        
-        
-        
-        //Island
-        /*
-        newPosition[0]=  2500;//lookAt[0] + 5256*cos(counter/2);
-        newPosition[1]= 350;
-        newPosition[2]=  600;//lookAt[2];// + 5256*sin(counter/2);
-        vec3_t lookAt = {2456,0,256};
-        */
+	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 
-        
-        //City Top
-        
-        
-        
-        //City view on mountains
-        /*
-        counter = 23;
-        vec3_t lookAt = {3856,30,2856};
-        newPosition[0]=  lookAt[0] + 256*cos(counter/2);
-        newPosition[1]= 60;
-        newPosition[2]=  lookAt[2] + 256*sin(counter/2);
-        */
-        
-        //Canyon
-        ///*
-        
-        
-        //*/
-        
-        //counter += 0.02;
-        
-        glDepthFunc(GL_LESS);
-        glBegin(GL_TRIANGLES);
-        //for(int i=97 ; i < 98 ; i++)
-        for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
-            RenderBlock(area, LOD, i,false);
-        glEnd();
-        
-        
-        glEnable(GL_TEXTURE_2D);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-        glDepthFunc(GL_EQUAL);
-        //for(int i=97 ; i < 98 ; i++)
-        for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
-            RenderBlock(area, LOD, i,true);
-        glDisable(GL_BLEND);
-        glDisable(GL_TEXTURE_2D);
-        
-        
-        //Render objects on the map
-        //for(int i=97 ; i < 98 ; i++)
-        //for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
-        //   RenderObjects(area,i);
-        
-        RenderJets(area);
-        
-      
-    
+	glMatrixMode(GL_MODELVIEW);
+	//Matrix* modelViewMatrix = camera.GetViewMatrix();
+	//glLoadMatrixf(modelViewMatrix->ToGL());
+	glLoadMatrixHMM(camera.getView());
 
+	//Island
+	/*
+	newPosition[0]=  2500;//lookAt[0] + 5256*cos(counter/2);
+	newPosition[1]= 350;
+	newPosition[2]=  600;//lookAt[2];// + 5256*sin(counter/2);
+	vec3_t lookAt = {2456,0,256};
+	*/
+
+
+	//City Top
+
+
+
+	//City view on mountains
+	/*
+	counter = 23;
+	vec3_t lookAt = {3856,30,2856};
+	newPosition[0]=  lookAt[0] + 256*cos(counter/2);
+	newPosition[1]= 60;
+	newPosition[2]=  lookAt[2] + 256*sin(counter/2);
+	*/
+
+	//Canyon
+	///*
+
+
+	//*/
+
+	//counter += 0.02;
+
+	glDepthFunc(GL_LESS);
+	glBegin(GL_TRIANGLES);
+	//for(int i=97 ; i < 98 ; i++)
+	for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
+		RenderBlock(area, LOD, i,false);
+	glEnd();
+
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glDepthFunc(GL_EQUAL);
+	//for(int i=97 ; i < 98 ; i++)
+	for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
+		RenderBlock(area, LOD, i,true);
+	glDisable(GL_BLEND);
+	glDisable(GL_TEXTURE_2D);
+
+	//Render objects on the map
+	//for(int i=97 ; i < 98 ; i++)
+	//for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
+	//   RenderObjects(area,i);
+
+	RenderJets(area);
 }
 
 void SCRenderer::RenderObjects(RSArea* area,size_t blockID){
@@ -942,82 +812,55 @@ void SCRenderer::RenderObjects(RSArea* area,size_t blockID){
 
 void SCRenderer::RenderWorldPoints(RSArea* area, int LOD, int verticesPerBlock)
 {
-    
-    
-    glMatrixMode(GL_PROJECTION);
+	glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     
-    Matrix* projectionMatrix = camera.GetProjectionMatrix();
-    glLoadMatrixf(projectionMatrix->ToGL());
-    
-    
-    
-    
+	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
+	//glLoadMatrixf(projectionMatrix->ToGL());
+	glLoadMatrixHMM(camera.proj);
+
     glPointSize(4);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-   
 
-    
-   
-    
     running = true;
-    
-    
     
     static float counter = 0;
     
-    
     while (running) {
-        
         glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-        
-    
-        
-        glMatrixMode(GL_MODELVIEW);
-        
+
+		glMatrixMode(GL_MODELVIEW);
         
         Point3D lookAt = { 256*16,100,256*16 };
         
-        Renderer.GetCamera()->LookAt(&lookAt);
-        
-        Point3D newPosition = camera.GetPosition();
-        
-        newPosition.x= lookAt.x + 5256*cos(counter/2);
-        newPosition.y= 3700;
-        newPosition.z= lookAt.z + 5256*sin(counter/2);
+		Renderer.GetCamera()->LookAt(lookAt);
 
-        camera.SetPosition(&newPosition);
-        
-        
-        Matrix* modelViewMatrix = camera.GetViewMatrix();
-        glLoadMatrixf(modelViewMatrix->ToGL());
-        
-        
+		Point3D newPosition = camera.position;
+		newPosition.X = lookAt.X + 5256*cos(counter/2);
+		newPosition.Y = 3700;
+		newPosition.Z = lookAt.Z + 5256*sin(counter/2);
+		camera.SetPosition(newPosition);
+
+		//Matrix* modelViewMatrix = camera.GetViewMatrix();
+		//glLoadMatrixf(modelViewMatrix->ToGL());
+		glLoadMatrixHMM(camera.getView());
+
         glBegin(GL_POINTS);
-        
-        for(int i=0 ; i < 324 ; i++){
+
+		for(int i=0 ; i < 324 ; i++){
         //for(int i=96 ; i < 99 ; i++){
             AreaBlock* block = area->GetAreaBlockByID(LOD, i);
             for (size_t i=0 ; i < verticesPerBlock ; i ++){
                 MapVertex* v = &block->vertice[i];
-                
-                
                 glColor3fv(v->color);
-                
-                glVertex3f(v->v.x,
-                           v->v.y,
-                           v->v.z         );
+				glVertex(v->v);
             }
         }
-            glEnd();
-        
-        
-        //Render objects on the map
+		glEnd();
+
+		//Render objects on the map
         for(int i=0 ; i < 324 ; i++)
             RenderObjects(area,i);
-        
-        
     }
-
 }

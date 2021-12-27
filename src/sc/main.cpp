@@ -18,21 +18,18 @@ SCRenderer      Renderer;
 ConvAssetManager ConvAssets;
 RSFontManager FontManager;
 
-int main(int argc, char* argv[]) {
-
-    
-    Assets.SetBase("./");
-    
-    Game.Init();
-    
-    
-    //Add MainMenu activity on the game stack.
-    SCMainMenu* main = new SCMainMenu();
-    main->Init();
-    Game.AddActivity(main);
-    
-    
-    Game.Run();
-    
+int main(int argc, char* argv[])
+{
+	if (argc != 1) {
+		TreArchive treArchive;
+		treArchive.InitFromFile(argv[1]);
+		treArchive.List(stdout);
+	} else {
+		Assets.SetBase("./");
+    	Game.Init();
+    	//Add MainMenu activity on the game stack.
+		Game.MakeActivity<SCMainMenu>();
+    	Game.Run();
+	}
     return EXIT_SUCCESS;
 }

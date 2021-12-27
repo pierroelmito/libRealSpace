@@ -22,9 +22,8 @@ SCSelectWeaponF16::~SCSelectWeaponF16(){
 void SCSelectWeaponF16::Init( ){
     
     //Palette
-    VGAPalette* rendererPalette = VGA.GetPalette();
-    this->palette = *rendererPalette;
-    
+	this->palette = VGA.GetPalette();
+
     //Patch palette
     ByteStream paletteReader;
     TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName(OPTPALS_PAK_PATH);
@@ -52,10 +51,10 @@ void SCSelectWeaponF16::RunFrame(void){
     VGA.Activate();
     VGA.Clear();
 
-    VGA.SetPalette(&this->palette);
+	VGA.SetPalette(this->palette);
 
     //Draw static
-    VGA.DrawShape(&background);
+	VGA.DrawShape(background);
     
 
     DrawButtons();

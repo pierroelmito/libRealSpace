@@ -6,13 +6,9 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCConvPlayer__
-#define __libRealSpace__SCConvPlayer__
+#pragma once
 
-
-
-
-
+#include "IActivity.h"
 
 class ConvFrame{
     
@@ -56,45 +52,22 @@ class SCConvPlayer: public IActivity {
 public :
     SCConvPlayer();
     ~SCConvPlayer();
-    
     void Init( );
-    
     void RunFrame(void);
-    
-    void   SetID(int32_t id);
-    
-    
+	void SetID(int32_t id);
     virtual void Focus(void)  ;
-   
-    
+
 private:
-    
-    int32_t conversationID;
-    
     void ReadNextFrame(void);
-    
-    void    SetArchive(PakEntry* conv);
-    
+	void SetArchive(PakEntry* conv);
     void ReadtNextFrame(void);
-    
-    
-    
     void DrawText(void);
-    
-    ByteStream conv ;
+	void CheckFrameExpired(void);
+
+	int32_t conversationID{ 0 };
+	ByteStream conv ;
     size_t size; //In bytes
     uint8_t* end; //In bytes
-    
-    
     ConvFrame currentFrame;
-    
-    void CheckFrameExpired(void);
-    
-    
-    bool initialized;
-    
-    
-    
+	bool initialized{ false };
 };
-
-#endif /* defined(__libRealSpace__SCConvPlayer__) */

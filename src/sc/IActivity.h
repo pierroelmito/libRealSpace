@@ -6,45 +6,39 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__IActivity__
-#define __libRealSpace__IActivity__
+#pragma once
 
+#include <vector>
 
-class IActivity{
-    
+#include "RLEShape.h"
+#include "Texture.h"
+
+class SCButton;
+
+class IActivity
+{
 public:
-    
-    virtual void Init(void) = 0;
-    virtual void Start(void) { this->running = true;}
-    void Stop(void) { this->running = false;}
-    
-    virtual void RunFrame (void) = 0;
-    
+	virtual ~IActivity();
+	virtual void Focus() { focused = true;}
+	virtual void UnFocus() { focused = false;}
+	virtual void Init() = 0;
+	virtual void Start() { running = true;}
+	virtual void RunFrame () = 0;
+	void Stop() { running = false;}
+	bool IsRunning() const { return running; }
     void SetTitle(const char* title);
-    
-    inline bool IsRunning(void){ return this->running; }
-    
-    VGAPalette palette;
-    
-    virtual ~IActivity();
-    
-    virtual void Focus(void)  { this->focused = true;}
-    virtual void UnFocus(void){ this->focused = false;}
-    
-    
+
+	VGAPalette palette;
+
 protected:
-    
     IActivity();
-    SCButton* CheckButtons(void);
-    std::vector<SCButton*> buttons;
-    void DrawButtons(void);
-    
+	SCButton* CheckButtons();
+	void DrawButtons();
+
+	std::vector<SCButton*> buttons;
+
 private:
     bool running;
     bool focused;
-    
-    
 };
 
-
-#endif /* defined(__libRealSpace__IActivity__) */

@@ -9,24 +9,22 @@
 #ifndef __libRealSpace__PakArchive__
 #define __libRealSpace__PakArchive__
 
-typedef struct PakEntry{
-    
+#include <cstdint>
+
+struct PakEntry
+{
     uint8_t* data;
-    
     size_t size;
-    
     uint8_t type ;
-    // The mystery bytes at the end of the table.
+
+	// The mystery bytes at the end of the table.
     // 0xE0 seems to indicate content. 0xFF indicates an empty entry.
     enum ContentType {EMPTY = 0xFF, CONTENT = 0xE0};
-    
-    static inline bool Compare(PakEntry* any, PakEntry* other){
+
+	static inline bool Compare(PakEntry* any, PakEntry* other){
         return any->data < other->data;
     }
-    
-    
-    
-} PakEntry;
+};
 
 class PakArchive{
     
@@ -38,12 +36,13 @@ public:
     
     bool InitFromFile(const char* filepath);
     void InitFromRAM(const char* name,uint8_t* data, size_t size);
-    
+	void InitFromPakEntry(const char* name, const PakEntry* pe);
+
 
     bool Decompress(const char* dstDirectory, const char* extension);
     
-    size_t GetNumEntries(void);
-    PakEntry* GetEntry(size_t index);
+	size_t GetNumEntries(void) const;
+	PakEntry* GetEntry(size_t index) const;
     
     void List(FILE* output);
     

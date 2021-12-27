@@ -36,6 +36,13 @@ public:
     inline void MoveForward(size_t bytes){
         this->cursor += bytes;
     }
+
+	template <typename T>
+	inline T ReadT() {
+		T* v = (T*)this->cursor;
+		this->cursor+=sizeof(T);
+		return *v;
+	}
     
 	inline uint8_t ReadByte(void){
 		return *this->cursor++;
@@ -45,17 +52,12 @@ public:
 		return *(this->cursor+1);
 	}
 
-    
     inline uint16_t ReadUShort(void){
-        uint16_t* ushortP = (uint16_t*)this->cursor;
-        this->cursor+=2;
-		return *ushortP;
+		return ReadT<uint16_t>();
 	}
     
     inline int16_t ReadShort(void){
-        int16_t* shortP = (int16_t*)this->cursor;
-        this->cursor+=2;
-		return *shortP;
+		return ReadT<int16_t>();
 	}
     
 	inline uint8_t* GetPosition(void){
@@ -63,15 +65,11 @@ public:
 	}
     
     inline uint32_t ReadUInt32LE(void){
-        uint32_t* i = (uint32_t*)cursor;
-        cursor+=4;
-        return *i;
+		return ReadT<uint32_t>();
     }
     
     inline int32_t ReadInt32LE(void){
-        int32_t* i = (int32_t*)cursor;
-        cursor+=4;
-        return *i;
+		return ReadT<int32_t>();
     }
     
     inline uint32_t ReadUInt32BE(void){

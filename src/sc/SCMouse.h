@@ -11,7 +11,7 @@
 
 
 
-typedef struct MouseButton{
+struct MouseButton{
     
     enum BUTTON_ID {LEFT, MIDDLE, RIGHT} ;
     
@@ -19,7 +19,7 @@ typedef struct MouseButton{
     
     EventType event;
     
-} MouseButton;
+};
 
 class SCMouse{
     

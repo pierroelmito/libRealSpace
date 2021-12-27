@@ -6,8 +6,7 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__RSEntity__
-#define __libRealSpace__RSEntity__
+#pragma once
 
 #include <cstdint>
 #include <cstddef>
@@ -26,7 +25,7 @@ class IffLexer;
 #define LOD_LEVEL_MED 1
 #define LOD_LEVEL_MIN 2
 
-typedef struct MapVertex{
+struct MapVertex{
     Point3D v;
 
     uint8_t flag;
@@ -36,29 +35,29 @@ typedef struct MapVertex{
     
     float color[4];
     
-} MapVertex ;
+};
 
 
 
 
-typedef struct BoudingBox{
+struct BoudingBox{
     Point3D min;
     Point3D max;
-} BoudingBox;
+};
 
-typedef struct UV{
+struct UV{
     uint8_t u;
     uint8_t v;
-} UV ;
+};
 
-typedef struct uvxyEntry{
+struct uvxyEntry{
     
     uint8_t triangleID;
     uint8_t textureID;
     UV uvs[3];
-} uvxyEntry;
+};
 
-typedef struct Triangle{
+struct Triangle{
     
     uint8_t property;
     uint8_t ids[3];
@@ -66,14 +65,14 @@ typedef struct Triangle{
     uint8_t color;
     uint8_t flags[3];
     
-} Triangle ;
+};
 
-typedef struct Lod{
+struct Lod{
     
     uint32_t dist;
     uint16_t numTriangles;
     uint16_t triangleIDs[256];
-} Lod;
+};
 
 
 
@@ -90,7 +89,7 @@ public:
     void AddImage(RSImage* image);
     size_t NumImages(void);
     
-    void AddVertex(Point3D* vertex);
+	void AddVertex(const Point3D& vertex);
     size_t NumVertice(void);
     
     void AddUV(uvxyEntry* uv);
@@ -144,5 +143,3 @@ private:
     
     
 };
-
-#endif /* defined(__libRealSpace__RSEntity__) */

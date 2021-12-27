@@ -61,9 +61,8 @@ void SCRegister::Init( ){
     
     
     //Load palette
-    VGAPalette* rendererPalette = VGA.GetPalette();
-    this->palette = *rendererPalette;
-    
+	this->palette = VGA.GetPalette();
+
 
     TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK");
     PakArchive palettesPak;
@@ -85,10 +84,10 @@ void SCRegister::RunFrame(void){
     VGA.Activate();
     VGA.Clear();
     
-    VGA.SetPalette(&this->palette);
+	VGA.SetPalette(this->palette);
     
     //Draw static
-    VGA.DrawShape(&book);
+	VGA.DrawShape(book);
 
     
     DrawButtons();

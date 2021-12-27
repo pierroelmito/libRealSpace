@@ -121,40 +121,6 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer){
     
 }
 
-void OnExit(void){
-    Game.StopTopActivity();
-}
-
-void OnNext(void){
-    //startTime = SDL_GetTicks();
-    SCObjectViewer* that =  (SCObjectViewer*)Game.GetCurrentActivity();
-    that->NextObject();
-}
-
-void OnZoomOut(void){
-    Game.StopTopActivity();
-}
-
-void OnZoomIn(void){
-    Game.StopTopActivity();
-}
-
-void OnRotateLeft(void){
-    Game.StopTopActivity();
-}
-
-void OnRotateRight(void){
-    Game.StopTopActivity();
-}
-
-void OnRotateUp(void){
-    Game.StopTopActivity();
-}
-
-void OnRotateDown(void){
-    Game.StopTopActivity();
-}
-
 void SCObjectViewer::NextObject(void){
     currentObject = (currentObject+ 1) % showCases.size();
 }
@@ -220,7 +186,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     button = new SCButton();
     Point2D exitDimension = {30, 15} ;
     Point2D exitPosition = {boardPosition.x+268,boardPosition.y+15};
-    button->InitBehavior(OnExit, exitPosition,exitDimension);
+	button->InitBehavior(exitPosition,exitDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(14)->data, objButtons.GetEntry(14)->size,&exitPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(15)->data, objButtons.GetEntry(15)->size,&exitPosition);
     buttons.push_back(button);
@@ -234,7 +200,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     button = new SCButton();
     
     Point2D rotRightButtonPosition = {boardPosition.x+232,boardPosition.y+12};
-    button->InitBehavior(OnRotateRight, rotRightButtonPosition,arrowDimension);
+	button->InitBehavior(rotRightButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(12)->data, objButtons.GetEntry(12)->size,&rotRightButtonPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(13)->data, objButtons.GetEntry(13)->size,&rotRightButtonPosition);
     buttons.push_back(button);
@@ -242,7 +208,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     //ROT LEFT OBJ BUTTON
     button = new SCButton();
     Point2D rotLeftButtonPosition = {boardPosition.x+174,boardPosition.y+12};
-    button->InitBehavior(OnRotateLeft, rotLeftButtonPosition,arrowDimension);
+	button->InitBehavior(rotLeftButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(10)->data, objButtons.GetEntry(10)->size,&rotLeftButtonPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(11)->data, objButtons.GetEntry(11)->size,&rotLeftButtonPosition);
     buttons.push_back(button);
@@ -250,7 +216,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     //ROT DOWN OBJ BUTTON
     button = new SCButton();
     Point2D rotDownButtonPosition = {boardPosition.x+198,boardPosition.y+24};
-    button->InitBehavior(OnRotateDown, rotDownButtonPosition,arrowDimension);
+	button->InitBehavior(rotDownButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(8)->data, objButtons.GetEntry(8)->size,&rotDownButtonPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(9)->data, objButtons.GetEntry(9)->size,&rotDownButtonPosition);
     buttons.push_back(button);
@@ -259,7 +225,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     //ROT UP OBJ BUTTON
     button = new SCButton();
     Point2D rotUpButtonPosition = {boardPosition.x+198,boardPosition.y+6};
-    button->InitBehavior(OnRotateUp, rotUpButtonPosition,arrowDimension);
+	button->InitBehavior(rotUpButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(6)->data, objButtons.GetEntry(6)->size,&rotUpButtonPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(7)->data, objButtons.GetEntry(7)->size,&rotUpButtonPosition);
     buttons.push_back(button);
@@ -269,7 +235,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     //ZOOM OUT OBJ BUTTON
     button = new SCButton();
     Point2D zoomOutButtonPosition = {boardPosition.x+122,boardPosition.y+25};
-    button->InitBehavior(OnZoomOut, zoomOutButtonPosition,arrowDimension);
+	button->InitBehavior(zoomOutButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(4)->data, objButtons.GetEntry(4)->size,&zoomOutButtonPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(5)->data, objButtons.GetEntry(5)->size,&zoomOutButtonPosition);
     buttons.push_back(button);
@@ -277,7 +243,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     //ZOOM IN OBJ BUTTON
     button = new SCButton();
     Point2D zoomInButtonPosition = {boardPosition.x+121,boardPosition.y+7};
-    button->InitBehavior(OnZoomIn, zoomInButtonPosition,arrowDimension);
+	button->InitBehavior(zoomInButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(2)->data, objButtons.GetEntry(2)->size,&zoomInButtonPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(3)->data, objButtons.GetEntry(3)->size,&zoomInButtonPosition);
     buttons.push_back(button);
@@ -286,7 +252,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive){
     Point2D nextDimension = {75, 15} ;
     button = new SCButton();
     Point2D nextButtonPosition = {boardPosition.x+10,boardPosition.y+15};
-    button->InitBehavior(OnNext, nextButtonPosition,nextDimension);
+	button->InitBehavior(nextButtonPosition,nextDimension, [this] { NextObject(); });
     button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(0)->data, objButtons.GetEntry(0)->size,&nextButtonPosition);
     button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(1)->data, objButtons.GetEntry(1)->size,&nextButtonPosition);
     buttons.push_back(button);
@@ -382,19 +348,18 @@ void SCObjectViewer::Init(void){
     startTime = SDL_GetTicks();
 }
 
-void SCObjectViewer::RunFrame(void){
-    
-       
+void SCObjectViewer::RunFrame(void)
+{
     CheckButtons();
     
     VGA.Activate();
     VGA.Clear();
     
-    VGA.SetPalette(&this->palette);
+	VGA.SetPalette(this->palette);
     
     //Draw static
-    VGA.DrawShape(&bluePrint);
-    VGA.DrawShape(&title);
+	VGA.DrawShape(bluePrint);
+	VGA.DrawShape(title);
     
     DrawButtons();
     
@@ -404,43 +369,47 @@ void SCObjectViewer::RunFrame(void){
     
     VGA.VSync();
 
-    
-    //Ok now time to draw the model
-    glClear(GL_DEPTH_BUFFER_BIT);
-    
-    uint32_t currentTime = SDL_GetTicks();
-    uint32_t totalTime = currentTime - startTime;
-    
+	//Ok now time to draw the model
+	glClearDepth(1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT);
 
-    
-    RSShowCase showCase = showCases[currentObject];
-    
-    Point3D newPosition;
-    newPosition.x= showCase.cameraDist/150 *cos(totalTime/2000.0f);
-    newPosition.y= showCase.cameraDist/350;
-    newPosition.z= showCase.cameraDist/150*sin(totalTime/2000.0f);
-   
+	uint32_t currentTime = SDL_GetTicks();
+	uint32_t totalTime = currentTime - startTime;
 
-    Renderer.GetCamera()->SetPosition(&newPosition);
-    Point3D lookAt = {0,0,0};
-    Renderer.GetCamera()->LookAt(&lookAt);
-    
-    Point3D light;
-    light.x= 4*cos(-totalTime/20000.0f);
-    light.y= 4;
-    light.z= 4*sin(-totalTime/20000.0f);
-    Renderer.SetLight(&light);
-    
-    glMatrixMode(GL_PROJECTION);
-    Matrix* projection = Renderer.GetCamera()->GetProjectionMatrix();
-    glLoadMatrixf(projection->ToGL());
-    
-    glMatrixMode(GL_MODELVIEW);
-    Matrix* view = Renderer.GetCamera()->GetViewMatrix();
-    glLoadMatrixf(view->ToGL());
-    
-    Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX);
-    
-    glDisable(GL_DEPTH_TEST);
-    
+	RSShowCase showCase = showCases[currentObject];
+	Camera* camera = Renderer.GetCamera();
+
+	Point3D newPosition;
+	newPosition.X = showCase.cameraDist/150 *cos(totalTime/2000.0f);
+	newPosition.Y = showCase.cameraDist/350;
+	newPosition.Z = showCase.cameraDist/150*sin(totalTime/2000.0f);
+	camera->SetPosition(newPosition);
+	camera->LookAt({ 0, 0, 0 });
+
+	Point3D light;
+	light.X = 4*cos(-totalTime/20000.0f);
+	light.Y = 4;
+	light.Z = 4*sin(-totalTime/20000.0f);
+	Renderer.SetLight(&light);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixHMM(camera->proj);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixHMM(camera->getView());
+
+	if (false)
+	{
+		const float szp = 5.0f;
+		const float szn = -szp;
+		glBegin(GL_TRIANGLES);
+		glVertex3f(szn, szp, szn);
+		glVertex3f(szn, szp, szp);
+		glVertex3f(szp, szp, szn);
+		glEnd();
+	}
+
+	Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX);
+
+	glDisable(GL_DEPTH_TEST);
 }

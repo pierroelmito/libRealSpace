@@ -14,14 +14,12 @@ struct Char_String_Comparator
     }
 };
 
-typedef struct TreEntry{
-    
+struct TreEntry{
     uint8_t     unknownFlag;
     char        name[65];
     size_t      size;
     uint8_t*    data;
-    
-} TreEntry;
+};
 
 
 

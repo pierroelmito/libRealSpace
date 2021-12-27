@@ -15,7 +15,7 @@ public:
     ~RSFont();
     
     RLEShape* GetShapeForChar(char c);
-    void InitFromPAK(PakArchive* fontArchive);
+	void InitFromPAK(const PakArchive& fontArchive);
     
 protected:
 private:

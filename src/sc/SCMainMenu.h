@@ -9,6 +9,7 @@
 #ifndef __libRealSpace__SCMainMenu__
 #define __libRealSpace__SCMainMenu__
 
+#include "IActivity.h"
 
 class SCMainMenu : public IActivity{
     

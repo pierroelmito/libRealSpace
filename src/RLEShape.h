@@ -9,6 +9,8 @@
 #ifndef __pak__rle__
 #define __pak__rle__
 
+#include <cstdint>
+
 class RLEShape{
 
     
@@ -52,14 +54,14 @@ private:
     enum FragmentType {FRAG_END,FRAG_COMPOSITE,FRAG_RAW} ;
     enum FragmentSubType {SUB_FRAG_RAW =0x0, SUB_FRAG_COMPRESSED=0x1} ;
     
-    typedef struct RLEFragment{
+	struct RLEFragment{
         FragmentType type;
         bool isCompressed;
         uint16_t numTexels;
         
         int16_t dx;
         int16_t dy;
-    } RLEFragment;
+	};
     
     
     void ReadFragment  (RLEFragment* frag);
