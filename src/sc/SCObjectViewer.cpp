@@ -6,11 +6,14 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCObjectViewer.h"
+
 #include "precomp.h"
+
+#include <SDL2/SDL.h>
 
 static const uint8_t PAK_ID_MENU_STATIC       = 0;
 static const uint8_t PAK_ID_MENU_DYNAMC       = 4;
-
 
 static const uint8_t PAK_ID_MENU_DYNAMC_JETNAME_BACKGROUND_RELEASED   = 0;
 static const uint8_t PAK_ID_MENU_DYNAMC_JETNAME_BACKGROUND_PRESSED    = 1;

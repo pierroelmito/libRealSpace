@@ -6,9 +6,12 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCWildCatBase.h"
+#include "SCConvPlayer.h"
+
 #include "precomp.h"
 
-
+#include <SDL2/SDL.h>
 
 SCWildCatBase::SCWildCatBase(){
     
@@ -21,7 +24,7 @@ SCWildCatBase::~SCWildCatBase(){
 void SCWildCatBase::CheckKeyboard(void){
     //Keyboard
     SDL_Event keybEvents[5];
-    int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYUP);
+	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN);
     for(int i= 0 ; i < numKeybEvents ; i++){
         SDL_Event* event = &keybEvents[i];
         switch (event->key.keysym.sym) {

@@ -6,8 +6,9 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "SCStrike.h"
 
+#include "precomp.h"
 
 SCStrike::SCStrike(){
     

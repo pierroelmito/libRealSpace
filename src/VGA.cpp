@@ -6,9 +6,13 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "RSVGA.h"
+
 #include "precomp.h"
 
 #include "SDL2/SDL_opengl.h"
+
+#include "RSFont.h"
 
 RSVGA::RSVGA(){
     

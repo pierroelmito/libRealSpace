@@ -8,13 +8,16 @@
 
 #include "precomp.h"
 
+#include "SCMainMenu.h"
+#include "RSFontManager.h"
+
 //Here are all the mean subsystems interacting together
-GameEngine      Game;
-RSScreen        Screen;
-RSVGA           VGA;
-SCMouse         Mouse;
-AssetManager    Assets;
-SCRenderer      Renderer;
+GameEngine Game;
+RSScreen Screen;
+RSVGA VGA;
+SCMouse Mouse;
+AssetManager Assets;
+SCRenderer Renderer;
 ConvAssetManager ConvAssets;
 RSFontManager FontManager;
 

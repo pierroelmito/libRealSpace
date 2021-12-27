@@ -6,8 +6,9 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__Screen__
-#define __libRealSpace__Screen__
+#pragma once
+
+#include <cstdint>
 
 class RSScreen{
     
@@ -28,4 +29,3 @@ private:
     
 };
 
-#endif /* defined(__libRealSpace__Screen__) */

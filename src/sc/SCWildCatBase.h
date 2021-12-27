@@ -6,23 +6,20 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__WildCatBase__
-#define __libRealSpace__WildCatBase__
+#pragma once
 
-class SCWildCatBase : public IActivity {
-    
+#include "IActivity.h"
+
+class SCWildCatBase : public IActivity
+{
 public:
-    SCWildCatBase();
-    ~SCWildCatBase();
-    
-    void Init( );
-    
-    void RunFrame(void);
-    
-    void CheckKeyboard(void);
-    
-    RLEShape hangar;
-    RLEShape vehicule;
-};
+	SCWildCatBase();
+	~SCWildCatBase();
 
-#endif /* defined(__libRealSpace__WildCatBase__) */
+	void Init( );
+	void RunFrame(void);
+	void CheckKeyboard(void);
+
+	RLEShape hangar;
+	RLEShape vehicule;
+};

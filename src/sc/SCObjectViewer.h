@@ -6,37 +6,31 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__NSObjectViewer__
-#define __libRealSpace__NSObjectViewer__
+#pragma once
 
-class SCObjectViewer : public IActivity{
-    
+#include "IActivity.h"
+#include "RSEntity.h"
+
+class SCObjectViewer : public IActivity
+{
 public:
     SCObjectViewer();
     ~SCObjectViewer();
     
     void Init( );
-    
     void RunFrame(void);
-    
-    
-    
     void NextObject(void);
-    
+
 private:
 
-    
-	struct RSShowCase{
-        
+	struct RSShowCase
+	{
         float cameraDist;
         RSEntity* entity;
-        
         char displayName[20];
-        
 	};
     
     std::vector<RSShowCase> showCases;
-    
     
     void ParseObjList(IffLexer* lexer);
     void ParseAssets(PakArchive* archive);
@@ -46,9 +40,7 @@ private:
     RLEShape board;
     
     uint32_t currentObject;
-    
-    //For rotating the object
+
+	//For rotating the object
     uint32_t startTime;
 };
-
-#endif /* defined(__libRealSpace__NSObjectViewer__) */

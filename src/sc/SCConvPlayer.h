@@ -10,6 +10,10 @@
 
 #include "IActivity.h"
 
+class RSFont;
+class CharFigure;
+class CharFace;
+
 class ConvFrame{
     
     public:

@@ -6,11 +6,12 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__File__
-#define __libRealSpace__File__
+#pragma once
 
-class SCTrainingMenu : public IActivity{
-    
+#include "IActivity.h"
+
+class SCTrainingMenu : public IActivity
+{
 public:
     
     SCTrainingMenu();
@@ -29,4 +30,3 @@ private:
     RLEShape board;
 };
 
-#endif /* defined(__libRealSpace__File__) */

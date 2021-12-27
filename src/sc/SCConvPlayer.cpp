@@ -6,8 +6,13 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCConvPlayer.h"
+
 #include "precomp.h"
 
+#include <SDL2/SDL.h>
+
+#include "RSImageSet.h"
 
 SCConvPlayer::SCConvPlayer()
 {
@@ -426,8 +431,10 @@ void SCConvPlayer::RunFrame(void){
         //00 nothing
         //01 rest face
         //02 hair
-        for (size_t i=1; i< 3; i++) {
-           RLEShape* s = currentFrame.face->appearances->GetShape(i);
+		const auto& shapes = currentFrame.face->appearances->GetShapes();
+
+		for (size_t i=1; i< 3; i++) {
+		   RLEShape* s = shapes[i];
            s->SetPositionX(pos);
 		   VGA.DrawShape(*s);
         }
@@ -446,7 +453,7 @@ void SCConvPlayer::RunFrame(void){
         for (size_t i=03; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP
              ; i++) {
             
-            RLEShape* s = currentFrame.face->appearances->GetShape(3+(SDL_GetTicks()/100)%10);
+			RLEShape* s = shapes[3+(SDL_GetTicks()/100)%10];
            s->SetPositionX(pos);
 			VGA.DrawShape(*s);
             
@@ -475,7 +482,7 @@ void SCConvPlayer::RunFrame(void){
         //25 right eye brows semi-raised
         //26 eye brows something
         for (size_t i=13; i< 14; i++) {
-            RLEShape* s = currentFrame.face->appearances->GetShape(i);
+			RLEShape* s = shapes[i];
            s->SetPositionX(pos);
             //VGA.DrawShape();
         }
@@ -491,7 +498,7 @@ void SCConvPlayer::RunFrame(void){
         //34 seducing face
         //35 look of desaproval face
         for (size_t i=29; i< 30; i++) {
-            RLEShape* s = currentFrame.face->appearances->GetShape(i);
+			RLEShape* s = shapes[i];
            s->SetPositionX(pos);
             //VGA.DrawShape();
         }
@@ -501,7 +508,7 @@ void SCConvPlayer::RunFrame(void){
         //36 pilot clothes
         //37 pilot clothes 2
         //for (size_t i=36; i< 37; i++) {
-            RLEShape* s = currentFrame.face->appearances->GetShape(35);
+			RLEShape* s = shapes[35];
            s->SetPositionX(pos);
 			VGA.DrawShape(*s);
         //}
@@ -510,7 +517,7 @@ void SCConvPlayer::RunFrame(void){
         //39 pilot helmet (if drawing this, don't draw hairs
         //40 pilot helmet visor (if drawing this draw 39 too
         for (size_t i=41; i< 40; i++) {
-            RLEShape* s = currentFrame.face->appearances->GetShape(i);
+			RLEShape* s = shapes[i];
            s->SetPositionX(pos);
 			VGA.DrawShape(*s);
         }
@@ -519,7 +526,7 @@ void SCConvPlayer::RunFrame(void){
         
         //54 hand extension
         if (currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE){
-            RLEShape* s = currentFrame.face->appearances->GetShape(54);
+			RLEShape* s = shapes[54];
            s->SetPositionX(pos);
             //VGA.DrawShape();
         }
@@ -530,7 +537,7 @@ void SCConvPlayer::RunFrame(void){
         // 62 look left
         for (size_t i=55; i< 63; i++) {
             //What is there ?
-            RLEShape* s = currentFrame.face->appearances->GetShape(i);
+			RLEShape* s = shapes[i];
            s->SetPositionX(pos);
             //VGA.DrawShape();
         }

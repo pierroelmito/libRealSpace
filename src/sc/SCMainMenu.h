@@ -6,30 +6,26 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCMainMenu__
-#define __libRealSpace__SCMainMenu__
+#pragma once
 
 #include "IActivity.h"
 
-class SCMainMenu : public IActivity{
-    
+class SCMainMenu : public IActivity
+{
 public:
     SCMainMenu();
     ~SCMainMenu();
-    
-    virtual void Init(void);
+
+	virtual void Init(void);
     virtual void RunFrame(void);
-    
+
 private:
-    
-    void LoadButtons(void);
+	void LoadButtons(void);
     void LoadBoard(void);
     void LoadBackgrounds(void);
     void LoadPalette(void);
-    
-    
-    
-    RLEShape board;
+
+	RLEShape board;
     RLEShape sky;
     RLEShape mountain;
     RLEShape cloud;
@@ -38,5 +34,3 @@ private:
     
     void DrawMenu(void);
 };
-
-#endif /* defined(__libRealSpace__SCMainMenu__) */

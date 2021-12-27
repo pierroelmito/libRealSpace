@@ -6,8 +6,12 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__VGA__
-#define __libRealSpace__VGA__
+#pragma once
+
+#include "Texture.h"
+#include "RLEShape.h"
+
+class RSFont;
 
 class RSVGA{
     
@@ -40,5 +44,3 @@ private:
     
     uint32_t textureID;
 };
-
-#endif /* defined(__libRealSpace__VGA__) */

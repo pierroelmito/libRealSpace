@@ -6,8 +6,17 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__ConAssetManager__
-#define __libRealSpace__ConAssetManager__
+#pragma once
+
+#include <map>
+#include <vector>
+
+#include "PakArchive.h"
+#include "TreArchive.h"
+
+class RSImageSet;
+class IffChunk;
+class RLEShape;
 
 #define CONV_TOP_BAR_HEIGHT 23
 #define CONV_BOTTOM_BAR_HEIGHT 48
@@ -16,42 +25,36 @@
 #define CONV_INTERLETTER_SPACE  3
 #define CONV_SPACE_SIZE  5
 
-struct CharFace{
-    
+struct CharFace
+{
     char name[9];
     RSImageSet* appearances;
     // size_t paletteID;
 };
 
-
-struct FacePalette{
-    
+struct FacePalette
+{
     char name[9];
     uint8_t index;
-    
 };
 
-struct CharFigure{
-    
+struct CharFigure
+{
     char name[9];
     RLEShape* appearance;
     size_t paletteID;
-    
 };
 
-
-struct ConvBackGround{
+struct ConvBackGround
+{
     std::vector<RLEShape*> layers;
     std::vector<uint8_t*> palettes;
     char name[9];
 };
 
-
-
-class ConvAssetManager{
-
+class ConvAssetManager
+{
 public:
-    
     ConvAssetManager();
     ~ConvAssetManager();
     
@@ -61,12 +64,9 @@ public:
     ConvBackGround* GetBackGround(char* name);
     CharFigure* GetFigure(char* name);
     
-    uint8_t GetFacePaletteID(char* name);
-    
-    
-    
+	uint8_t GetFacePaletteID(char* name);
+
 private:
-    
     void BuildDB(void);
     void ReadBackGrounds(const IffChunk* chunk);
     void ReadFaces(const IffChunk* chunk);
@@ -77,22 +77,16 @@ private:
     //I have no idea what is in there.
     void ReadFGPL(const IffChunk* chunk);
   
-    
-    
-    
     std::map<char*, CharFace*,Char_String_Comparator> faces;
     std::map<char*, FacePalette* ,Char_String_Comparator> facePalettes;
     std::map<char*, ConvBackGround*,Char_String_Comparator> backgrounds;
     std::map<char*, CharFigure*,Char_String_Comparator> figures;
 
-    
     PakArchive convShps;
     PakArchive convPals;
     PakArchive optShps;
     PakArchive optPals;
-    void ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround* back );
-    
+
+	void ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround* back );
 };
 
-
-#endif /* defined(__libRealSpace__ConAssetManager__) */

@@ -6,6 +6,10 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
+#pragma once
+
+#include <cstring>
+
 struct Char_String_Comparator
 {
     bool operator()(char const *a, char const *b) const

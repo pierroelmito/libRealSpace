@@ -6,10 +6,13 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__PakArchive__
-#define __libRealSpace__PakArchive__
+#pragma once
 
 #include <cstdint>
+#include <cstdio>
+#include <vector>
+
+#include "ByteStream.h"
 
 struct PakEntry
 {
@@ -70,5 +73,3 @@ private:
     // allows to know if we should free the TRE data
     bool initalizedFromFile ;
 };
-
-#endif /* defined(__libRealSpace__PakArchive__) */

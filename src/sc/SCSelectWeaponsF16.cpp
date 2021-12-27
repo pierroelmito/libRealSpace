@@ -8,7 +8,7 @@
 
 #include "precomp.h"
 
-
+#include "SCSelectWeaponsF16.h"
 
 SCSelectWeaponF16::SCSelectWeaponF16(){
     

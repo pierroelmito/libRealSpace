@@ -6,8 +6,9 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "RSImageSet.h"
 
+#include "precomp.h"
 
 RSImageSet::RSImageSet(){
     
@@ -53,15 +54,6 @@ void RSImageSet::InitFromPakEntry(PakEntry* entry){
 
 }
 
-RLEShape* RSImageSet::GetShape(size_t index){
-    return this->shapes[index];
-}
-
-
 void RSImageSet::Add(RLEShape* shape){
     this->shapes.push_back(shape);
-}
-
-size_t RSImageSet::GetNumImages(void){
-    return this->shapes.size();
 }

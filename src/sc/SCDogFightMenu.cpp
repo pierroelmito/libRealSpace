@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCDogFightMenu.h"
+
 #include "precomp.h"
 
 static const uint8_t PAK_ID_PALETTE          = 7;

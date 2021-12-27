@@ -8,9 +8,13 @@
 
 #include "precomp.h"
 
+#include <SDL2/SDL.h>
+
+#include "RSScreen.h"
+#include "RSVGA.h"
+
 static RSScreen Screen;
 static RSVGA VGA;
-
 
 void testTRE(void){
     

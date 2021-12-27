@@ -10,6 +10,9 @@
 
 #include <functional>
 
+#include "Math.h"
+#include "RLEShape.h"
+
 class SCButton
 {
 public:

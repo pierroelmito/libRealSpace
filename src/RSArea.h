@@ -6,12 +6,15 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__RSMap__
-#define __libRealSpace__RSMap__
+#pragma once
+
+#include "RSEntity.h"
+
+class RSMapTextureSet;
+class TreArchive;
 
 //DIRTY HACK !!! DELETE ME ASAP
 #define  HEIGHT_DIVIDER 17
-
 
 struct MapObject
 {
@@ -99,5 +102,3 @@ private:
 
 	std::vector<RSEntity*> jets;
 };
-
-#endif /* defined(__libRealSpace__RSMap__) */

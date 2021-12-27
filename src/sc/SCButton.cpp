@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCButton.h"
+
 #include "precomp.h"
 
 SCButton::SCButton()

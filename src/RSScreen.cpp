@@ -6,24 +6,24 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "RSScreen.h"
+
 #include "precomp.h"
 
-#include "SDL2/SDL_opengl.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 
 static SDL_Window *sdlWindow;
 static SDL_Renderer *sdlRenderer;
 
 RSScreen::RSScreen(){
-    
 }
 
-
 RSScreen::~RSScreen(){
-    
 }
 
 void RSScreen::SetTitle(const char* title){
-    SDL_SetWindowTitle(sdlWindow, title);
+	SDL_SetWindowTitle(sdlWindow, title);
 }
 
 void RSScreen::Init(int32_t zoomFactor){

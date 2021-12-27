@@ -6,8 +6,9 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCSelectWeaponsF16__
-#define __libRealSpace__SCSelectWeaponsF16__
+#pragma once
+
+#include "IActivity.h"
 
 //GAMEFLOW
 // 70 74
@@ -28,4 +29,3 @@ private:
     RLEShape background;
 };
 
-#endif /* defined(__libRealSpace__SCSelectWeaponsF16__) */

@@ -6,10 +6,11 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCMouse__
-#define __libRealSpace__SCMouse__
+#pragma once
 
+#include "Math.h"
 
+class RLEShape;
 
 struct MouseButton{
     
@@ -54,5 +55,3 @@ private:
     
     bool visible;
 };
-
-#endif /* defined(__libRealSpace__SCMouse__) */

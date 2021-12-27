@@ -9,6 +9,11 @@
 #ifndef __libRealSpace__SCFontManager__
 #define __libRealSpace__SCFontManager__
 
+#include <map>
+
+#include "RSFont.h"
+#include "TreArchive.h"
+
 class RSFontManager{
 public:
     RSFontManager();

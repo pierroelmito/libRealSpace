@@ -6,6 +6,11 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCMainMenu.h"
+#include "SCTrainingMenu.h"
+#include "SCObjectViewer.h"
+#include "SCRegister.h"
+
 #include "precomp.h"
 
 #define MAINMENU_PAK_PATH "..\\..\\DATA\\GAMEFLOW\\MAINMENU.PAK"

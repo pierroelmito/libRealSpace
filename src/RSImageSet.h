@@ -6,25 +6,25 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__RSImageSet__
-#define __libRealSpace__RSImageSet__
+#pragma once
 
-class RSImageSet{
-    
+#include <cstdint>
+#include <vector>
+
+class PakEntry;
+class RLEShape;
+
+class RSImageSet
+{
 public:
     RSImageSet();
     ~RSImageSet();
     
     void InitFromPakEntry(PakEntry* entry);
     
-    RLEShape* GetShape(size_t index);
-    size_t GetNumImages(void);
-    
+	const std::vector<RLEShape*>& GetShapes() const { return shapes; }
     void Add(RLEShape* shape);
-    
+
 private:
-    
     std::vector<RLEShape*> shapes;
 };
-
-#endif /* defined(__libRealSpace__RSImageSet__) */

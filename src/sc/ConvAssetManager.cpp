@@ -8,7 +8,7 @@
 
 #include "precomp.h"
 
-
+#include "RSImageSet.h"
 
 ConvAssetManager::ConvAssetManager(){
     
@@ -141,7 +141,7 @@ void ConvAssetManager::ReadBackGrounds(const IffChunk* chunkRoot){
     
     for(size_t i = 0 ; i < chunkRoot->childs.size() ; i ++){
         IffChunk* chunk = chunkRoot->childs[i];
-        if (chunk->id != 'FORM'){
+		if (chunk->id != IdToUInt("FORM")){
             Game.Log("ConvAssetManager::ReadBackGrounds => Unexpected chunk (%s).\n",chunk->GetName());
             Game.Terminate("Unable to build CONV database.\n");
         }
@@ -181,8 +181,9 @@ void ConvAssetManager::ReadFaces(const IffChunk* root){
         imageSet->InitFromPakEntry(convShps.GetEntry(pakID));
         face->appearances = imageSet;
 
-        for (size_t fid=0; fid < imageSet->GetNumImages(); fid++) {
-            RLEShape*s = imageSet->GetShape(fid);
+		const auto& shapes = imageSet->GetShapes();
+		for (size_t fid=0; fid < shapes.size(); fid++) {
+			RLEShape*s = shapes[fid];
             
             
                 Point2D pos = {0,CONV_TOP_BAR_HEIGHT+1}; //  to allow the black band on top of the screen

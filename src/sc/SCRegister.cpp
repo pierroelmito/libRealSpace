@@ -6,20 +6,28 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCRegister.h"
+
 #include "precomp.h"
 
-SCRegister::SCRegister(){
-    
+#include <SDL2/SDL.h>
+
+#include "SCWildCatBase.h"
+#include "SCAnimationPlayer.h"
+
+SCRegister::SCRegister()
+{
 }
 
-SCRegister::~SCRegister(){
-    
+SCRegister::~SCRegister()
+{
 }
 
-void SCRegister::CheckKeyboard(void){
+void SCRegister::CheckKeyboard(void)
+{
     //Keyboard
     SDL_Event keybEvents[5];
-    int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYUP);
+	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN);
     for(int i= 0 ; i < numKeybEvents ; i++){
         SDL_Event* event = &keybEvents[i];
         switch (event->key.keysym.sym) {

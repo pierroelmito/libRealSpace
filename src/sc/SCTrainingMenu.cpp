@@ -6,8 +6,10 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "SCTrainingMenu.h"
+#include "SCStrike.h"
 
+#include "precomp.h"
 
 SCTrainingMenu::SCTrainingMenu(){
 }
@@ -15,11 +17,10 @@ SCTrainingMenu::SCTrainingMenu(){
 SCTrainingMenu::~SCTrainingMenu(){
 }
 
-void SCTrainingMenu::Init( ){
+void SCTrainingMenu::Init()
+{
 
-    
-    
-    TreEntry* objViewPAK = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OBJVIEW.PAK");
+	TreEntry* objViewPAK = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OBJVIEW.PAK");
     PakArchive assets;
     assets.InitFromRAM("OBJVIEW.PAK",objViewPAK->data, objViewPAK->size);
     assets.List(stdout);

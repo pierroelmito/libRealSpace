@@ -11,6 +11,9 @@
 
 #include <cstdint>
 
+#include "Math.h"
+#include "ByteStream.h"
+
 class RLEShape{
 
     

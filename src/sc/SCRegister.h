@@ -6,23 +6,21 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCRegister__
-#define __libRealSpace__SCRegister__
+#pragma once
 
-class SCRegister : public IActivity{
-    
+#include "IActivity.h"
+
+class SCRegister : public IActivity
+{
 public:
-    SCRegister();
-    ~SCRegister();
-    
-    void CheckKeyboard(void);
-    
-    void Init( );
-    
-    void RunFrame(void);
-    
+	SCRegister();
+	~SCRegister();
+
+	void CheckKeyboard(void);
+	void Init( );
+	void RunFrame(void);
+
 private:
-    RLEShape book;
+	RLEShape book;
 };
 
-#endif /* defined(__libRealSpace__SCRegister__) */

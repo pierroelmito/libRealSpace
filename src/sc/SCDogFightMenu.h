@@ -6,23 +6,19 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCDogFightMenu__
-#define __libRealSpace__SCDogFightMenu__
+#pragma once
 
-class SCDogFightMenu : public IActivity{
-    
+#include "IActivity.h"
+
+class SCDogFightMenu : public IActivity
+{
 public:
-    
-    SCDogFightMenu();
-    ~SCDogFightMenu();
-    
-    void Init( );
-    
-    void RunFrame(void);
+	SCDogFightMenu();
+	~SCDogFightMenu();
 
+	void Init( );
+	void RunFrame(void);
 
 private:
-
 };
 
-#endif /* defined(__libRealSpace__SCDogFightMenu__) */

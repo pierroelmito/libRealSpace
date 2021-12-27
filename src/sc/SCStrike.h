@@ -6,21 +6,21 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCStrike__
-#define __libRealSpace__SCStrike__
+#pragma once
 
-class SCStrike : public IActivity{
-    
+#include "IActivity.h"
+#include "RSArea.h"
+
+class SCStrike : public IActivity
+{
 public:
-    SCStrike();
-    ~SCStrike();
-    
-    void Init( );
-    
-    void RunFrame(void);
+	SCStrike();
+	~SCStrike();
+
+	void Init( );
+	void RunFrame(void);
 
 private:
-    RSArea area ;
+	RSArea area;
 };
 
-#endif /* defined(__libRealSpace__SCStrike__) */

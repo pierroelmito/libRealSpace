@@ -6,8 +6,9 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "SCAnimationPlayer.h"
 
+#include "precomp.h"
 
 SCAnimationPlayer::SCAnimationPlayer(int32_t animationID, int32_t backgroundID){
     

@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <cstdio>
+
 #include "ByteStream.h"
 
 struct Texel {

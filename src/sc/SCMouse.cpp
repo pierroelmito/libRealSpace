@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
+#include "SCMouse.h"
+
 #include "precomp.h"
 
 const char* const CURSOR_SHAPE_PATH = "..\\..\\DATA\\MOUSE.SHP";
