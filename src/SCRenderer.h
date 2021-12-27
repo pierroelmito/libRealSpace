@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 
 class RSEntity;
 
@@ -39,7 +40,7 @@ public:
     void UploadTextureContentToGPU(Texture* texture);
     void DeleteTextureInGPU(Texture* texture);
 
-	VGAPalette* GetPalette(void);
+	VGAPalette& GetPalette(void);
 
 	//Map Rendering
     //For research methods: Those should be deleted soon:
@@ -63,10 +64,17 @@ public:
 
 	void RenderJets(RSArea* area);
 
-	Camera* GetCamera(void);
-    void SetLight(Point3D* position);
-    
-    inline bool IsPaused(void){
+	struct Render3DParams
+	{
+	};
+	void SetProj(const Matrix& m);
+	void SetView(const Matrix& m);
+	void Draw3D(const Render3DParams& params, std::function<void()>&& f);
+
+	Camera& GetCamera(void);
+	void SetLight(const Point3D& position);
+
+	inline bool IsPaused(void){
         return this->paused;
     }
     
@@ -80,20 +88,16 @@ public:
 
 private:
 
-	bool initialized;
-    
-    void GetNormal(RSEntity* object,Triangle* triangle,Point3D* normal);
+	bool initialized{ false };
 
-	int32_t width;
-    int32_t height;
-    int scale;
+	Vector3D GetNormal(RSEntity* object, Triangle* triangle);
 
 	VGAPalette palette;
-    bool running;
-    bool paused;
-    
-    Camera camera;
-    Point3D light;
+	bool running;
+	bool paused;
+
+	Camera camera;
+	Point3D light;
 };
 
 /*

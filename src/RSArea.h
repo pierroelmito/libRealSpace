@@ -13,31 +13,26 @@
 #define  HEIGHT_DIVIDER 17
 
 
-struct MapObject{
-    
+struct MapObject
+{
     char name[9];
     char destroyedName[9];
-    
     uint32_t position[3];
-    
     RSEntity* entity;
-    
 };
 
-struct AreaBlock{
-    
-    size_t width;
-    size_t height;
-    
-    int sideSize;
-    
-    //To be delete later when we can parse it properly
-    MapVertex vertice[400];
-    
-    inline MapVertex* GetVertice(int x, int y){
-        return &vertice[x + y * this->sideSize];
-    }
-    
+struct AreaBlock
+{
+	size_t width;
+	size_t height;
+	int sideSize;
+
+	//To be delete later when we can parse it properly
+	MapVertex vertice[400];
+
+	inline MapVertex* GetVertice(int x, int y){
+		return &vertice[x + y * this->sideSize];
+	}
 };
 
 #define BLOCK_LOD_MAX 0

@@ -28,7 +28,7 @@ void RSImage::Create(const char name[8],uint32_t width,uint32_t height){
     this->width = width;
     this->height = height;
     this->data = (uint8_t*)malloc(this->width*this->height);
-    this->palette = Renderer.GetPalette();
+	this->palette = &Renderer.GetPalette();
     
     this->texture.Set(this);
     dirty = true;

@@ -8,6 +8,8 @@
 
 #include "precomp.h"
 
+#include "SDL2/SDL_opengl.h"
+
 void glVertex(const Point3D& p)
 {
 	glVertex3f(p.X, p.Y, p.Z);
@@ -15,8 +17,7 @@ void glVertex(const Point3D& p)
 
 void glLoadMatrixHMM(const Matrix& m)
 {
-	float* p = (float*)m.Elements;
-	glLoadMatrixf(p);
+	glLoadMatrixf((float*)m.Elements);
 }
 
 SCRenderer::SCRenderer()
@@ -27,19 +28,44 @@ SCRenderer::SCRenderer()
 SCRenderer::~SCRenderer(){
 }
 
-Camera* SCRenderer::GetCamera(void){
-    return &this->camera;
+void
+SCRenderer::SetProj(const Matrix& m)
+{
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixHMM(m);
 }
 
-VGAPalette* SCRenderer::GetPalette(void){
-    return &this->palette;
+void
+SCRenderer::SetView(const Matrix& m)
+{
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixHMM(m);
 }
 
-void SCRenderer::Init(int32_t zoomFactor){
-	this->scale =zoomFactor;
+void
+SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
+{
+	glClearDepth(1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
 
-	int32_t width  = 320 * scale;
-    int32_t height = 200 * scale;
+	f();
+
+	glDisable(GL_DEPTH_TEST);
+}
+
+Camera& SCRenderer::GetCamera(void){
+	return camera;
+}
+
+VGAPalette& SCRenderer::GetPalette(void){
+	return palette;
+}
+
+void SCRenderer::Init(int32_t zoomFactor)
+{
+	int32_t width  = 320 * zoomFactor;
+	int32_t height = 200 * zoomFactor;
 
 	//Load the default palette
     IffLexer lexer ;
@@ -50,14 +76,12 @@ void SCRenderer::Init(int32_t zoomFactor){
     palette.InitFromIFF(&lexer);
 
 	this->palette = *palette.GetColorPalette();
-    this->width = width;
-    this->height = height;
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
 	//glClearDepth(1.0f);								// Depth Buffer Setup
 	glDisable(GL_DEPTH_TEST);							// Disable Depth Testing
 
-	camera.SetPersective(50.0f,this->width/(float)this->height,10.0f,12000.0f);
+	camera.SetPersective(50.0f, width / (float)height,10.0f,12000.0f);
 
 	light = { 300, 300, 300 };
 
@@ -122,12 +146,14 @@ void SCRenderer::DeleteTextureInGPU(Texture* texture){
 }
 
 
-void SCRenderer::GetNormal(RSEntity* object,Triangle* triangle,Vector3D* normal)
+Vector3D SCRenderer::GetNormal(RSEntity* object,Triangle* triangle)
 {
+	Vector3D normal;
+
 	//Calculate the normal for this triangle
 	Vector3D edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
 	Vector3D edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
-	*normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
+	normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
 
 	// All normals are supposed to point outward in modern GPU but SC triangles
     // don't have consistent winding. They can be CW or CCW (the back governal of a jet  is
@@ -139,8 +165,10 @@ void SCRenderer::GetNormal(RSEntity* object,Triangle* triangle,Vector3D* normal)
 	const Point3D& cameraPosition = camera.position;
 	const Point3D& vertexOnTriangle = object->vertices[triangle->ids[0]];
 	Point3D cameraDirection = HMM_NormalizeVec3(cameraPosition - vertexOnTriangle);
-	if (HMM_Dot(cameraDirection, *normal) < 0)
-		*normal *= -1.0f;
+	if (HMM_Dot(cameraDirection, normal) < 0)
+		normal *= -1.0f;
+
+	return normal;
 }
 
 void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
@@ -157,24 +185,15 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
     
     float ambientLamber = 0.4f;
     
-    Lod* lod = &object->lods[lodLevel] ;
-    
-    
-    
-        
-        
-    glDisable(GL_CULL_FACE);
-    
-    glEnable(GL_BLEND);
-    
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    
-    
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    
-    
-    //Texture pass
+	Lod* lod = &object->lods[lodLevel];
+
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
+	//Texture pass
     if (lodLevel == 0){
         glEnable(GL_TEXTURE_2D);
         
@@ -200,11 +219,9 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
             
             Triangle* triangle = &object->triangles[textInfo->triangleID];
             
-            Vector3D normal;
-            GetNormal(object, triangle, &normal);
-            
-            
-            glBegin(GL_TRIANGLES);
+			const Vector3D normal = GetNormal(object, triangle);
+
+			glBegin(GL_TRIANGLES);
             for(int j=0 ; j < 3 ; j++){
 				Point3D vertice = object->vertices[triangle->ids[j]];
 				Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
@@ -226,12 +243,12 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
         glDisable(GL_BLEND);
     }
 
-    //Pass 3: Let's draw the transparent stuff render RSEntity::TRANSPARENT)
-    glDisable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE);
-    glBlendEquation(GL_ADD);
-    //glDepthFunc(GL_LESS);
+	//Pass 3: Let's draw the transparent stuff render RSEntity::TRANSPARENT)
+	glDisable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE);
+	glBlendEquation(GL_ADD);
+	//glDepthFunc(GL_LESS);
 
 	for(int i = 0 ; i < lod->numTriangles ; i++) {
         uint16_t triangleID = lod->triangleIDs[i];
@@ -240,8 +257,7 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
 		if (triangle->property != RSEntity::TRANSPARENT)
             continue;
 
-		Vector3D normal;
-        GetNormal(object,triangle,&normal);
+		const Vector3D normal = GetNormal(object,triangle);
 
 		glBegin(GL_TRIANGLES);
 
@@ -263,15 +279,10 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
 		glEnd();
     }
 
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_BLEND);
-    
-    
-    
-    
-    
-    
-    //Pass 1, draw color
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
+
+	//Pass 1, draw color
     for(int i = 0 ; i < lod->numTriangles ; i++){
         //for(int i = 60 ; i < 62 ; i++){  //Debug purpose only back governal of F-16 is 60-62
         
@@ -282,10 +293,9 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
         if (triangle->property == RSEntity::TRANSPARENT)
             continue;
         
-        Vector3D normal;
-        GetNormal(object, triangle, &normal);
-        
-        glBegin(GL_TRIANGLES);
+		const Vector3D normal = GetNormal(object, triangle);
+
+		glBegin(GL_TRIANGLES);
         for(int j=0 ; j < 3 ; j++){
 			Point3D vertice = object->vertices[triangle->ids[j]];
 			Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
@@ -310,12 +320,9 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel ){
 
 }
 
-
-
-void SCRenderer::SetLight(Point3D* l){
-    this->light = *l;
+void SCRenderer::SetLight(const Point3D& l){
+	this->light = l;
 }
-
 
 void SCRenderer::Prepare(RSEntity* object){
     
@@ -441,14 +448,9 @@ void SCRenderer::RenderTexturedTriangle(MapVertex* tri0,
                                      MapVertex* tri1,
                                      MapVertex* tri2,
                                      RSArea* area,
-                                      int triangleType){
-    
-    
-    float white[4];
-    white[0] = 1;
-    white[1] = 1;
-    white[2] = 1;
-    white[3] = 1;
+									  int triangleType)
+{
+	const float white[4] { 1, 1, 1, 1 };
     glColor4fv(white);
     
     RSImage* image = NULL;
@@ -537,35 +539,33 @@ void SCRenderer::RenderColoredTriangle(MapVertex* tri0,
 
 
 
-void SCRenderer::RenderQuad(MapVertex* currentVertex,
-                MapVertex* rightVertex,
-                MapVertex* bottomRightVertex,
-                          MapVertex* bottomVertex,RSArea* area,bool renderTexture){
-    
-    //Render lower triangle
-    if (!renderTexture){
-        //if (currentVertex->lowerImageID == 0xFF ){
-            RenderColoredTriangle(currentVertex,bottomRightVertex,bottomVertex);
-        //}
-    }
-    else{
-        if (currentVertex->lowerImageID != 0xFF )
-            RenderTexturedTriangle(currentVertex,bottomRightVertex,bottomVertex,area,LOWER_TRIANGE);
-    }
-    
-      //Render Upper triangles
-    
-    if (!renderTexture){
-       // if (currentVertex->upperImageID == 0xFF ){
-            RenderColoredTriangle(currentVertex,rightVertex,bottomRightVertex);
-       // }
-    }
-    else{
-        if (currentVertex->upperImageID != 0xFF )
-             RenderTexturedTriangle(currentVertex,rightVertex,bottomRightVertex,area,UPPER_TRIANGE);
-    }
-    
-    
+void SCRenderer::RenderQuad(
+	MapVertex* currentVertex,
+	MapVertex* rightVertex,
+	MapVertex* bottomRightVertex,
+	MapVertex* bottomVertex,RSArea* area,bool renderTexture)
+{
+	//Render lower triangle
+	if (!renderTexture){
+		//if (currentVertex->lowerImageID == 0xFF ){
+			RenderColoredTriangle(currentVertex,bottomRightVertex,bottomVertex);
+		//}
+	}
+	else{
+		if (currentVertex->lowerImageID != 0xFF )
+			RenderTexturedTriangle(currentVertex,bottomRightVertex,bottomVertex,area,LOWER_TRIANGE);
+	}
+
+	  //Render Upper triangles
+	if (!renderTexture){
+		// if (currentVertex->upperImageID == 0xFF ){
+			RenderColoredTriangle(currentVertex,rightVertex,bottomRightVertex);
+		// }
+	}
+	else{
+		if (currentVertex->upperImageID != 0xFF )
+			 RenderTexturedTriangle(currentVertex,rightVertex,bottomRightVertex,area,UPPER_TRIANGE);
+	}
 }
 
 void SCRenderer::RenderBlock(RSArea* area, int LOD, int i, bool renderTexture){
@@ -585,7 +585,7 @@ void SCRenderer::RenderBlock(RSArea* area, int LOD, int i, bool renderTexture){
             MapVertex* bottomVertex      =   &block->vertice[x+(y+1)*sideSize];
             
             
-            RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
+			RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
         }
         
         
@@ -603,7 +603,7 @@ void SCRenderer::RenderBlock(RSArea* area, int LOD, int i, bool renderTexture){
             MapVertex* bottomRightVertex =   rightBlock->GetVertice(0, y+1);
             MapVertex* bottomVertex      =   currentBlock->GetVertice(currentBlock->sideSize-1, y+1);
             
-            RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
+			RenderQuad(currentVertex,rightVertex, bottomRightVertex, bottomVertex,area,renderTexture);
         }
     }
     
@@ -668,36 +668,41 @@ void SCRenderer::RenderJets(RSArea* area)
 
 void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock)
 {
-    glMatrixMode(GL_PROJECTION);
+	glMatrixMode(GL_PROJECTION);
 	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
 	//glLoadMatrixf(projectionMatrix->ToGL());
 	glLoadMatrixHMM(camera.proj);
 
-    running = true;
+	running = true;
 
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+	glDepthFunc(GL_LESS);
+
+	const Point3D lookAt = { 3856, 0, 2856};
 
 	Point3D newPosition;
-	newPosition.X =  4100;//lookAt[0] + 5256*cos(counter/2);
+	newPosition.X =  4100;
 	newPosition.Y = 100;
-	newPosition.Z =  3000;//lookAt[2];// + 5256*sin(counter/2);
-	camera.SetPosition(newPosition);
+	newPosition.Z =  3000;
 
-	Point3D lookAt = {3856,0,2856};
+	uint32_t currentTime = SDL_GetTicks();
+	newPosition.X =  lookAt.X + 300 * cos(currentTime/2000.0f);
+	newPosition.Z =  lookAt.Z + 300 * sin(currentTime/2000.0f);
+
+	camera.SetPosition(newPosition);
 	camera.LookAt(lookAt);
 
 	GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
-    GLuint fogfilter= 0;                    // Which Fog To Use
-    GLfloat fogColor[4]= {1.0f, 1.0f, 1.0f, 1.0f};
-    glFogi(GL_FOG_MODE, fogMode[fogfilter]);        // Fog Mode
-    glFogfv(GL_FOG_COLOR, fogColor);            // Set Fog Color
-    glFogf(GL_FOG_DENSITY, 0.0002f);              // How Dense Will The Fog Be
-    glHint(GL_FOG_HINT, GL_DONT_CARE);          // Fog Hint Value
-    glFogf(GL_FOG_START, 600.0f);             // Fog Start Depth
-    glFogf(GL_FOG_END, 8000.0f);               // Fog End Depth
-    glEnable(GL_FOG);
+	GLuint fogfilter= 0;                    // Which Fog To Use
+	GLfloat fogColor[4]= {1.0f, 1.0f, 1.0f, 1.0f};
+	glFogi(GL_FOG_MODE, fogMode[fogfilter]);        // Fog Mode
+	glFogfv(GL_FOG_COLOR, fogColor);            // Set Fog Color
+	glFogf(GL_FOG_DENSITY, 0.0002f);              // How Dense Will The Fog Be
+	glHint(GL_FOG_HINT, GL_DONT_CARE);          // Fog Hint Value
+	glFogf(GL_FOG_START, 600.0f);             // Fog Start Depth
+	glFogf(GL_FOG_END, 8000.0f);               // Fog End Depth
+	glEnable(GL_FOG);
 
 	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 
@@ -714,10 +719,7 @@ void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock)
 	vec3_t lookAt = {2456,0,256};
 	*/
 
-
 	//City Top
-
-
 
 	//City view on mountains
 	/*
@@ -730,7 +732,6 @@ void SCRenderer::RenderWorldSolid(RSArea* area, int LOD, int verticesPerBlock)
 
 	//Canyon
 	///*
-
 
 	//*/
 
@@ -834,7 +835,7 @@ void SCRenderer::RenderWorldPoints(RSArea* area, int LOD, int verticesPerBlock)
         
         Point3D lookAt = { 256*16,100,256*16 };
         
-		Renderer.GetCamera()->LookAt(lookAt);
+		Renderer.GetCamera().LookAt(lookAt);
 
 		Point3D newPosition = camera.position;
 		newPosition.X = lookAt.X + 5256*cos(counter/2);

@@ -34,8 +34,6 @@ extern "C" {
 #endif
 
     #include "SDL2/SDL.h"
-    #include "SDL2/SDL_opengl.h"
-
 
     #include "Math.h"
     #include "Matrix.h"

@@ -320,8 +320,8 @@ void RSArea::ParseTriFile(PakEntry* entry)
 	Point3D* vertices = new Point3D[300];
 
 	ByteStream stream(entry->data);
-	stream.ReadInt32LE();
-	stream.ReadInt32LE();
+	const auto v0 = stream.ReadInt32LE();
+	const auto v1 = stream.ReadInt32LE();
 	for (int i=0 ; i < 300; i++) {
 		const float x = readCoord(stream.ReadInt32LE()) / 2000;
 		const float z = readCoord(stream.ReadInt32LE()) / 2000;
@@ -478,7 +478,7 @@ void RSArea::ParseBlocks(size_t lod,PakEntry* entry, size_t blockDim){
             */
             
      
-            Texel* t = Renderer.GetPalette()->GetRGBColor(paletteColor*16+shade);
+			Texel* t = Renderer.GetPalette().GetRGBColor(paletteColor*16+shade);
             
             //Texel* t = renderer.GetDefaultPalette()->GetRGBColor(vertex->text);
             /*

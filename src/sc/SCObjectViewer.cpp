@@ -369,47 +369,27 @@ void SCObjectViewer::RunFrame(void)
     
     VGA.VSync();
 
-	//Ok now time to draw the model
-	glClearDepth(1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT);
-
 	uint32_t currentTime = SDL_GetTicks();
 	uint32_t totalTime = currentTime - startTime;
 
 	RSShowCase showCase = showCases[currentObject];
-	Camera* camera = Renderer.GetCamera();
+	Camera& camera = Renderer.GetCamera();
 
 	Point3D newPosition;
 	newPosition.X = showCase.cameraDist/150 *cos(totalTime/2000.0f);
 	newPosition.Y = showCase.cameraDist/350;
 	newPosition.Z = showCase.cameraDist/150*sin(totalTime/2000.0f);
-	camera->SetPosition(newPosition);
-	camera->LookAt({ 0, 0, 0 });
+	camera.SetPosition(newPosition);
+	camera.LookAt({ 0, 0, 0 });
 
-	Point3D light;
-	light.X = 4*cos(-totalTime/20000.0f);
-	light.Y = 4;
-	light.Z = 4*sin(-totalTime/20000.0f);
-	Renderer.SetLight(&light);
+	const float t = -totalTime/20000.0f;
+	const Point3D light = { 4 * cos(t), 4, 4 * sin(t) };
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixHMM(camera->proj);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixHMM(camera->getView());
-
-	if (false)
-	{
-		const float szp = 5.0f;
-		const float szn = -szp;
-		glBegin(GL_TRIANGLES);
-		glVertex3f(szn, szp, szn);
-		glVertex3f(szn, szp, szp);
-		glVertex3f(szp, szp, szn);
-		glEnd();
-	}
-
-	Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX);
-
-	glDisable(GL_DEPTH_TEST);
+	//Ok now time to draw the model
+	Renderer.Draw3D({}, [&] () {
+		Renderer.SetLight(light);
+		Renderer.SetProj(camera.proj);
+		Renderer.SetView(camera.getView());
+		Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX);
+	});
 }

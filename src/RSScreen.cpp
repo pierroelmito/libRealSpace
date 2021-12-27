@@ -8,6 +8,7 @@
 
 #include "precomp.h"
 
+#include "SDL2/SDL_opengl.h"
 
 static SDL_Window *sdlWindow;
 static SDL_Renderer *sdlRenderer;
@@ -50,11 +51,9 @@ void RSScreen::Init(int32_t zoomFactor){
     
     
     glViewport(0,0,this->width,this->height);			// Reset The Current Viewport
-    
-    
-    
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
 
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
+	glClearDepth(1.0f);
     glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
     
     SDL_ShowWindow(sdlWindow);
