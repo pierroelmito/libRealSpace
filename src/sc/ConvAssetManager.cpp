@@ -110,7 +110,7 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 
 	const PakEntry& shapeEntry = shapeArchive->GetEntry(shapeID);
 	PakArchive subPAK;
-	subPAK.InitFromPakEntry("", shapeEntry);
+	subPAK.InitFromRAM("", shapeEntry);
 
 	if (!subPAK.IsReady()){
 
@@ -175,7 +175,7 @@ void ConvAssetManager::ReadFaces(const IffChunk* root)
 		uint8_t pakID = s.ReadByte();
 
 		RSImageSet* imageSet = new RSImageSet();
-		imageSet->InitFromPakEntry(convShps.GetEntry(pakID));
+		imageSet->InitFromRAM(convShps.GetEntry(pakID));
 		face->appearances = imageSet;
 
 		const auto& shapes = imageSet->GetShapes();
@@ -224,28 +224,28 @@ void ConvAssetManager::BuildDB()
 {
 	//This is were the background shapes are stored.
 	TreEntry* convShapEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONVSHPS.PAK");
-	convShps.InitFromRAM("CONVSHPS.PAK",convShapEntry->data,convShapEntry->size);
+	convShps.InitFromRAM("CONVSHPS.PAK", *convShapEntry);
 	//convShapeArchive.List(stdout);
 
 	//This is were the palette patches are stored
 	TreEntry* convPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONVPALS.PAK");
-	convPals.InitFromRAM("CONVPALS.PAK", convPalettesEntry->data, convPalettesEntry->size);
+	convPals.InitFromRAM("CONVPALS.PAK", *convPalettesEntry);
 	//convPalettePak.List(stdout);
 
 	//This is were the background shapes are stored.
 	TreEntry* optShapEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
-	optShps.InitFromRAM("OPTSHPS.PAK",optShapEntry->data,optShapEntry->size);
+	optShps.InitFromRAM("OPTSHPS.PAK", *optShapEntry);
 	//optShps(stdout);
 
 	//This is were the palette patches are stored
 	TreEntry* optPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK");
-	optPals.InitFromRAM("OPTPALS.PAK", optPalettesEntry->data, optPalettesEntry->size);
+	optPals.InitFromRAM("OPTPALS.PAK", *optPalettesEntry);
 	//optPals(stdout);
 
 	//Open the metadata
 	TreEntry* convDataEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONVDATA.IFF");
 	IffLexer convDataLexer;
-	convDataLexer.InitFromRAM(convDataEntry->data, convDataEntry->size);
+	convDataLexer.InitFromRAM(*convDataEntry);
 	//convDataLexer.List(stdout);
 
 	ReadBackGrounds(convDataLexer.GetChunkByID("BCKS"));

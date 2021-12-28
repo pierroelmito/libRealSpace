@@ -23,7 +23,7 @@ void SCStrike::Init(void )
 	area.InitFromPAKFileName("ARENA.PAK");
 }
 
-void SCStrike::RunFrame(void)
+void SCStrike::RunFrame(const FrameParams& p)
 {
 	Renderer.RenderWorldSolid(area,BLOCK_LOD_MAX,400);
 }

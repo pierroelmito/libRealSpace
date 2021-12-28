@@ -37,7 +37,7 @@ void SCMainMenu::Init(void){
     
     TreArchive* gameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
     TreEntry* entry = gameFlow->GetEntryByName(MAINMENU_PAK_PATH);
-    mainMenupak.InitFromRAM("MAINMENU.PAK",entry->data,entry->size);
+	mainMenupak.InitFromRAM("MAINMENU.PAK",*entry);
     
     LoadPalette();
     LoadButtons();
@@ -71,7 +71,7 @@ void SCMainMenu::LoadButtons()
 
 	//The buttons are within an other pak within MAINMENU.PAK !!!!
 	PakArchive subPak;
-	subPak.InitFromRAM("subPak Buttons",boardEntry.data ,boardEntry.size);
+	subPak.InitFromRAM("subPak Buttons",boardEntry);
 
 	SCButton* button{};
 	Point2D buttonDimension = {211, 15} ;
@@ -123,14 +123,11 @@ void SCMainMenu::LoadButtons()
 
 void SCMainMenu::LoadBoard(void)
 {
-	const PakEntry* boardEntry = &mainMenupak.GetEntry(MAINMENU_PAK_BOARD_INDICE);
-
+	const PakEntry& boardEntry = mainMenupak.GetEntry(MAINMENU_PAK_BOARD_INDICE);
 	//The board is within an other pak within MAINMENU.PAK !!!!
 	PakArchive subPak;
-	subPak.InitFromRAM("subPak board",boardEntry->data ,boardEntry->size);
-	boardEntry = &subPak.GetEntry(0);
-
-	board.InitWithPosition(*boardEntry, &boardPosition);
+	subPak.InitFromRAM("subPak board", boardEntry);
+	board.InitWithPosition(subPak.GetEntry(0), &boardPosition);
 }
 
 void SCMainMenu::LoadPalette(void)
@@ -142,7 +139,7 @@ void SCMainMenu::LoadPalette(void)
 
 	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName(OPTPALS_PAK_PATH);
     PakArchive palettesPak;
-    palettesPak.InitFromRAM("OPTSHPS.PAK",palettesEntry->data,palettesEntry->size);
+	palettesPak.InitFromRAM("OPTSHPS.PAK",*palettesEntry);
     //palettesPak.List(stdout);
     
 	paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_MOUTAIN_PALETTE_PATCH_ID).data); //mountains Good but not sky
@@ -161,50 +158,27 @@ void SCMainMenu::LoadBackgrounds(void)
 {
 	TreEntry* entryMountain = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
 	PakArchive pak;
-	pak.InitFromRAM("",entryMountain->data,entryMountain->size);
+	pak.InitFromRAM("",*entryMountain);
 
 	//The board is within an other pak within MAINMENU.PAK !!!!
 	PakArchive mountainPak;
-	mountainPak.InitFromPakEntry("subPak board", pak.GetEntry(OptionShapeID::MOUTAINS_BG));
+	mountainPak.InitFromRAM("subPak board", pak.GetEntry(OptionShapeID::MOUTAINS_BG));
 	mountain.Init(mountainPak.GetEntry(0));
 
 	PakArchive skyPak;
-	skyPak.InitFromPakEntry("subPak sky", pak.GetEntry(OptionShapeID::SKY));
+	skyPak.InitFromRAM("subPak sky", pak.GetEntry(OptionShapeID::SKY));
 	sky.Init(skyPak.GetEntry(0));
 
 	TreEntry* entryCloud = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\MIDGAMES\\MIDGAMES.PAK");
 	PakArchive subcloudPak;
-	subcloudPak.InitFromRAM("cloud oak entry", entryCloud->data, entryCloud->size);
+	subcloudPak.InitFromRAM("cloud oak entry", *entryCloud);
+
 	PakArchive cloudPak;
-	cloudPak.InitFromPakEntry("subPak cloud",subcloudPak.GetEntry(20));
+	cloudPak.InitFromRAM("subPak cloud",subcloudPak.GetEntry(20));
 	cloud.Init(cloudPak.GetEntry(0));
 }
 
-
-
-void SCMainMenu::RunFrame(void){
-    
-    CheckButtons();
-    
-    VGA.Activate();
-    VGA.Clear();
-    
-	VGA.SetPalette(this->palette);
-    
-    //Draw static
-	VGA.DrawShape(sky);
-
-	VGA.DrawShape(mountain);
-	VGA.DrawShape(cloud);
-    
-	VGA.DrawShape(board);
-	DrawButtons();
-
-    //Draw Mouse
-    Mouse.Draw();
-    
-    //Check Mouse state.
-    
-    VGA.VSync();
-    
+void SCMainMenu::RunFrame(const FrameParams& p)
+{
+	Frame2D({ &sky, &mountain, &cloud, &board });
 }

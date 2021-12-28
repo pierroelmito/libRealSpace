@@ -15,18 +15,18 @@
 #include <vector>
 #include <map>
 
+#include "ByteSlice.h"
+
 struct Char_String_Comparator
 {
-    bool operator()(char const *a, char const *b) const
-    {
-        return strcmp(a, b) < 0;
-    }
+	bool operator()(char const *a, char const *b) const
+	{
+		return strcmp(a, b) < 0;
+	}
 };
 
-struct TreEntry
+struct TreEntry : public ByteSlice
 {
-	uint8_t* data{ nullptr };
-	size_t size{ 0 };
 	uint8_t unknownFlag{ 0 };
 	char name[65]{};
 };

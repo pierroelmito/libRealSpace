@@ -57,8 +57,8 @@ public:
 
 	void InitFromPAKFileName(const char* pakFilename);
 
-	inline const AreaBlock* GetAreaBlockByID(int lod,int blockID) const {
-		return &this->blocks[lod][blockID];
+	inline const AreaBlock& GetAreaBlockByID(int lod,int blockID) const {
+		return this->blocks[lod][blockID];
 	}
 
 	inline const AreaBlock* GetAreaBlockByCoo(int lod, int x, int y) const {

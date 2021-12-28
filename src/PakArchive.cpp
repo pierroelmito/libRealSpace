@@ -113,7 +113,7 @@ void PakArchive::InitFromRAM(const char* name,uint8_t* data, size_t size)
 	Parse();
 }
 
-void PakArchive::InitFromPakEntry(const char* name, const ByteSlice& bs)
+void PakArchive::InitFromRAM(const char* name, const ByteSlice& bs)
 {
 	InitFromRAM(name, bs.data, bs.size);
 }

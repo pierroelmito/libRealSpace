@@ -147,7 +147,7 @@ bool TreArchive::GetPAKByName(const char* entryName,PakArchive* pak){\
     if (entry == NULL)
         return false;
     
-    pak->InitFromRAM(entryName, entry->data, entry->size);
+	pak->InitFromRAM(entryName, *entry);
     
     if (!pak->IsReady())
         return false;

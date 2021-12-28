@@ -18,10 +18,10 @@ SCAnimationPlayer::~SCAnimationPlayer(){
     
 }
 
-void SCAnimationPlayer::Init( ){
+void SCAnimationPlayer::Init() {
     
 }
 
-void SCAnimationPlayer::RunFrame(void){
+void SCAnimationPlayer::RunFrame(const FrameParams& p){
     Stop();
 }

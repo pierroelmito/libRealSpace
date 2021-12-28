@@ -13,12 +13,7 @@
 #include <vector>
 
 #include "ByteStream.h"
-
-struct ByteSlice
-{
-	uint8_t* data{ nullptr };
-	size_t size{ 0 };
-};
+#include "ByteSlice.h"
 
 struct PakEntry : public ByteSlice
 {
@@ -41,7 +36,7 @@ public:
 
 	bool InitFromFile(const char* filepath);
 	void InitFromRAM(const char* name,uint8_t* data, size_t size);
-	void InitFromPakEntry(const char* name, const ByteSlice& bs);
+	void InitFromRAM(const char* name, const ByteSlice& bs);
 
 	bool Decompress(const char* dstDirectory, const char* extension);
 

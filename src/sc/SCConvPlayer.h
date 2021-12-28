@@ -57,16 +57,16 @@ public :
     SCConvPlayer();
     ~SCConvPlayer();
 	void Init( ) override;
-	void RunFrame(void) override;
+	void RunFrame(const FrameParams& p) override;
 	void SetID(int32_t id);
 	virtual void Focus(void) override;
 
 private:
-    void ReadNextFrame(void);
+	void ReadNextFrame(const FrameParams& p);
 	void SetArchive(const PakEntry* conv);
     void ReadtNextFrame(void);
     void DrawText(void);
-	void CheckFrameExpired(void);
+	void CheckFrameExpired(const FrameParams& p);
 
 	int32_t conversationID{ 0 };
 	ByteStream conv ;

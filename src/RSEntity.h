@@ -16,6 +16,7 @@
 
 #include "Matrix.h"
 #include "Quaternion.h"
+#include "ByteSlice.h"
 
 class RSImage;
 class IffChunk;
@@ -74,8 +75,6 @@ struct Lod{
     uint16_t triangleIDs[256];
 };
 
-
-
 class RSEntity
 {
 public:
@@ -83,6 +82,7 @@ public:
 	~RSEntity();
 
 	void InitFromRAM(uint8_t* data, size_t size);
+	void InitFromRAM(const ByteSlice& bytes);
 	void InitFromIFF(IffLexer* lexer);
 
 	void AddImage(RSImage* image);

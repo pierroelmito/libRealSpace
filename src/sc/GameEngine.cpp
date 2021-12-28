@@ -132,7 +132,7 @@ void GameEngine::Run(){
         
         if (currentActivity->IsRunning()){
             currentActivity->Focus();
-            currentActivity->RunFrame();
+			currentActivity->RunFrame({ SDL_GetTicks() });
             currentActivity->UnFocus();
         }
         else{
@@ -152,7 +152,7 @@ void GameEngine::Run(){
 }
 
 void GameEngine::AddActivity(IActivity* activity){
-    activity->Start();
+	activity->Start(SDL_GetTicks());
     this->activities.push(activity);
 }
 

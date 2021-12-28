@@ -8,6 +8,8 @@
 
 #include "precomp.h"
 
+#if 0
+
 #include <SDL2/SDL.h>
 
 #include "RSScreen.h"
@@ -17,17 +19,10 @@ static RSScreen Screen;
 static RSVGA VGA;
 
 void testTRE(void){
-    
     TreArchive treArchive;
     treArchive.InitFromFile("OBJECTS.TRE");
     treArchive.List(stdout);
-    
 }
-
-
-
-
-
 
 void testPalette(void){
     
@@ -68,7 +63,7 @@ void testPAKDecompress(void){
     
     
     PakArchive pakArchive;
-    pakArchive.InitFromRAM(pakName,treEntry->data, treEntry->size);
+	pakArchive.InitFromRAM(pakName, *treEntry);
     
     //Decompress it
     pakArchive.Decompress(".","VOC");
@@ -806,3 +801,5 @@ int maine( int argc,char** argv){
     
     return EXIT_SUCCESS;
 }
+
+#endif

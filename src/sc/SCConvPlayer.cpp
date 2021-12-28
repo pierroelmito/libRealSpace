@@ -38,22 +38,15 @@ void SCConvPlayer::Focus(void) {
     Screen.SetTitle("CONVersation Player");
 }
 
-void SCConvPlayer::ReadNextFrame(void){
-    
-    
-    
-    
-        
+void SCConvPlayer::ReadNextFrame(const FrameParams& p)
+{
         if (conv.GetPosition() == end){
             Stop();
             return;
         }
 
-        
-        currentFrame.creationTime = SDL_GetTicks();
-        
-  
-    
+		currentFrame.creationTime = p.currentTime;
+
         uint8_t type = conv.ReadByte();
     
         switch (type) {
@@ -73,7 +66,7 @@ void SCConvPlayer::ReadNextFrame(void){
             conv.MoveForward(8+1);
             
             while(conv.PeekByte() == GROUP_SHOT_ADD_CHARCTER)
-                ReadNextFrame();
+				ReadNextFrame(p);
             
             break;
         }
@@ -178,7 +171,7 @@ void SCConvPlayer::ReadNextFrame(void){
             uint8_t unkn  = conv.ReadByte();
             uint8_t unkn1  = conv.ReadByte();
             printf("ConvID: %d Unknown usage Flag 0xE: (0x%2X 0x%2X) \n",this->conversationID,unkn,unkn1);
-            ReadNextFrame();
+			ReadNextFrame(p);
             break;
         }
         case CHOOSE_WINGMAN:  // Wingman selection trigger
@@ -227,7 +220,7 @@ void SCConvPlayer::SetID(int32_t id){
     TreEntry* convEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONV.PAK");
     
     PakArchive convPak;
-    convPak.InitFromRAM("CONV.PAK", convEntry->data, convEntry->size);
+	convPak.InitFromRAM("CONV.PAK", *convEntry);
     //convPak.List(stdout);
     
     if (convPak.GetNumEntries() <= id){
@@ -246,170 +239,152 @@ void SCConvPlayer::Init( ){
     currentFrame.font = FontManager.GetFont("");
 }
 
-void SCConvPlayer::CheckFrameExpired(void){
-    
-    //A frame expires either after a player press a key, click or 6 seconds elapse.
-    //Mouse
-    SDL_Event mouseEvents[5];
-    int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEBUTTONUP,SDL_MOUSEBUTTONUP);
-    for(int i= 0 ; i < numMouseEvents ; i++){
-        SDL_Event* event = &mouseEvents[i];
-        
-        switch (event->type) {
-            case SDL_MOUSEBUTTONUP:
-                this->currentFrame.SetExpired(true);
-                break;
-            default:
-                break;
-        }
-    }
-    
-    
-    //Keyboard
-    SDL_Event keybEvents[5];
-    int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYUP,SDL_KEYUP);
-    for(int i= 0 ; i < numKeybEvents ; i++){
-        SDL_Event* event = &keybEvents[i];
-        switch (event->type) {
-            default:
-                this->currentFrame.SetExpired(true);
-                break;
-        }
-    }
-    
-    
-    int32_t currentTime = SDL_GetTicks();
-    if(currentTime - currentFrame.creationTime > 5000)
-        this->currentFrame.SetExpired(true);
-    
-    
-    
-   
+void SCConvPlayer::CheckFrameExpired(const FrameParams& p)
+{
+	//A frame expires either after a player press a key, click or 6 seconds elapse.
+
+	//Mouse
+	SDL_Event mouseEvents[5];
+	int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEBUTTONUP,SDL_MOUSEBUTTONUP);
+	for(int i= 0 ; i < numMouseEvents ; i++){
+		SDL_Event* event = &mouseEvents[i];
+		switch (event->type) {
+			case SDL_MOUSEBUTTONUP:
+				this->currentFrame.SetExpired(true);
+				break;
+			default:
+				break;
+		}
+	}
+
+	//Keyboard
+	SDL_Event keybEvents[5];
+	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYUP,SDL_KEYUP);
+	for(int i= 0 ; i < numKeybEvents ; i++){
+		SDL_Event* event = &keybEvents[i];
+		switch (event->type) {
+			default:
+				this->currentFrame.SetExpired(true);
+				break;
+		}
+	}
+
+	if(p.currentTime - currentFrame.creationTime > 5000)
+		this->currentFrame.SetExpired(true);
 }
 
 
-void SCConvPlayer::DrawText(void){
-    
-    
-    if (currentFrame.text == NULL)
-        return;
+void SCConvPlayer::DrawText(void)
+{
+	if (currentFrame.text == NULL)
+		return;
 
-    size_t textSize = strlen(currentFrame.text);
-    const char* cursor = currentFrame.text;
-    const char* end = cursor + textSize;
-    
-    uint8_t lineNumber = 0;
-    
-    while (cursor < end){
-        
-        const char* wordSearch = cursor;
-        const char* lastGoodPos = wordSearch;
-        
-        //How many pixels are avaiable for a line.
-        int32_t pixelAvailable = 320-CONV_BORDER_MARGIN*2 ;
-        
-        //Determine what will fit in a line.
-        while (pixelAvailable > 0 && wordSearch < end) {
-            
-            lastGoodPos = wordSearch-1;
-            while (*wordSearch != ' ' && wordSearch < end) {
-                
-                if ( *wordSearch == ' ')
-                    pixelAvailable -= CONV_SPACE_SIZE ;
-                else
-                    pixelAvailable -= currentFrame.font->GetShapeForChar(*wordSearch)->GetWidth() + CONV_INTERLETTER_SPACE;
-                
-                wordSearch++;
-            }
-            
-            if( pixelAvailable > 0)
-                lastGoodPos = currentFrame.text + strlen(currentFrame.text);
-            //Skip the space char
-            wordSearch++;
-            
-            
-        }
-        
-        //Draw the line
-        Point2D coo = {CONV_BORDER_MARGIN,165+lineNumber*13};
-        
-        if (pixelAvailable < 0)
-            pixelAvailable=0;
-        //Don't forget to center the text
-        coo.x += pixelAvailable/2;
-        
-        VGA.DrawText(currentFrame.font, &coo, currentFrame.text,currentFrame.textColor,cursor-currentFrame.text,lastGoodPos-cursor,CONV_INTERLETTER_SPACE,CONV_SPACE_SIZE);
-        
-        //Go to next line
-        cursor = lastGoodPos+1;
-        lineNumber++;
-    }
-    
+	size_t textSize = strlen(currentFrame.text);
+	const char* cursor = currentFrame.text;
+	const char* end = cursor + textSize;
+
+	uint8_t lineNumber = 0;
+
+	while (cursor < end){
+
+		const char* wordSearch = cursor;
+		const char* lastGoodPos = wordSearch;
+
+		//How many pixels are avaiable for a line.
+		int32_t pixelAvailable = 320-CONV_BORDER_MARGIN*2 ;
+
+		//Determine what will fit in a line.
+		while (pixelAvailable > 0 && wordSearch < end) {
+
+			lastGoodPos = wordSearch-1;
+			while (*wordSearch != ' ' && wordSearch < end) {
+
+				if ( *wordSearch == ' ')
+					pixelAvailable -= CONV_SPACE_SIZE ;
+				else
+					pixelAvailable -= currentFrame.font->GetShapeForChar(*wordSearch)->GetWidth() + CONV_INTERLETTER_SPACE;
+
+				wordSearch++;
+			}
+
+			if( pixelAvailable > 0)
+				lastGoodPos = currentFrame.text + strlen(currentFrame.text);
+			//Skip the space char
+			wordSearch++;
+
+
+		}
+
+		//Draw the line
+		Point2D coo = {CONV_BORDER_MARGIN,165+lineNumber*13};
+
+		if (pixelAvailable < 0)
+			pixelAvailable=0;
+		//Don't forget to center the text
+		coo.x += pixelAvailable/2;
+
+		VGA.DrawText(currentFrame.font, &coo, currentFrame.text,currentFrame.textColor,cursor-currentFrame.text,lastGoodPos-cursor,CONV_INTERLETTER_SPACE,CONV_SPACE_SIZE);
+
+		//Go to next line
+		cursor = lastGoodPos+1;
+		lineNumber++;
+	}
 }
 
+void SCConvPlayer::RunFrame(const FrameParams& p)
+{
+	if (!initialized){
+		Stop();
+		Game.Log("Conv ID %d was not initialized: Stopping.\n", this->conversationID);
+		return ;
+	}
 
+	//If frame needs to be update
+	CheckFrameExpired(p);
+	if ( currentFrame.IsExpired() )
+		ReadNextFrame(p);
 
-void SCConvPlayer::RunFrame(void){
-    
-    
-    if (!initialized){
-        Stop();
-        Game.Log("Conv ID %d was not initialized: Stopping.\n", this->conversationID);
-        return ;
-    }
-    
-    //If frame needs to be update
-    CheckFrameExpired();
-    if ( currentFrame.IsExpired() )
-        ReadNextFrame();
-    
-    
-    CheckButtons();
-    
-    VGA.Activate();
-    VGA.Clear();
-    
-    //Update the palette for the current background
-    for (size_t i = 0; i < currentFrame.bgLayers->size(); i++) {
-        ByteStream paletteReader;
-        paletteReader.Set((*currentFrame.bgPalettes)[i]);
-        this->palette.ReadPatch(&paletteReader);
+	CheckButtons();
+
+	VGA.Activate();
+	VGA.Clear();
+
+	//Update the palette for the current background
+	for (size_t i = 0; i < currentFrame.bgLayers->size(); i++) {
+		ByteStream paletteReader;
+		paletteReader.Set((*currentFrame.bgPalettes)[i]);
+		this->palette.ReadPatch(&paletteReader);
 		VGA.SetPalette(this->palette);
 
-    }
-    
-    
-    //Draw static
-    for (size_t i = 0; i < currentFrame.bgLayers->size(); i++) {
-        RLEShape* shape = (*currentFrame.bgLayers)[i];
+	}
+
+	//Draw static
+	for (size_t i = 0; i < currentFrame.bgLayers->size(); i++) {
+		RLEShape* shape = (*currentFrame.bgLayers)[i];
 		VGA.DrawShape(*shape);
-    }
-    
-    
-    if (currentFrame.mode == ConvFrame::CONV_CLOSEUP){
-        
-        for (size_t i = 0 ; i < CONV_TOP_BAR_HEIGHT; i++)
-            VGA.FillLineColor(i, 0x00);
-    
-    
-        for (size_t i = 0 ; i < CONV_BOTTOM_BAR_HEIGHT; i++) 
-            VGA.FillLineColor(199-i, 0x00);
-    
-    }
-    
-    //
-    if (currentFrame.mode == ConvFrame::CONV_CLOSEUP ||
-        currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE){
-        
-        
-        TreEntry* convPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONVPALS.PAK");
-        PakArchive convPals;
-        convPals.InitFromRAM("CONVPALS.PAK", convPalettesEntry->data, convPalettesEntry->size);
-        
-        
-        ByteStream paletteReader;
+	}
+
+	if (currentFrame.mode == ConvFrame::CONV_CLOSEUP) {
+		for (size_t i = 0 ; i < CONV_TOP_BAR_HEIGHT; i++)
+			VGA.FillLineColor(i, 0x00);
+
+		for (size_t i = 0 ; i < CONV_BOTTOM_BAR_HEIGHT; i++)
+			VGA.FillLineColor(199-i, 0x00);
+	}
+
+	//
+	if (currentFrame.mode == ConvFrame::CONV_CLOSEUP ||
+		currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE){
+
+
+		TreEntry* convPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONVPALS.PAK");
+		PakArchive convPals;
+		convPals.InitFromRAM("CONVPALS.PAK", *convPalettesEntry);
+
+
+		ByteStream paletteReader;
 		paletteReader.Set(convPals.GetEntry(currentFrame.facePaletteID).data); //mountains Good but not sky
-        this->palette.ReadPatch(&paletteReader);
+		this->palette.ReadPatch(&paletteReader);
 
 		int32_t pos = 0 ;
 		if (currentFrame.mode == ConvFrame::CONV_CLOSEUP) {
@@ -418,154 +393,144 @@ void SCConvPlayer::RunFrame(void){
 			if (currentFrame.facePosition == ConvFrame::FACE_RIGHT)
 				pos =  30;
 		}
-        
-        if (currentFrame.face == NULL)
-            goto afterFace;
-        
-        //Face wiht of without hair
-        //00 nothing
-        //01 rest face
-        //02 hair
+
+		if (currentFrame.face == NULL)
+			goto afterFace;
+
+		//Face wiht of without hair
+		//00 nothing
+		//01 rest face
+		//02 hair
 		const auto& shapes = currentFrame.face->appearances->GetShapes();
 
 		for (size_t i=1; i< 3; i++) {
 		   RLEShape* s = shapes[i];
-           s->SetPositionX(pos);
+		   s->SetPositionX(pos);
 		   VGA.DrawShape(*s);
-        }
-        
-        //Taking animation
-        //03 mouth anim
-        //04 mouth anim
-        //06 mouth anim
-        //07 mouth anim
-        //08 mouth anim
-        //09 mouth pinched
-        //10 mouth opened
-        //11 mouth something
-        //12 mouth something
-        
-        for (size_t i=03; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP
-             ; i++) {
-            
+		}
+
+		//Taking animation
+		//03 mouth anim
+		//04 mouth anim
+		//06 mouth anim
+		//07 mouth anim
+		//08 mouth anim
+		//09 mouth pinched
+		//10 mouth opened
+		//11 mouth something
+		//12 mouth something
+
+		for (size_t i=03; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP
+			 ; i++) {
+
 			RLEShape* s = shapes[3+(SDL_GetTicks()/100)%10];
-           s->SetPositionX(pos);
+		   s->SetPositionX(pos);
 			VGA.DrawShape(*s);
-            
-           
-        }
-        
-        
-        
-        
-        //Eyes animation
-        //13 eyes closed
-        //14 eyes closed
-        //15 eyes wide open
-        //16 eagle eyes
-        //16 left wink
-        //17 upper left eyes
-        //18 look right
-        //19 look left
-        //20 eyes straight
-        //21 eyes blink closed
-        //22 eyes blink mid-open
-        
-        
-        //23 eye brows semi-raised
-        //24 left eye brows semi-raised
-        //25 right eye brows semi-raised
-        //26 eye brows something
-        for (size_t i=13; i< 14; i++) {
+
+
+		}
+
+		//Eyes animation
+		//13 eyes closed
+		//14 eyes closed
+		//15 eyes wide open
+		//16 eagle eyes
+		//16 left wink
+		//17 upper left eyes
+		//18 look right
+		//19 look left
+		//20 eyes straight
+		//21 eyes blink closed
+		//22 eyes blink mid-open
+
+
+		//23 eye brows semi-raised
+		//24 left eye brows semi-raised
+		//25 right eye brows semi-raised
+		//26 eye brows something
+		for (size_t i=13; i< 14; i++) {
 			RLEShape* s = shapes[i];
-           s->SetPositionX(pos);
-            //VGA.DrawShape();
-        }
-        
-        //General face expression
-        //27 mouth heart
-        //28 face tensed
-        //29 face smile
-        //30 right face tensed
-        //31 right crooked
-        //32 pinched lips
-        //33 surprise
-        //34 seducing face
-        //35 look of desaproval face
-        for (size_t i=29; i< 30; i++) {
+			s->SetPositionX(pos);
+			//VGA.DrawShape();
+		}
+
+		//General face expression
+		//27 mouth heart
+		//28 face tensed
+		//29 face smile
+		//30 right face tensed
+		//31 right crooked
+		//32 pinched lips
+		//33 surprise
+		//34 seducing face
+		//35 look of desaproval face
+		for (size_t i=29; i< 30; i++) {
 			RLEShape* s = shapes[i];
-           s->SetPositionX(pos);
-            //VGA.DrawShape();
-        }
-        
-        //Cloth
-        //35 civil clothes
-        //36 pilot clothes
-        //37 pilot clothes 2
-        //for (size_t i=36; i< 37; i++) {
+			s->SetPositionX(pos);
+			//VGA.DrawShape();
+		}
+
+		//Cloth
+		//35 civil clothes
+		//36 pilot clothes
+		//37 pilot clothes 2
+		//for (size_t i=36; i< 37; i++) {
 			RLEShape* s = shapes[35];
-           s->SetPositionX(pos);
+			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
-        //}
-        
-        //38 sunglasses
-        //39 pilot helmet (if drawing this, don't draw hairs
-        //40 pilot helmet visor (if drawing this draw 39 too
-        for (size_t i=41; i< 40; i++) {
+		//}
+
+		//38 sunglasses
+		//39 pilot helmet (if drawing this, don't draw hairs
+		//40 pilot helmet visor (if drawing this draw 39 too
+		for (size_t i=41; i< 40; i++) {
 			RLEShape* s = shapes[i];
-           s->SetPositionX(pos);
+			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
-        }
-        
-        //40 to 54 ????
-        
-        //54 hand extension
-        if (currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE){
+		}
+
+		//40 to 54 ????
+
+		//54 hand extension
+		if (currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE){
 			RLEShape* s = shapes[54];
-           s->SetPositionX(pos);
-            //VGA.DrawShape();
-        }
-        
-        
-        // 60 scary smile
-        // 61 look right
-        // 62 look left
-        for (size_t i=55; i< 63; i++) {
-            //What is there ?
+			s->SetPositionX(pos);
+			//VGA.DrawShape();
+		}
+
+		// 60 scary smile
+		// 61 look right
+		// 62 look left
+		for (size_t i=55; i< 63; i++) {
+			//What is there ?
 			RLEShape* s = shapes[i];
-           s->SetPositionX(pos);
-            //VGA.DrawShape();
-        }
-        
-       
-    }
-    
+			s->SetPositionX(pos);
+			//VGA.DrawShape();
+		}
+	}
+
 afterFace:
-    if (currentFrame.mode == ConvFrame::CONV_WIDE ||
-        currentFrame.mode == ConvFrame::CONV_WINGMAN_CHOICE){
-    
-        for (size_t i=0 ; i < currentFrame.participants.size(); i++) {
-            //CharFace* participant = currentFrame.participants[i];
-            //      VGA.DrawShape(participant->appearance);
-        }
-    }
-    
-    //Draw text
-    DrawText();
-    
-    DrawButtons();
-    
-    
-    if (currentFrame.mode == ConvFrame::CONV_WIDE ||
-        currentFrame.mode == ConvFrame::CONV_CLOSEUP)
-        ;
-    
-    //Draw Mouse
-    //Mouse.Draw();
-    
-    //Check Mouse state.
-    
-    VGA.VSync();
-    
-    
+	if (currentFrame.mode == ConvFrame::CONV_WIDE ||
+		currentFrame.mode == ConvFrame::CONV_WINGMAN_CHOICE){
+
+		for (size_t i=0 ; i < currentFrame.participants.size(); i++) {
+			//CharFace* participant = currentFrame.participants[i];
+			//      VGA.DrawShape(participant->appearance);
+		}
+	}
+
+	//Draw text
+	DrawText();
+
+	DrawButtons();
+
+	if (currentFrame.mode == ConvFrame::CONV_WIDE ||
+		currentFrame.mode == ConvFrame::CONV_CLOSEUP);
+
+	//Draw Mouse
+	//Mouse.Draw();
+
+	//Check Mouse state.
+
+	VGA.VSync();
 }

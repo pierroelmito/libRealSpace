@@ -21,7 +21,7 @@ public:
 	RSImageSet();
 	~RSImageSet();
 
-	void InitFromPakEntry(const ByteSlice& entry);
+	void InitFromRAM(const ByteSlice& entry);
 	const std::vector<RLEShape*>& GetShapes() const { return shapes; }
 	void Add(RLEShape* shape);
 

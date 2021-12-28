@@ -47,15 +47,15 @@ void SCWildCatBase::Init()
 	//Load book
 	TreEntry* entryMountain = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
 	PakArchive pak;
-	pak.InitFromRAM("",entryMountain->data,entryMountain->size);
+	pak.InitFromRAM("", *entryMountain);
 
 	PakArchive bookPak;
-	bookPak.InitFromPakEntry("subPak board", pak.GetEntry(OptionShapeID::WILDCAT_HANGAR));
+	bookPak.InitFromRAM("subPak board", pak.GetEntry(OptionShapeID::WILDCAT_HANGAR));
 	hangar.Init(bookPak.GetEntry(0));
 
 	//Load vehicule
 	PakArchive vehiculePak;
-	vehiculePak.InitFromPakEntry("subPak board", pak.GetEntry(OptionShapeID::WILDCAT_HANGAR_VEHICULE_F16));
+	vehiculePak.InitFromRAM("subPak board", pak.GetEntry(OptionShapeID::WILDCAT_HANGAR_VEHICULE_F16));
 	vehicule.Init(vehiculePak.GetEntry(0));
 
 	//Load palette
@@ -63,32 +63,16 @@ void SCWildCatBase::Init()
 
 	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK");
 	PakArchive palettesPak;
-	palettesPak.InitFromRAM("OPTSHPS.PAK",palettesEntry->data,palettesEntry->size);
+	palettesPak.InitFromRAM("OPTSHPS.PAK",*palettesEntry);
 
 	ByteStream paletteReader;
 	paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_WILD_CAT_HANGAR).data);
 	this->palette.ReadPatch(&paletteReader);
 }
 
-void SCWildCatBase::RunFrame(void)
+void SCWildCatBase::RunFrame(const FrameParams& p)
 {
-	CheckButtons();
 	CheckKeyboard();
-
-	VGA.Activate();
-	VGA.Clear();
-
-	VGA.SetPalette(this->palette);
-
-	VGA.DrawShape(hangar);
-	VGA.DrawShape(vehicule);
-
-	DrawButtons();
-
-	Mouse.Draw();
-
-	//Check Mouse state.
-
-	VGA.VSync();
+	Frame2D({ &hangar, &vehicule });
 }
 

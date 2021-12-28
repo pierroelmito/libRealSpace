@@ -18,7 +18,7 @@ RSImageSet::~RSImageSet()
 {
 }
 
-void RSImageSet::InitFromPakEntry(const ByteSlice& entry)
+void RSImageSet::InitFromRAM(const ByteSlice& entry)
 {
 	uint8_t* end = entry.data + entry.size;
 	ByteStream index(entry.data);

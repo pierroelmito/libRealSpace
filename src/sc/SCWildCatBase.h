@@ -17,7 +17,7 @@ public:
 	~SCWildCatBase();
 
 	void Init( ) override;
-	void RunFrame(void) override;
+	void RunFrame(const FrameParams& p) override;
 	void CheckKeyboard(void);
 
 	RLEShape hangar;

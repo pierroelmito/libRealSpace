@@ -44,9 +44,9 @@ public:
 	}
 
 	//Add an activity on the top of the stack.
-	template <class T>
-	void MakeActivity() {
-		T* activity = new T();
+	template <class T, typename... ARGS>
+	void MakeActivity(const ARGS&... args) {
+		T* activity = new T(args...);
 		activity->Init();
 		AddActivity(activity);
 	}

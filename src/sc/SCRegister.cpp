@@ -25,76 +25,50 @@ SCRegister::~SCRegister()
 
 void SCRegister::CheckKeyboard(void)
 {
-    //Keyboard
-    SDL_Event keybEvents[5];
+	//Keyboard
+	SDL_Event keybEvents[5];
 	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN);
-    for(int i= 0 ; i < numKeybEvents ; i++){
-        SDL_Event* event = &keybEvents[i];
-        switch (event->key.keysym.sym) {
-            case SDLK_RETURN :{
-                
-                Stop();
-                
-                //Add both animation and next location on the stack.
-                SCWildCatBase* baseLocation = new SCWildCatBase();
-                baseLocation->Init();
-                Game.AddActivity(baseLocation);
-                
-                SCAnimationPlayer* anim = new SCAnimationPlayer(NULL,NULL);
-                anim->Init();
-                Game.AddActivity(anim);
-                
-                break;
-            }
-            
-            default:
-                break;
-        }
-    }
+	for(int i= 0 ; i < numKeybEvents ; i++){
+		SDL_Event* event = &keybEvents[i];
+		switch (event->key.keysym.sym) {
+			case SDLK_RETURN :{
+				Stop();
+				//Add both animation and next location on the stack.
+				Game.MakeActivity<SCWildCatBase>();
+				Game.MakeActivity<SCAnimationPlayer>(0, 0);
+				break;
+			}
+			default:
+				break;
+		}
+	}
 }
 
-void SCRegister::Init( ){
-    
-    //Load book
-    TreEntry* entryMountain = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
-    PakArchive pak;
-    pak.InitFromRAM("",entryMountain->data,entryMountain->size);
-    
-    PakArchive bookPak;
-	bookPak.InitFromPakEntry("subPak board", pak.GetEntry(OptionShapeID::START_GAME_REGISTRATION));
+void SCRegister::Init()
+{
+	//Load book
+	TreEntry* entryMountain = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
+	PakArchive pak;
+	pak.InitFromRAM("", *entryMountain);
+
+	PakArchive bookPak;
+	bookPak.InitFromRAM("subPak board", pak.GetEntry(OptionShapeID::START_GAME_REGISTRATION));
 	book.Init(bookPak.GetEntry(0));
 
-    //Load palette
+	//Load palette
 	this->palette = VGA.GetPalette();
 
-    TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK");
-    PakArchive palettesPak;
-    palettesPak.InitFromRAM("OPTSHPS.PAK",palettesEntry->data,palettesEntry->size);
+	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK");
+	PakArchive palettesPak;
+	palettesPak.InitFromRAM("OPTSHPS.PAK", *palettesEntry);
 
 	ByteStream paletteReader;
 	paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_STARTGAME_REGISTRATION).data);
-    this->palette.ReadPatch(&paletteReader);
+	this->palette.ReadPatch(&paletteReader);
 }
 
-void SCRegister::RunFrame(void)
+void SCRegister::RunFrame(const FrameParams& p)
 {
-	CheckButtons();
 	CheckKeyboard();
-
-	VGA.Activate();
-	VGA.Clear();
-
-	VGA.SetPalette(this->palette);
-
-	//Draw static
-	VGA.DrawShape(book);
-
-	DrawButtons();
-
-	//Draw Mouse
-	Mouse.Draw();
-
-	//Check Mouse state.
-
-	VGA.VSync();
+	Frame2D({ &book });
 }

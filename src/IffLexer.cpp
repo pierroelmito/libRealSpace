@@ -100,27 +100,31 @@ bool IffLexer::InitFromFile(const char* filepath){
     
 }
 
-bool IffLexer::InitFromRAM(uint8_t* data, size_t size){
-    
-    this->data = data;
-    this->size = size;
-    
-    stream.Set(this->data);
-    
-    if (this->path[0] == '\0')
-        strcpy(this->path, "PALETTE FROM RAM");
-    
-    Parse();
-    
-    return true;
+bool IffLexer::InitFromRAM(const ByteSlice& bytes)
+{
+	return InitFromRAM(bytes.data, bytes.size);
+}
+
+bool IffLexer::InitFromRAM(uint8_t* data, size_t size)
+{
+	this->data = data;
+	this->size = size;
+
+	stream.Set(this->data);
+
+	if (this->path[0] == '\0')
+		strcpy(this->path, "PALETTE FROM RAM");
+
+	Parse();
+
+	return true;
 }
 
 
 
 
-size_t IffLexer::ParseFORM(IffChunk* chunk){
- 
-    
+size_t IffLexer::ParseFORM(IffChunk* chunk)
+{
     //FORM id
     chunk->id = stream.ReadUInt32BE();
     
@@ -146,10 +150,8 @@ size_t IffLexer::ParseFORM(IffChunk* chunk){
         
         bytesToParse -= byteParsed;
     }
-    
-    
-    
-    return chunk->size+CHUNK_HEADER_SIZE;
+
+	return chunk->size+CHUNK_HEADER_SIZE;
 }
 
 size_t IffLexer::ParseChunk(IffChunk* chunk){

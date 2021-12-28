@@ -17,7 +17,7 @@ public:
 	~SCTrainingMenu();
 
 	void Init( ) override;
-	void RunFrame(void) override;
+	void RunFrame(const FrameParams& p) override;
 
 private:
 	RLEShape title;

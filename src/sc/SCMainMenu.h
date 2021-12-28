@@ -17,7 +17,7 @@ public:
     ~SCMainMenu();
 
 	virtual void Init(void) override;
-	virtual void RunFrame(void) override;
+	virtual void RunFrame(const FrameParams& p) override;
 
 private:
 	void LoadButtons(void);

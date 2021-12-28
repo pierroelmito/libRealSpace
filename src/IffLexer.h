@@ -9,13 +9,14 @@
 #ifndef __libRealSpace__IffLexer__
 #define __libRealSpace__IffLexer__
 
-#include "ByteStream.h"
-
 #include <cstdint>
 #include <cstddef>
 #include <cstdio>
 #include <vector>
 #include <map>
+
+#include "ByteStream.h"
+#include "ByteSlice.h"
 
 constexpr uint32_t IdToUInt(const char id[5])
 {
@@ -62,6 +63,7 @@ public:
     
     bool InitFromFile(const char* filepath);
     bool InitFromRAM(uint8_t* data, size_t size);
+	bool InitFromRAM(const ByteSlice& bytes);
 
     void List(FILE* output);
     

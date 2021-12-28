@@ -9,7 +9,11 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
+
 #include <functional>
+#include <optional>
+#include <map>
 
 #include "Matrix.h"
 #include "Texture.h"
@@ -22,6 +26,14 @@ class RSArea;
 class MapVertex;
 class Texture;
 
+struct ObjVertex
+{
+	Point3D pos;
+	Point3D normal;
+	std::array<float, 2> uv;
+	std::array<uint8_t, 4> col;
+};
+
 class SCRenderer
 {
 public:
@@ -31,11 +43,16 @@ public:
 	void Prepare(void);
 	void Init(int32_t zoom);
 	void Clear(void);
+	void PrepareModel(RSEntity* object, size_t lodLevel, std::map<uint32_t, std::vector<ObjVertex>>& vertice);
 	void DrawModel(RSEntity* object, size_t lodLevel);
 	void DisplayModel(RSEntity* object,size_t lodLevel);
 	void CreateTextureInGPU(Texture* texture);
 	void UploadTextureContentToGPU(Texture* texture);
 	void DeleteTextureInGPU(Texture* texture);
+
+	static uint32_t MakeTexture(uint32_t w, uint32_t h, bool nearest = true);
+	static void UpdateBitmapQuad(uint32_t textureID, Texel* data);
+	static void ResetState();
 
 	VGAPalette& GetPalette(void) { return palette; }
 
@@ -45,19 +62,22 @@ public:
 
 	void RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock);
 
-	void RenderTexturedTriangle(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2,const RSArea& area,int triangleType);
-	void RenderColoredTriangle (const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
-	bool IsTextured(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
-	void RenderQuad(
-		const MapVertex* currentVertex,
-		const MapVertex* rightVertex,
-		const MapVertex* bottomRightVertex,
-		const MapVertex* bottomVertex,
-		const RSArea& area,
-		bool renderTexture
-	);
+	struct AreaVertex
+	{
+		Point3D pos;
+		hmm_vec2 uv;
+		hmm_vec4 color;
+	};
+	using AreaCache = std::map<uint32_t, std::vector<AreaVertex>>;
+	using AddVertex = std::function<void(uint32_t, const Point3D&, const float*, const float*)>;
 
-	void RenderBlock(const RSArea& area,int LOD, int blockID,bool renderTexture);
+	std::optional<AreaCache> areaCache;
+	bool IsTextured(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
+	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area,const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2,int triangleType);
+	void RenderColoredTriangle (const AddVertex& vfunc, const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
+	void RenderQuad(const AddVertex& vfunc, const RSArea& area, const MapVertex* currentVertex, const MapVertex* rightVertex, const MapVertex* bottomRightVertex, const MapVertex* bottomVertex, bool renderTexture);
+	void RenderBlock(const AddVertex& vfunc, const RSArea& area,int LOD, int blockID,bool renderTexture);
+
 	void RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock);
 	void RenderObjects(const RSArea& area,size_t blockID);
 	void RenderJets(const RSArea& area);

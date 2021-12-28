@@ -33,11 +33,11 @@ void SCDogFightMenu::Init()
     
     
     IffLexer objToDisplay;
-    objToDisplay.InitFromRAM(objViewIFF->data, objViewIFF->size);
+	objToDisplay.InitFromRAM(*objViewIFF);
     objToDisplay.List(stdout);
     
     PakArchive assets;
-    assets.InitFromRAM("OBJVIEW.PAK",objViewPAK->data, objViewPAK->size);
+	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);
     assets.List(stdout);
     
 
@@ -46,7 +46,7 @@ void SCDogFightMenu::Init()
     
 	const PakEntry& entry0 = assets.GetEntry(PAK_ID_BACKGROUND);
     PakArchive file0;
-	file0.InitFromRAM("OBJVIEW.PAK: file PAK_ID_MENU_DYNAMC",entry0.data, entry0.size);
+	file0.InitFromRAM("OBJVIEW.PAK: file PAK_ID_MENU_DYNAMC",entry0);
     file0.List(stdout);
     //showAllImage(&file0);
 }
@@ -54,7 +54,7 @@ void SCDogFightMenu::Init()
 
 
 
-void SCDogFightMenu::RunFrame(void){
+void SCDogFightMenu::RunFrame(const FrameParams& p){
     
  
 }

@@ -24,6 +24,21 @@ void IActivity::SetTitle(const char* title){
 	Screen.SetTitle(title);
 }
 
+void IActivity::Frame2D(std::initializer_list<RLEShape*> shapes)
+{
+	CheckButtons();
+	VGA.Activate();
+	VGA.Clear();
+
+	VGA.SetPalette(this->palette);
+	for (RLEShape* shape : shapes)
+		VGA.DrawShape(*shape);
+
+	DrawButtons();
+	Mouse.Draw();
+	VGA.VSync();
+}
+
 SCButton* IActivity::CheckButtons(void)
 {
 	for(SCButton* button : buttons) {

@@ -157,6 +157,10 @@ void RSEntity::ParseUVXY(IffChunk* chunk)
 	}
 }
 
+void RSEntity::InitFromRAM(const ByteSlice& bytes)
+{
+	return InitFromRAM(bytes.data, bytes.size);
+}
 
 void RSEntity::InitFromRAM(uint8_t* data, size_t size)
 {

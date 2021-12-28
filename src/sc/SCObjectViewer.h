@@ -18,8 +18,8 @@ public:
     ~SCObjectViewer();
     
 	void Init( ) override;
-	void RunFrame(void) override;
-    void NextObject(void);
+	void RunFrame(const FrameParams& p) override;
+	void NextObject();
 
 private:
 
@@ -40,7 +40,4 @@ private:
     RLEShape board;
     
     uint32_t currentObject;
-
-	//For rotating the object
-    uint32_t startTime;
 };
