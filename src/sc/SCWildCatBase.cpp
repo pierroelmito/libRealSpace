@@ -23,22 +23,12 @@ SCWildCatBase::~SCWildCatBase()
 
 void SCWildCatBase::CheckKeyboard(void)
 {
-	SDL_Event keybEvents[5];
-	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN);
-	for(int i= 0 ; i < numKeybEvents ; i++){
-		SDL_Event* event = &keybEvents[i];
-		switch (event->key.keysym.sym) {
-			case SDLK_RETURN :{
-				Stop();
-				SCConvPlayer* conv = new SCConvPlayer();
-				conv->Init();
-				conv->SetID(14);
-				Game.AddActivity(conv);
-				break;
-			}
-			default:
-				break;
-		}
+	if (Game.IsKeyPressed(SDLK_RETURN)) {
+		Stop();
+		SCConvPlayer* conv = new SCConvPlayer();
+		conv->Init();
+		conv->SetID(14);
+		Game.AddActivity(conv);
 	}
 }
 

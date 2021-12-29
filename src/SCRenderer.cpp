@@ -187,12 +187,11 @@ void SCRenderer::UploadTextureContentToGPU(Texture* texture)
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)texture->width, (GLsizei)texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data);
 }
 
-void SCRenderer::DeleteTextureInGPU(Texture* texture){
-    
-    if (!initialized)
-        return;
-    
-    glDeleteTextures(1, &texture->id);
+void SCRenderer::DeleteTextureInGPU(Texture* texture)
+{
+	if (!initialized)
+		return;
+	glDeleteTextures(1, &texture->id);
 }
 
 
@@ -533,8 +532,8 @@ void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel)
 		glDisable(GL_DEPTH_TEST);
 		glPointSize(6);
 		glBegin(GL_POINTS);
-			glColor4f(1, 1,0 , 1);
-			glVertex(light);
+		glColor4f(1, 1,0 , 1);
+		glVertex(light);
 		glEnd();
 	}
 }
@@ -616,18 +615,7 @@ void SCRenderer::RenderTexturedTriangle(
 	const bool is64 = image->width == 64;
 	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
 
-	uint32_t texId = image->GetTexture()->GetTextureID();
-#if 0
-	glBindTexture(GL_TEXTURE_2D, texId);
-	glBegin(GL_TRIANGLES);
-	glTexCoord2fv(ttc[triangleType][0]);
-	glVertex(tri0->v);
-	glTexCoord2fv(ttc[triangleType][1]);
-	glVertex(tri1->v);
-	glTexCoord2fv(ttc[triangleType][2]);
-	glVertex(tri2->v);
-	glEnd();
-#endif
+	const uint32_t texId = image->GetTexture()->GetTextureID();
 	vfunc(texId, tri0->v, white, ttc[triangleType][0]);
 	vfunc(texId, tri1->v, white, ttc[triangleType][1]);
 	vfunc(texId, tri2->v, white, ttc[triangleType][2]);
@@ -832,10 +820,26 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	//counter += 0.02;
 
 	if (!areaCache) {
+		//struct PointComparator
+		//{
+		//	bool operator() (const Point3D& a, const Point3D& b) const {
+		//		if (a.X != b.X) return a.X < b.X;
+		//		if (a.Y != b.Y) return a.Y < b.Y;
+		//		return a.Z < b.Z;
+		//	}
+		//};
+		//std::map<Point3D, uint32_t, PointComparator> pointToIndex;
 		AreaCache tmp;
-		AddVertex vadd = [&tmp] (uint32_t texId, const Point3D& pos, const float* col, const float* uv) {
+		AddVertex vadd = [&] (uint32_t texId, const Point3D& pos, const float* col, const float* uv) {
+			//uint32_t& idx = pointToIndex[pos];
+			//if (idx == 0)
+			//	idx = pointToIndex.size();
 			auto& vert = tmp[texId];
-			vert.push_back({ pos, { uv[0], uv[1] }, { col[0], col[1], col[2], col[3] } });
+			const auto r = col[0];
+			const auto g = col[1];
+			const auto b = col[2];
+			if (std::abs(pos.Y) > 0.01f || texId != 0 || b < r || b < g)
+				vert.push_back({ pos, { uv[0], uv[1] }, { r, g, b, col[3] } });
 		};
 		for(int i = 0; i < BLOCKS_PER_MAP; i++)
 			RenderBlock(vadd, area, LOD, i, false);

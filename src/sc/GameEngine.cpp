@@ -31,6 +31,47 @@ void GameEngine::Init()
 	Mouse.Init(); //Load the Mouse Cursor
 }
 
+bool GameEngine::AnyInput()
+{
+	//Mouse
+	SDL_Event mouseEvents[5];
+	int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEBUTTONUP,SDL_MOUSEBUTTONUP);
+	for(int i= 0 ; i < numMouseEvents ; i++){
+		SDL_Event* event = &mouseEvents[i];
+		switch (event->type) {
+			case SDL_MOUSEBUTTONUP:
+				return true;
+			default:
+				break;
+		}
+	}
+
+	//Keyboard
+	SDL_Event keybEvents[5];
+	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYUP,SDL_KEYUP);
+	for(int i= 0 ; i < numKeybEvents ; i++){
+		SDL_Event* event = &keybEvents[i];
+		switch (event->type) {
+			default:
+				return true;
+		}
+	}
+
+	return false;
+}
+
+bool GameEngine::IsKeyPressed(uint32_t keyCode)
+{
+	SDL_Event keybEvents[5];
+	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN);
+	for(int i= 0 ; i < numKeybEvents ; i++){
+		SDL_Event* event = &keybEvents[i];
+		if (event->key.keysym.sym == keyCode)
+			return true;
+	}
+	return false;
+}
+
 bool GameEngine::PumpEvents(void)
 {
     SDL_PumpEvents();

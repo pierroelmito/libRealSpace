@@ -10,8 +10,6 @@
 
 #include "precomp.h"
 
-#include <SDL2/SDL.h>
-
 #include "RSImageSet.h"
 
 SCConvPlayer::SCConvPlayer()
@@ -33,246 +31,193 @@ SCConvPlayer::~SCConvPlayer()
 #define UNKNOWN                 0x0E
 #define CHOOSE_WINGMAN          0x0F
 
-void SCConvPlayer::Focus(void) {
-    IActivity::Focus();
-    Screen.SetTitle("CONVersation Player");
+void SCConvPlayer::Focus(void)
+{
+	IActivity::Focus();
+	Screen.SetTitle("CONVersation Player");
 }
 
 void SCConvPlayer::ReadNextFrame(const FrameParams& p)
 {
-        if (conv.GetPosition() == end){
-            Stop();
-            return;
-        }
+	if (conv.GetPosition() == end){
+		Stop();
+		return;
+	}
 
-		currentFrame.creationTime = p.currentTime;
+	currentFrame.creationTime = p.currentTime;
 
-        uint8_t type = conv.ReadByte();
-    
-        switch (type) {
-        case GROUP_SHOT:  // Group plan
-        {
-            char* location = (char*)conv.GetPosition();
-            
-            ConvBackGround* bg = ConvAssets.GetBackGround(location);
-            
-            
-            currentFrame.mode = ConvFrame::CONV_WIDE;
-            currentFrame.participants.clear();
-            currentFrame.bgLayers = &bg->layers;
-            currentFrame.bgPalettes = &bg->palettes;
-            
-            //printf("ConvID: %d WIDEPLAN : LOCATION: '%s'\n",this->conversationID, location);
-            conv.MoveForward(8+1);
-            
-            while(conv.PeekByte() == GROUP_SHOT_ADD_CHARCTER)
+	uint8_t type = conv.ReadByte();
+
+	switch (type) {
+		case GROUP_SHOT:  // Group plan
+		{
+			char* location = (char*)conv.GetPosition();
+			ConvBackGround* bg = ConvAssets.GetBackGround(location);
+			currentFrame.mode = ConvFrame::CONV_WIDE;
+			currentFrame.participants.clear();
+			currentFrame.bgLayers = &bg->layers;
+			currentFrame.bgPalettes = &bg->palettes;
+			//printf("ConvID: %d WIDEPLAN : LOCATION: '%s'\n",this->conversationID, location);
+			conv.MoveForward(8+1);
+			while(conv.PeekByte() == GROUP_SHOT_ADD_CHARCTER)
 				ReadNextFrame(p);
-            
-            break;
-        }
-        case CLOSEUP:  // Person talking
-        {
-            char* speakerName =       (char*)conv.GetPosition();
-            char* setName         = (char*)conv.GetPosition() + 0xA;
-            char* sentence         = (char*)conv.GetPosition() + 0x17;
-            
-            uint8_t pos = *(conv.GetPosition() + 0x13);
-            
-            currentFrame.facePosition = static_cast<ConvFrame::FacePos>(pos);
-            
-            currentFrame.text = sentence;
-            
-            currentFrame.mode = ConvFrame::CONV_CLOSEUP;
-            currentFrame.face = ConvAssets.GetCharFace(speakerName);
-            
-            
-            ConvBackGround* bg = ConvAssets.GetBackGround(setName);
-            currentFrame.bgLayers = &bg->layers;
-            currentFrame.bgPalettes = &bg->palettes;
-            
-            
-            conv.MoveForward(0x17 + strlen((char*)sentence)+1);
-            uint8_t color = conv.ReadByte(); // Color ?
-            currentFrame.textColor = color;
-            
-            currentFrame.facePaletteID = ConvAssets.GetFacePaletteID("normal");
-            
-            printf("ConvID: %d CLOSEUP: WHO: '%8s' WHERE: '%8s'     WHAT: '%s' (%2X) pos %2X\n",this->conversationID,speakerName,setName,sentence,color,pos);
-            break;
-        }
-        case CLOSEUP_CONTINUATION:  // Same person keep talking
-        {
-            char* sentence         = (char*)conv.GetPosition();
-            
-            currentFrame.text = sentence;
-            
-            conv.MoveForward(strlen((char*)sentence)+1);
-            printf("ConvID: %d MORETEX:                                       WHAT: '%s'\n",this->conversationID,sentence);
-            break;
-        }
-        case YESNOCHOICE_BRANCH1:  // Choice Offsets are question
-        {
-            currentFrame.mode = ConvFrame::CONV_CONTRACT_CHOICE;
-            printf("ConvID: %d CHOICE YES/NO : %X.\n",this->conversationID,type);
-            //Looks like first byte is the offset to skip if the answer is no.
-            /*uint8_t noOffset  =*/  conv.ReadByte();
-            /*uint8_t yesOffset  =*/ conv.ReadByte();
-            break;
-        }
-        case YESNOCHOICE_BRANCH2:  // Choice offset after first branch
-        {
-            
-            //currentFrame.mode = ConvFrame::CONV_CONTRACT_CHOICE;
-            printf("ConvID: %d CHOICE YES/NO : %X.\n",this->conversationID,type);
-            //Looks like first byte is the offset to skip if the answer is no.
-            /*uint8_t yesOffset  =*/ conv.ReadByte();
-            /*uint8_t noOffset  =*/  conv.ReadByte();
-            break;
-        }
-        case GROUP_SHOT_ADD_CHARCTER:  // Add person to GROUP
-        {
-            
-            char* participantName  = (char*)conv.GetPosition();
-            CharFigure* participant = ConvAssets.GetFigure(participantName);
-            //currentFrame.participants.push_back(participant);
-            
-            printf("ConvID: %d WIDEPLAN ADD PARTICIPANT: '%s'\n",this->conversationID,conv.GetPosition());
-            conv.MoveForward(0xD);
-            break;
-        }
-        case GROUP_SHOT_CHARCTR_TALK:  // Make group character talk
-        {
-            
-            char* who = (char*)conv.GetPosition();
-            conv.MoveForward(0xE);
-            char* sentence = (char*)conv.GetPosition();
-            conv.MoveForward(strlen(sentence)+1);
-            printf("ConvID: %d WIDEPLAN PARTICIPANT TALKING: who: '%s' WHAT '%s'\n",this->conversationID,who,sentence);
-            
-            
-            break;
-        }
-        case SHOW_TEXT:  // Show text
-        {
-            int8_t color = conv.ReadByte();
-            char* sentence = (char*)conv.GetPosition();
-            
-            currentFrame.mode = ConvFrame::CONV_CLOSEUP;
-            currentFrame.text = sentence;
-            currentFrame.textColor = color;
-            
-            printf("ConvID: %d Show Text: '%s' \n",this->conversationID,sentence);
-            conv.MoveForward(strlen(sentence)+1);
-            
-            break;
-        }
-        case 0xE:
-        {
-            uint8_t unkn  = conv.ReadByte();
-            uint8_t unkn1  = conv.ReadByte();
-            printf("ConvID: %d Unknown usage Flag 0xE: (0x%2X 0x%2X) \n",this->conversationID,unkn,unkn1);
+			break;
+		}
+		case CLOSEUP:  // Person talking
+		{
+			char* speakerName = (char*)conv.GetPosition();
+			char* setName = (char*)conv.GetPosition() + 0xA;
+			char* sentence = (char*)conv.GetPosition() + 0x17;
+			uint8_t pos = *(conv.GetPosition() + 0x13);
+			currentFrame.facePosition = static_cast<ConvFrame::FacePos>(pos);
+			currentFrame.text = sentence;
+			currentFrame.mode = ConvFrame::CONV_CLOSEUP;
+			currentFrame.face = ConvAssets.GetCharFace(speakerName);
+			ConvBackGround* bg = ConvAssets.GetBackGround(setName);
+			currentFrame.bgLayers = &bg->layers;
+			currentFrame.bgPalettes = &bg->palettes;
+			conv.MoveForward(0x17 + strlen((char*)sentence)+1);
+			uint8_t color = conv.ReadByte(); // Color ?
+			currentFrame.textColor = color;
+			currentFrame.facePaletteID = ConvAssets.GetFacePaletteID("normal");
+			printf("ConvID: %d CLOSEUP: WHO: '%8s' WHERE: '%8s'     WHAT: '%s' (%2X) pos %2X\n",this->conversationID,speakerName,setName,sentence,color,pos);
+			break;
+		}
+		case CLOSEUP_CONTINUATION:  // Same person keep talking
+		{
+			char* sentence         = (char*)conv.GetPosition();
+			currentFrame.text = sentence;
+			conv.MoveForward(strlen((char*)sentence)+1);
+			printf("ConvID: %d MORETEX:                                       WHAT: '%s'\n",this->conversationID,sentence);
+			break;
+		}
+		case YESNOCHOICE_BRANCH1:  // Choice Offsets are question
+		{
+			currentFrame.mode = ConvFrame::CONV_CONTRACT_CHOICE;
+			printf("ConvID: %d CHOICE YES/NO : %X.\n",this->conversationID,type);
+			//Looks like first byte is the offset to skip if the answer is no.
+			/*uint8_t noOffset  =*/  conv.ReadByte();
+			/*uint8_t yesOffset  =*/ conv.ReadByte();
+			break;
+		}
+		case YESNOCHOICE_BRANCH2:  // Choice offset after first branch
+		{
+			//currentFrame.mode = ConvFrame::CONV_CONTRACT_CHOICE;
+			printf("ConvID: %d CHOICE YES/NO : %X.\n",this->conversationID,type);
+			//Looks like first byte is the offset to skip if the answer is no.
+			/*uint8_t yesOffset  =*/ conv.ReadByte();
+			/*uint8_t noOffset  =*/  conv.ReadByte();
+			break;
+		}
+		case GROUP_SHOT_ADD_CHARCTER:  // Add person to GROUP
+		{
+			char* participantName  = (char*)conv.GetPosition();
+			CharFigure* participant = ConvAssets.GetFigure(participantName);
+			//currentFrame.participants.push_back(participant);
+			printf("ConvID: %d WIDEPLAN ADD PARTICIPANT: '%s'\n",this->conversationID,conv.GetPosition());
+			conv.MoveForward(0xD);
+			break;
+		}
+		case GROUP_SHOT_CHARCTR_TALK:  // Make group character talk
+		{
+			char* who = (char*)conv.GetPosition();
+			conv.MoveForward(0xE);
+			char* sentence = (char*)conv.GetPosition();
+			conv.MoveForward(strlen(sentence)+1);
+			printf("ConvID: %d WIDEPLAN PARTICIPANT TALKING: who: '%s' WHAT '%s'\n",this->conversationID,who,sentence);
+			break;
+		}
+		case SHOW_TEXT:  // Show text
+		{
+			int8_t color = conv.ReadByte();
+			char* sentence = (char*)conv.GetPosition();
+
+			currentFrame.mode = ConvFrame::CONV_CLOSEUP;
+			currentFrame.text = sentence;
+			currentFrame.textColor = color;
+
+			printf("ConvID: %d Show Text: '%s' \n",this->conversationID,sentence);
+			conv.MoveForward(strlen(sentence)+1);
+
+			break;
+		}
+		case 0xE:
+		{
+			uint8_t unkn  = conv.ReadByte();
+			uint8_t unkn1  = conv.ReadByte();
+			printf("ConvID: %d Unknown usage Flag 0xE: (0x%2X 0x%2X) \n",this->conversationID,unkn,unkn1);
 			ReadNextFrame(p);
-            break;
-        }
-        case CHOOSE_WINGMAN:  // Wingman selection trigger
-        {
-            currentFrame.mode = ConvFrame::CONV_WINGMAN_CHOICE;
-            printf("ConvID: %d Open pilot selection screen with current BG.\n",this->conversationID);
-            break;
-        }
-        default:
-            printf("ConvID: %d Unknown opcode: %X.\n",this->conversationID,type);
-            Stop();
-            return ;
-            break;
-        }
-    
-    
-    
-    this->currentFrame.SetExpired(false);
+			break;
+		}
+		case CHOOSE_WINGMAN:  // Wingman selection trigger
+		{
+			currentFrame.mode = ConvFrame::CONV_WINGMAN_CHOICE;
+			printf("ConvID: %d Open pilot selection screen with current BG.\n",this->conversationID);
+			break;
+		}
+		default:
+		{
+			printf("ConvID: %d Unknown opcode: %X.\n",this->conversationID,type);
+			Stop();
+			return ;
+			break;
+		}
+	}
+
+	this->currentFrame.SetExpired(false);
 }
 
-void SCConvPlayer::SetArchive(const PakEntry* convPakEntry){
-    
-    if (convPakEntry->size == 0){
-        Game.Log("Conversation entry is empty: Unable to load it.\n");
-        Stop();
-        return;
-    }
-    
-    this->size = convPakEntry->size;
-    
-    this->conv.Set(convPakEntry->data);
-    end = convPakEntry->data + convPakEntry->size;
-    
-    //Read a frame so we are ready to display it.
-    //ReadNextFrame();
-    this->currentFrame.SetExpired(true);
-    
-    initialized = true;
+void SCConvPlayer::SetArchive(const PakEntry* convPakEntry)
+{
+	if (convPakEntry->size == 0){
+		Game.Log("Conversation entry is empty: Unable to load it.\n");
+		Stop();
+		return;
+	}
+
+	this->size = convPakEntry->size;
+
+	this->conv.Set(convPakEntry->data);
+	end = convPakEntry->data + convPakEntry->size;
+
+	//Read a frame so we are ready to display it.
+	//ReadNextFrame();
+	this->currentFrame.SetExpired(true);
+
+	initialized = true;
 }
 
+void SCConvPlayer::SetID(int32_t id)
+{
+	this->conversationID = id;
 
-void SCConvPlayer::SetID(int32_t id){
-    
-    this->conversationID = id;
-    
-    TreEntry* convEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONV.PAK");
-    
-    PakArchive convPak;
+	TreEntry* convEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONV.PAK");
+
+	PakArchive convPak;
 	convPak.InitFromRAM("CONV.PAK", *convEntry);
-    //convPak.List(stdout);
-    
-    if (convPak.GetNumEntries() <= id){
-        Stop();
-        Game.Log("Cannot load conversation id (max convID is %lu).",convPak.GetNumEntries()-1);
-        return;
-    }
-    
+	//convPak.List(stdout);
+
+	if (convPak.GetNumEntries() <= id){
+		Stop();
+		Game.Log("Cannot load conversation id (max convID is %lu).",convPak.GetNumEntries()-1);
+		return;
+	}
+
 	SetArchive(&convPak.GetEntry(id));
-    
 }
 
-void SCConvPlayer::Init( ){
+void SCConvPlayer::Init( )
+{
 	this->palette = VGA.GetPalette();
-    
-    currentFrame.font = FontManager.GetFont("");
+	currentFrame.font = FontManager.GetFont("");
 }
 
 void SCConvPlayer::CheckFrameExpired(const FrameParams& p)
 {
 	//A frame expires either after a player press a key, click or 6 seconds elapse.
-
-	//Mouse
-	SDL_Event mouseEvents[5];
-	int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEBUTTONUP,SDL_MOUSEBUTTONUP);
-	for(int i= 0 ; i < numMouseEvents ; i++){
-		SDL_Event* event = &mouseEvents[i];
-		switch (event->type) {
-			case SDL_MOUSEBUTTONUP:
-				this->currentFrame.SetExpired(true);
-				break;
-			default:
-				break;
-		}
-	}
-
-	//Keyboard
-	SDL_Event keybEvents[5];
-	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYUP,SDL_KEYUP);
-	for(int i= 0 ; i < numKeybEvents ; i++){
-		SDL_Event* event = &keybEvents[i];
-		switch (event->type) {
-			default:
-				this->currentFrame.SetExpired(true);
-				break;
-		}
-	}
-
-	if(p.currentTime - currentFrame.creationTime > 5000)
+	if(Game.AnyInput() || p.currentTime - currentFrame.creationTime > 5000)
 		this->currentFrame.SetExpired(true);
 }
-
 
 void SCConvPlayer::DrawText(void)
 {
@@ -341,7 +286,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 
 	//If frame needs to be update
 	CheckFrameExpired(p);
-	if ( currentFrame.IsExpired() )
+	if (currentFrame.IsExpired())
 		ReadNextFrame(p);
 
 	CheckButtons();
@@ -355,7 +300,6 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		paletteReader.Set((*currentFrame.bgPalettes)[i]);
 		this->palette.ReadPatch(&paletteReader);
 		VGA.SetPalette(this->palette);
-
 	}
 
 	//Draw static
@@ -367,15 +311,12 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 	if (currentFrame.mode == ConvFrame::CONV_CLOSEUP) {
 		for (size_t i = 0 ; i < CONV_TOP_BAR_HEIGHT; i++)
 			VGA.FillLineColor(i, 0x00);
-
 		for (size_t i = 0 ; i < CONV_BOTTOM_BAR_HEIGHT; i++)
 			VGA.FillLineColor(199-i, 0x00);
 	}
 
 	//
-	if (currentFrame.mode == ConvFrame::CONV_CLOSEUP ||
-		currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE){
-
+	if (currentFrame.mode == ConvFrame::CONV_CLOSEUP || currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE) {
 
 		TreEntry* convPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\CONVPALS.PAK");
 		PakArchive convPals;
@@ -404,9 +345,9 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		const auto& shapes = currentFrame.face->appearances->GetShapes();
 
 		for (size_t i=1; i< 3; i++) {
-		   RLEShape* s = shapes[i];
-		   s->SetPositionX(pos);
-		   VGA.DrawShape(*s);
+			RLEShape* s = shapes[i];
+			s->SetPositionX(pos);
+			VGA.DrawShape(*s);
 		}
 
 		//Taking animation
@@ -420,14 +361,10 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//11 mouth something
 		//12 mouth something
 
-		for (size_t i=03; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP
-			 ; i++) {
-
-			RLEShape* s = shapes[3+(SDL_GetTicks()/100)%10];
-		   s->SetPositionX(pos);
+		for (size_t i = 3; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP; i++) {
+			RLEShape* s = shapes[3 + (p.currentTime / 100) % 10];
+			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
-
-
 		}
 
 		//Eyes animation
@@ -442,7 +379,6 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//20 eyes straight
 		//21 eyes blink closed
 		//22 eyes blink mid-open
-
 
 		//23 eye brows semi-raised
 		//24 left eye brows semi-raised
@@ -510,12 +446,10 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 	}
 
 afterFace:
-	if (currentFrame.mode == ConvFrame::CONV_WIDE ||
-		currentFrame.mode == ConvFrame::CONV_WINGMAN_CHOICE){
-
+	if (currentFrame.mode == ConvFrame::CONV_WIDE || currentFrame.mode == ConvFrame::CONV_WINGMAN_CHOICE) {
 		for (size_t i=0 ; i < currentFrame.participants.size(); i++) {
 			//CharFace* participant = currentFrame.participants[i];
-			//      VGA.DrawShape(participant->appearance);
+			//VGA.DrawShape(participant->appearance);
 		}
 	}
 
@@ -524,8 +458,7 @@ afterFace:
 
 	DrawButtons();
 
-	if (currentFrame.mode == ConvFrame::CONV_WIDE ||
-		currentFrame.mode == ConvFrame::CONV_CLOSEUP);
+	//if (currentFrame.mode == ConvFrame::CONV_WIDE || currentFrame.mode == ConvFrame::CONV_CLOSEUP);
 
 	//Draw Mouse
 	//Mouse.Draw();

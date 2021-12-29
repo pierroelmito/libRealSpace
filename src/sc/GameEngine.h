@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 
@@ -54,6 +55,8 @@ public:
 	void StopTopActivity(void);
 	IActivity* GetCurrentActivity(void);
 
+	bool IsKeyPressed(uint32_t keyCode);
+	bool AnyInput();
 	bool PumpEvents(void);
 
 private:

@@ -63,7 +63,7 @@ CharFigure* ConvAssetManager::GetFigure(char* name)
 	return NULL;
 }
 
-uint8_t ConvAssetManager::GetFacePaletteID(char* name)
+uint8_t ConvAssetManager::GetFacePaletteID(const char* name)
 {
 	return this->facePalettes[name]->index;
 }
