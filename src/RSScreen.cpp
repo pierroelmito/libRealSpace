@@ -30,12 +30,12 @@ void RSScreen::SetTitle(const char* title)
 
 void RSScreen::Init(int32_t zoomFactor)
 {
-	const int32_t width  = 320 * zoomFactor;
-	const int32_t height = 200 * zoomFactor;
+	const int32_t w = 320 * zoomFactor;
+	const int32_t h = 200 * zoomFactor;
 
 	this->scale =zoomFactor;
-	this->width = width;
-	this->height = height;
+	this->width = w;
+	this->height = h;
 
 	SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_HIDDEN, &sdlWindow, &sdlRenderer);
 
@@ -47,7 +47,7 @@ void RSScreen::Init(int32_t zoomFactor)
 	sdlWindow = SDL_CreateWindow("RealSpace OBJ Viewer",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,this->width,this->height,SDL_WINDOW_OPENGL);
 	// Create an OpenGL context associated with the window.
 	SDL_GL_CreateContext(sdlWindow);
-	//glViewport(0,0,this->width,this->height);			// Reset The Current Viewport
+	//glViewport(0,0,this->width,this->height); // Reset The Current Viewport
 	SDL_ShowWindow(sdlWindow);
 }
 

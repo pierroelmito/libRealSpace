@@ -10,7 +10,7 @@
 
 #include "precomp.h"
 
-const char* const CURSOR_SHAPE_PATH = "..\\..\\DATA\\MOUSE.SHP";
+const char* const CURSOR_SHAPE_PATH = TRE_DATA "MOUSE.SHP";
 
 SCMouse::SCMouse()
 {
@@ -22,7 +22,7 @@ SCMouse::~SCMouse()
 
 void SCMouse::Init(void)
 {
-	TreEntry* cursorShape   = Assets.tres[AssetManager::TRE_MISC]->GetEntryByName(CURSOR_SHAPE_PATH);
+	TreEntry* cursorShape = Assets.tres[AssetManager::TRE_MISC].GetEntryByName(CURSOR_SHAPE_PATH);
 
 	PakArchive cursors ;
 	cursors.InitFromRAM("MOUSE.SHP",*cursorShape);

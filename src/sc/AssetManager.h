@@ -8,21 +8,29 @@
 
 #pragma once
 
+#include <vector>
+#include <array>
+
+class TreArchive;
+class PakArchive;
+
+#define TRE_DATA "..\\..\\DATA\\"
+
 class AssetManager
 {
 public:
-    void SetBase(const char* base);
-    void Init(void);
-
 	enum TreID {TRE_GAMEFLOW, TRE_OBJECTS, TRE_MISC, TRE_SOUND, TRE_MISSIONS,TRE_TEXTURES, NUM_TRES } ;
 	static_assert(NUM_TRES == 6);
 
-    std::vector<TreArchive*> tres;
+	AssetManager();
+	~AssetManager();
 
-    AssetManager();
-    ~AssetManager();
+	void SetBase(const char* base);
+	void Init(void);
+
+	std::array<TreArchive, NUM_TRES> tres;
 
 private:
-    TreArchive* LoadTRE(const char* name);
-    PakArchive* LoadPAK(const char* name);
+	TreArchive* LoadTRE(const char* name);
+	PakArchive* LoadPAK(const char* name);
 };

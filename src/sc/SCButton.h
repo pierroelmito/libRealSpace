@@ -18,25 +18,23 @@ class SCButton
 public:
 	using ActionFunction = std::function<void()>;
 
-	SCButton();
-    ~SCButton();
-    
-    Point2D position;
-    Point2D dimension;
-    
-	void InitBehavior(Point2D position, Point2D dimension, ActionFunction&& fct); // functor last for readibility
-
-    void OnAction(void);
-
 	enum Appearance { APR_UP, APR_DOWN};
 
-    RLEShape appearance[2];
+	SCButton();
+	~SCButton();
 
-	inline bool IsEnabled(void){ return this->enabled; }
-    inline void SetEnable(bool enabled){ this->enabled = enabled;}
-    
-    inline void SetAppearance(Appearance app){ this->apre = app;}
-    inline Appearance GetAppearance(void){ return this->apre; }
+	Point2D position;
+	Point2D dimension;
+
+	void InitBehavior(Point2D position, Point2D dimension, ActionFunction&& fct); // functor last for readibility
+	void OnAction(void);
+
+	inline bool IsEnabled(void) const { return this->enabled; }
+	inline void SetEnable(bool enabled){ this->enabled = enabled;}
+	inline void SetAppearance(Appearance app){ this->apre = app;}
+	inline Appearance GetAppearance(void){ return this->apre; }
+
+	RLEShape appearance[2];
 
 private:
 	bool enabled{ true };

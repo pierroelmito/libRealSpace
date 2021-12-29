@@ -78,9 +78,11 @@ private:
     void ParseMetadata(void );
     void ParseObjects(void );
     
-    void ParseTrigo(void );
+#if USE_SHADER_PIPELINE != 1
+	void ParseTrigo(void );
 	void ParseTriFile(const PakEntry* entry);
-    
+#endif
+
     //Temporary name: I don't know yet what is in there.
     void ParseHeightMap(void);
 	void ParseBlocks(size_t lod,const PakEntry* entry,size_t verticePerBlock);

@@ -66,7 +66,7 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer)
 	tre.InitFromFile("OBJECTS.TRE");
 
 	//The object all follow the same path:
-	const char* OBJ_PATH = "..\\..\\DATA\\OBJECTS\\";
+	const char* OBJ_PATH = TRE_DATA "OBJECTS\\";
 	const char* OBJ_EXTENSION = ".IFF";
 
 	IffChunk* chunk = lexer->GetChunkByID("OBJS");
@@ -298,8 +298,9 @@ void SCObjectViewer::ParseAssets(PakArchive* archive)
 
 void SCObjectViewer::Init(void)
 {
-	TreEntry* objViewIFF = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OBJVIEW.IFF");
-	TreEntry* objViewPAK = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OBJVIEW.PAK");
+	auto treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	TreEntry* objViewIFF = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OBJVIEW.IFF");
+	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OBJVIEW.PAK");
 
 	PakArchive assets;
 	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);

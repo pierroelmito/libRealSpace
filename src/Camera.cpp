@@ -25,7 +25,8 @@ void Camera::LookAt(const Point3D& lookAt)
 	dirtyView = true;
 }
 
-Matrix& Camera::getView() {
+Matrix& Camera::getView()
+{
 	if (dirtyView)
 		view = HMM_LookAt(position, lookAt, { 0, 1, 0 });
 	dirtyView = false;

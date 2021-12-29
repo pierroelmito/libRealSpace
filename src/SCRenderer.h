@@ -45,7 +45,6 @@ public:
 	void Clear(void);
 	void PrepareModel(RSEntity* object, size_t lodLevel, std::map<uint32_t, std::vector<ObjVertex>>& vertice);
 	void DrawModel(RSEntity* object, size_t lodLevel);
-	void DisplayModel(RSEntity* object,size_t lodLevel);
 	void CreateTextureInGPU(Texture* texture);
 	void UploadTextureContentToGPU(Texture* texture);
 	void DeleteTextureInGPU(Texture* texture);
@@ -56,11 +55,14 @@ public:
 
 	VGAPalette& GetPalette(void) { return palette; }
 
+#if USE_SHADER_PIPELINE != 1
 	//Map Rendering
 	//For research methods: Those should be deleted soon:
+	void RenderObjects(const RSArea& area,size_t blockID);
 	void RenderVerticeField(Point3D* vertices, int numVertices);
-
 	void RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock);
+	void DisplayModel(RSEntity* object,size_t lodLevel);
+#endif
 
 	struct AreaVertex
 	{
@@ -79,7 +81,6 @@ public:
 	void RenderBlock(const AddVertex& vfunc, const RSArea& area,int LOD, int blockID,bool renderTexture);
 
 	void RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock);
-	void RenderObjects(const RSArea& area,size_t blockID);
 	void RenderJets(const RSArea& area);
 
 	struct Render3DParams {};

@@ -20,7 +20,7 @@ public:
 	void Init( ) override;
 	void RunFrame(const FrameParams& p) override;
 
-private:
+protected:
 	RSArea area;
 };
 

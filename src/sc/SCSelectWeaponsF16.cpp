@@ -24,15 +24,17 @@ void SCSelectWeaponF16::Init( )
 	//Palette
 	this->palette = VGA.GetPalette();
 
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+
 	//Patch palette
 	ByteStream paletteReader;
-	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName(OPTPALS_PAK_PATH);
+	TreEntry* palettesEntry = treGameFlow.GetEntryByName(OPTPALS_PAK_PATH);
 	PakArchive palettesPak;
 	palettesPak.InitFromRAM("OPTSHPS.PAK", *palettesEntry);
 	paletteReader.Set(palettesPak.GetEntry(12).data);
 	this->palette.ReadPatch(&paletteReader);
 
-	TreEntry* optionShapesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
+	TreEntry* optionShapesEntry = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTSHPS.PAK");
 
 	PakArchive optionShapes;
 	optionShapes.InitFromRAM("", *optionShapesEntry);
@@ -44,5 +46,7 @@ void SCSelectWeaponF16::Init( )
 
 void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 {
+	if (Game.IsKeyPressed('\r'))
+		Stop();
 	Frame2D({ &background });
 }

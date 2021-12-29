@@ -29,10 +29,10 @@ int main(int argc, char* argv[])
 		treArchive.List(stdout);
 	} else {
 		Assets.SetBase("./");
-    	Game.Init();
-    	//Add MainMenu activity on the game stack.
+		Game.Init();
+		//Add MainMenu activity on the game stack.
 		Game.MakeActivity<SCMainMenu>();
-    	Game.Run();
+		Game.Run();
 	}
-    return EXIT_SUCCESS;
+	return EXIT_SUCCESS;
 }

@@ -11,8 +11,6 @@
 
 #include "precomp.h"
 
-#include <SDL2/SDL.h>
-
 SCWildCatBase::SCWildCatBase()
 {
 }
@@ -21,21 +19,12 @@ SCWildCatBase::~SCWildCatBase()
 {
 }
 
-void SCWildCatBase::CheckKeyboard(void)
-{
-	if (Game.IsKeyPressed(SDLK_RETURN)) {
-		Stop();
-		SCConvPlayer* conv = new SCConvPlayer();
-		conv->Init();
-		conv->SetID(14);
-		Game.AddActivity(conv);
-	}
-}
-
 void SCWildCatBase::Init()
 {
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+
 	//Load book
-	TreEntry* entryMountain = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
+	TreEntry* entryMountain = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTSHPS.PAK");
 	PakArchive pak;
 	pak.InitFromRAM("", *entryMountain);
 
@@ -51,7 +40,7 @@ void SCWildCatBase::Init()
 	//Load palette
 	this->palette = VGA.GetPalette();
 
-	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK");
+	TreEntry* palettesEntry = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTPALS.PAK");
 	PakArchive palettesPak;
 	palettesPak.InitFromRAM("OPTSHPS.PAK",*palettesEntry);
 
@@ -62,7 +51,14 @@ void SCWildCatBase::Init()
 
 void SCWildCatBase::RunFrame(const FrameParams& p)
 {
-	CheckKeyboard();
+	if (Game.IsKeyPressed('\r')) {
+		Stop();
+		SCConvPlayer* conv = new SCConvPlayer();
+		conv->Init();
+		conv->SetID(14);
+		Game.AddActivity(conv);
+	}
+
 	Frame2D({ &hangar, &vehicule });
 }
 

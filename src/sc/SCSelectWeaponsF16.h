@@ -14,17 +14,17 @@
 // 70 74
 //Main image 91	
 
-class SCSelectWeaponF16 : public IActivity{
-    
+class SCSelectWeaponF16 : public IActivity
+{
+
 public:
-    SCSelectWeaponF16();
-    ~SCSelectWeaponF16();
-    
+	SCSelectWeaponF16();
+	~SCSelectWeaponF16();
+
 	void Init( ) override;
 	void RunFrame(const FrameParams& p) override;
-    
-private:
-    
-    RLEShape background;
+
+protected:
+	RLEShape background;
 };
 

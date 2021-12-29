@@ -8,7 +8,6 @@
 
 #include "precomp.h"
 
-
 RSArea::RSArea()
 {
 }
@@ -22,7 +21,6 @@ RSArea::~RSArea()
 		delete set;
 	}
 }
-
 
 void RSArea::ParseMetadata()
 {
@@ -270,6 +268,8 @@ void RSArea::ParseObjects()
 	}
 }
 
+#if USE_SHADER_PIPELINE != 1
+
 void RSArea::ParseTriFile(const PakEntry* entry)
 {
 	const auto readCoord = [] (int32_t coo) -> float {
@@ -317,6 +317,7 @@ void RSArea::ParseTrigo()
 	}
 }
 
+#endif
 
 #define LAND_TYPE_SEA      0
 #define LAND_TYPE_DESERT   1

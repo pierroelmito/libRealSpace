@@ -10,12 +10,15 @@
 
 #include <vector>
 
-#include "SCButton.h"
 #include "Texture.h"
 #include "PakArchive.h"
 #include "PaletteIDs.h"
 #include "ShapeIDs.h"
+#include "RLEShape.h"
 #include "SCMouse.h"
+#include "SCButton.h"
+
+class SCButton;
 
 class IActivity
 {
@@ -26,27 +29,29 @@ public:
 	};
 
 	virtual ~IActivity();
+
 	virtual void Focus() { focused = true;}
 	virtual void UnFocus() { focused = false;}
-	virtual void Init() = 0;
 	virtual void Start(uint32_t startTime)
 	{
 		this->startTime = startTime;
 		this->running = true;
 	}
-	virtual void RunFrame (const FrameParams& p) = 0;
+
+	virtual void Init() = 0;
+	virtual void RunFrame(const FrameParams& p) = 0;
+
 	void Stop() { running = false;}
 	bool IsRunning() const { return running; }
 	void SetTitle(const char* title);
 	void Frame2D(std::initializer_list<RLEShape*> shapes);
-
-	VGAPalette palette;
 
 protected:
 	IActivity();
 	SCButton* CheckButtons();
 	void DrawButtons();
 
+	VGAPalette palette;
 	std::vector<SCButton*> buttons;
 	uint32_t startTime{};
 

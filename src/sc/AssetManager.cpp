@@ -11,11 +11,12 @@
 struct TreNameID
 {
 	AssetManager::TreID id;
-    const char* filename;
+	const char* filename;
 };
 
-void AssetManager::SetBase(const char* newBase){
-    ::SetBase(newBase);
+void AssetManager::SetBase(const char* newBase)
+{
+	::SetBase(newBase);
 }
 
 void AssetManager::Init()
@@ -30,27 +31,21 @@ void AssetManager::Init()
 		{AssetManager::TRE_TEXTURES,"TEXTURES.TRE"}
 	};
 
-    //Load all TRE in RAM and store them.
-    for (size_t i =0 ; i < NUM_TRES; i++) {
-        TreArchive* tre = new TreArchive();
-        tre->InitFromFile(nameIds[i].filename);
-        if (tre->IsValid())
-            this->tres.push_back(tre);
-        else{
-            Game.Terminate("Unable to load asset '%s' (Did you set the SC base folder ?).",nameIds[i].filename);
-        }
-    }
+	//Load all TRE in RAM and store them.
+	for (size_t i =0 ; i < NUM_TRES; i++) {
+		TreArchive& tre = tres[i];
+		tre.InitFromFile(nameIds[i].filename);
+		if (!tre.IsValid())
+			Game.Terminate("Unable to load asset '%s' (Did you set the SC base folder ?).", nameIds[i].filename);
+	}
 }
 
-AssetManager::AssetManager(){
-    
+AssetManager::AssetManager()
+{
 }
 
-AssetManager::~AssetManager(){
-    
-    while(!tres.empty()){
-        TreArchive* tre = tres.back();
-        tres.pop_back();
-        delete tre;
-    }
+AssetManager::~AssetManager()
+{
+	for (TreArchive& t : tres)
+		t.Release();
 }

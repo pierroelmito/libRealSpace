@@ -74,147 +74,126 @@ bool GameEngine::IsKeyPressed(uint32_t keyCode)
 
 bool GameEngine::PumpEvents(void)
 {
-    SDL_PumpEvents();
+	SDL_PumpEvents();
 
 	//Mouse
-    SDL_Event mouseEvents[5];
-    int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEMOTION,SDL_MOUSEWHEEL);
-    for(int i= 0 ; i < numMouseEvents ; i++){
-        SDL_Event* event = &mouseEvents[i];
-        switch (event->type) {
-            case SDL_MOUSEMOTION:
-                Point2D newPosition;
-                newPosition.x = event->motion.x;
-                newPosition.y = event->motion.y;
-                newPosition.x *= 320.0f / Screen.width;
-                newPosition.y *= 200.0f / Screen.height;
-                Mouse.SetPosition(newPosition);
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                //printf("SDL_MOUSEBUTTONDOWN %d\n",event->button.button);
-                Mouse.buttons[event->button.button-1].event = MouseButton::PRESSED;
-                break;
-            case SDL_MOUSEBUTTONUP:
-                //printf("SDL_MOUSEBUTTONUP %d\n",event->button.button);
-                Mouse.buttons[event->button.button-1].event = MouseButton::RELEASED;
-                break;
-            default:
-                break;
-        }
-    }
-    
-    //Joystick
-    
-    //Keyboard
-    SDL_Event keybEvents[5];
-    int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_TEXTINPUT);
-    for(int i= 0 ; i < numKeybEvents ; i++){
-        SDL_Event* event = &keybEvents[i];
-        switch (event->type) {
+	SDL_Event mouseEvents[5];
+	int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEMOTION,SDL_MOUSEWHEEL);
+	for(int i= 0 ; i < numMouseEvents ; i++){
+		SDL_Event* event = &mouseEvents[i];
+		switch (event->type) {
+			case SDL_MOUSEMOTION:
+				Point2D newPosition;
+				newPosition.x = event->motion.x;
+				newPosition.y = event->motion.y;
+				newPosition.x *= 320.0f / Screen.width;
+				newPosition.y *= 200.0f / Screen.height;
+				Mouse.SetPosition(newPosition);
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				Mouse.buttons[event->button.button-1].event = MouseButton::PRESSED;
+				break;
+			case SDL_MOUSEBUTTONUP:
+				Mouse.buttons[event->button.button-1].event = MouseButton::RELEASED;
+				break;
+			default:
+				break;
+		}
+	}
+
+	//Joystick
+
+	//Keyboard
+	SDL_Event keybEvents[5];
+	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_TEXTINPUT);
+	for(int i= 0 ; i < numKeybEvents ; i++){
+		SDL_Event* event = &keybEvents[i];
+		switch (event->type) {
 			case SDL_KEYDOWN:
 				if (event->key.keysym.scancode == SDL_SCANCODE_ESCAPE)
 				return false;
 			default:
-                break;
-        }
-    }
+				break;
+		}
+	}
 
 	//Oculus VR
 
 	//System events
-    SDL_Event sysEvents[5];
-    int numSysEvents = SDL_PeepEvents(sysEvents,5,SDL_PEEKEVENT,SDL_FIRSTEVENT,SDL_SYSWMEVENT);
+	SDL_Event sysEvents[5];
+	int numSysEvents = SDL_PeepEvents(sysEvents,5,SDL_PEEKEVENT,SDL_FIRSTEVENT,SDL_SYSWMEVENT);
 	for(int i= 0 ; i < numSysEvents ; i++) {
-        SDL_Event* event = &sysEvents[i];
-        switch (event->type) {
-            case SDL_APP_TERMINATING:
-                Terminate("System request.");
-                break;
-            case SDL_QUIT:
-                Terminate("System request.");
-                break;
-            //Verify is we should be capturing the mouse or not.
-            case SDL_WINDOWEVENT:
-                if (event->window.event == SDL_WINDOWEVENT_ENTER){
-                    Mouse.SetVisible(true);
-                    SDL_ShowCursor(SDL_DISABLE);
+		SDL_Event* event = &sysEvents[i];
+		switch (event->type) {
+			case SDL_APP_TERMINATING:
+				Terminate("System request.");
+				break;
+			case SDL_QUIT:
+				Terminate("System request.");
+				break;
+			//Verify is we should be capturing the mouse or not.
+			case SDL_WINDOWEVENT:
+				if (event->window.event == SDL_WINDOWEVENT_ENTER){
+					Mouse.SetVisible(true);
+					SDL_ShowCursor(SDL_DISABLE);
 					return true;
-                }
-                if (event->window.event == SDL_WINDOWEVENT_LEAVE){
-                    Mouse.SetVisible(false);
-                    SDL_ShowCursor(SDL_ENABLE);
+				}
+				if (event->window.event == SDL_WINDOWEVENT_LEAVE){
+					Mouse.SetVisible(false);
+					SDL_ShowCursor(SDL_ENABLE);
 					return true;
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    
-    
+				}
+				break;
+			default:
+				break;
+		}
+	}
 	return true;
 }
 
-
-void GameEngine::Run(){
-    
-    IActivity* currentActivity;
-    
-    while (activities.size() > 0) {
-        
+void GameEngine::Run()
+{
+	while (activities.size() > 0) {
 		if (!PumpEvents())
 			break;
-        
-        //Clear the screen
-        //enderer.Clear();
-        
-        //Allow the active activity to Run and Render
-        currentActivity = activities.top();
-        
-        if (currentActivity->IsRunning()){
-            currentActivity->Focus();
+
+		//Allow the active activity to Run and Render
+		IActivity* currentActivity = activities.top();
+
+		if (currentActivity->IsRunning()){
+			currentActivity->Focus();
 			currentActivity->RunFrame({ SDL_GetTicks() });
-            currentActivity->UnFocus();
-        }
-        else{
-            activities.pop();
-            delete currentActivity;
-        }
+			currentActivity->UnFocus();
+		} else{
+			activities.pop();
+			delete currentActivity;
+		}
 
 		//Swap GL buffer
-        Screen.Refresh();
+		Screen.Refresh();
 
 		//Flush all events since they should all have been interpreted.
-        SDL_FlushEvents(SDL_FIRSTEVENT,SDL_LASTEVENT);
+		SDL_FlushEvents(SDL_FIRSTEVENT,SDL_LASTEVENT);
 
 		//Also clear the Mouse flags.
-        Mouse.FlushEvents();
-    }
+		Mouse.FlushEvents();
+	}
 }
 
-void GameEngine::AddActivity(IActivity* activity){
+void GameEngine::AddActivity(IActivity* activity)
+{
 	activity->Start(SDL_GetTicks());
-    this->activities.push(activity);
+	this->activities.push(activity);
 }
 
-void GameEngine::StopTopActivity(void){
-    IActivity* currentActivity;
-    currentActivity = activities.top();
-    currentActivity->Stop();
+void GameEngine::StopTopActivity(void)
+{
+	IActivity* currentActivity;
+	currentActivity = activities.top();
+	currentActivity->Stop();
 }
 
-IActivity* GameEngine::GetCurrentActivity(void){
-    return activities.top();
+IActivity* GameEngine::GetCurrentActivity(void)
+{
+	return activities.top();
 }
-
-
-
-
-
-
-
-
-
-
-
-

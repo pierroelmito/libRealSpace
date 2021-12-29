@@ -13,7 +13,6 @@
 #include "RSImage.h"
 #include "IffLexer.h"
 
-
 RSEntity::RSEntity()
 {
 }

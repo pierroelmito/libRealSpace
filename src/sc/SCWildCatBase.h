@@ -18,8 +18,8 @@ public:
 
 	void Init( ) override;
 	void RunFrame(const FrameParams& p) override;
-	void CheckKeyboard(void);
 
+protected:
 	RLEShape hangar;
 	RLEShape vehicule;
 };

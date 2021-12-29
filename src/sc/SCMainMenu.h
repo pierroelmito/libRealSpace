@@ -13,24 +13,22 @@
 class SCMainMenu : public IActivity
 {
 public:
-    SCMainMenu();
-    ~SCMainMenu();
+	SCMainMenu();
+	~SCMainMenu();
 
 	virtual void Init(void) override;
 	virtual void RunFrame(const FrameParams& p) override;
 
 private:
 	void LoadButtons(void);
-    void LoadBoard(void);
-    void LoadBackgrounds(void);
-    void LoadPalette(void);
+	void LoadBoard(void);
+	void LoadBackgrounds(void);
+	void LoadPalette(void);
 
 	RLEShape board;
-    RLEShape sky;
-    RLEShape mountain;
-    RLEShape cloud;
-    
-    PakArchive mainMenupak;
-    
-    void DrawMenu(void);
+	RLEShape sky;
+	RLEShape mountain;
+	RLEShape cloud;
+
+	PakArchive mainMenupak;
 };

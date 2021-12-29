@@ -502,64 +502,6 @@ void SCRenderer::Prepare(RSEntity* object)
 	object->prepared = true;
 }
 
-void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel)
-{
-	if (!initialized)
-		return;
-
-	if (object->IsPrepared())
-		Prepare(object);
-
-	SetProj(camera.proj);
-
-	running = true;
-	float counter = 0;
-	while (running) {
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		light = { 20 * cos(counter), 10, 20 * sin(counter) };
-		counter += 0.02;
-
-		//camera.SetPosition(position);
-
-		SetView(camera.getView());
-
-		DrawModel(object, lodLevel);
-
-		//Render light
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_BLEND);
-		glDisable(GL_DEPTH_TEST);
-		glPointSize(6);
-		glBegin(GL_POINTS);
-		glColor4f(1, 1,0 , 1);
-		glVertex(light);
-		glEnd();
-	}
-}
-
-void SCRenderer::RenderVerticeField(Point3D* vertices, int numVertices)
-{
-	SetProj(camera.proj);
-
-	running = true;
-	float counter = 0;
-	while (running) {
-		const Point3D newPosition{ 256 * cos(counter), 0, 256 * sin(counter) };
-		counter += 0.02;
-
-		camera.SetPosition(newPosition);
-		SetView(camera.getView());
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glPointSize(5);
-		glBegin(GL_POINTS);
-		for(int i=0; i < numVertices ; i ++)
-			glVertex(vertices[i]);
-		glEnd();
-	}
-}
-
 #define TEX_ZERO (0/64.0f)
 #define TEX_ONE (64/64.0f)
 
@@ -750,48 +692,18 @@ void SCRenderer::RenderJets(const RSArea& area)
 
 void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock)
 {
-	glMatrixMode(GL_PROJECTION);
-	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
-	//glLoadMatrixf(projectionMatrix->ToGL());
-	glLoadMatrixHMM(camera.proj);
-
 	running = true;
 
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-
-	const Point3D lookAt = { 3856, 0, 2856};
-
-	Point3D newPosition;
-	newPosition.X =  4100;
-	newPosition.Y = 100;
-	newPosition.Z =  3000;
-
+	// Camera
+	const Point3D lookAt{ 3856, 0, 2856};
+	Point3D newPosition{ 4100, 100, 3000 };
 	uint32_t currentTime = SDL_GetTicks();
 	newPosition.X =  lookAt.X + 300 * cos(currentTime/2000.0f);
 	newPosition.Z =  lookAt.Z + 300 * sin(currentTime/2000.0f);
-
 	camera.SetPosition(newPosition);
 	camera.LookAt(lookAt);
-
-	GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
-	GLuint fogfilter= 0;                    // Which Fog To Use
-	GLfloat fogColor[4]= {1.0f, 1.0f, 1.0f, 1.0f};
-	glFogi(GL_FOG_MODE, fogMode[fogfilter]);        // Fog Mode
-	glFogfv(GL_FOG_COLOR, fogColor);            // Set Fog Color
-	glFogf(GL_FOG_DENSITY, 0.0002f);              // How Dense Will The Fog Be
-	glHint(GL_FOG_HINT, GL_DONT_CARE);          // Fog Hint Value
-	glFogf(GL_FOG_START, 600.0f);             // Fog Start Depth
-	glFogf(GL_FOG_END, 8000.0f);               // Fog End Depth
-	glEnable(GL_FOG);
-
-	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-
-	glMatrixMode(GL_MODELVIEW);
-	//Matrix* modelViewMatrix = camera.GetViewMatrix();
-	//glLoadMatrixf(modelViewMatrix->ToGL());
-	glLoadMatrixHMM(camera.getView());
+	SetProj(camera.proj);
+	SetView(camera.getView());
 
 	//Island
 	/*
@@ -838,7 +750,8 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			const auto r = col[0];
 			const auto g = col[1];
 			const auto b = col[2];
-			if (std::abs(pos.Y) > 0.01f || texId != 0 || b < r || b < g)
+			const bool useVertex = std::abs(pos.Y) > 0.01f || texId != 0 || b < r || b < g;
+			if (useVertex)
 				vert.push_back({ pos, { uv[0], uv[1] }, { r, g, b, col[3] } });
 		};
 		for(int i = 0; i < BLOCKS_PER_MAP; i++)
@@ -848,6 +761,19 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 		areaCache = std::move(tmp);
 	}
 
+	const GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
+	const GLuint fogfilter= 0;                    // Which Fog To Use
+	const GLfloat fogColor[4]= {1.0f, 1.0f, 1.0f, 1.0f};
+	glFogi(GL_FOG_MODE, fogMode[fogfilter]);        // Fog Mode
+	glFogfv(GL_FOG_COLOR, fogColor);            // Set Fog Color
+	glFogf(GL_FOG_DENSITY, 0.0002f);              // How Dense Will The Fog Be
+	glHint(GL_FOG_HINT, GL_DONT_CARE);          // Fog Hint Value
+	glFogf(GL_FOG_START, 600.0f);             // Fog Start Depth
+	glFogf(GL_FOG_END, 8000.0f);               // Fog End Depth
+	glEnable(GL_FOG);
+	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	if (auto itV = areaCache->find(0); itV != areaCache->end()) {
 		const auto& vert = itV->second;
@@ -884,6 +810,44 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	//   RenderObjects(area,i);
 
 	RenderJets(area);
+}
+
+#if USE_SHADER_PIPELINE != 1
+
+void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel)
+{
+	if (!initialized)
+		return;
+
+	if (object->IsPrepared())
+		Prepare(object);
+
+	SetProj(camera.proj);
+
+	running = true;
+	float counter = 0;
+	while (running) {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		light = { 20 * cos(counter), 10, 20 * sin(counter) };
+		counter += 0.02;
+
+		//camera.SetPosition(position);
+
+		SetView(camera.getView());
+
+		DrawModel(object, lodLevel);
+
+		//Render light
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
+		glDisable(GL_DEPTH_TEST);
+		glPointSize(6);
+		glBegin(GL_POINTS);
+		glColor4f(1, 1,0 , 1);
+		glVertex(light);
+		glEnd();
+	}
 }
 
 void SCRenderer::RenderObjects(const RSArea& area,size_t blockID)
@@ -929,14 +893,31 @@ void SCRenderer::RenderObjects(const RSArea& area,size_t blockID)
 	glEnd();
 }
 
+void SCRenderer::RenderVerticeField(Point3D* vertices, int numVertices)
+{
+	SetProj(camera.proj);
+
+	running = true;
+	float counter = 0;
+	while (running) {
+		const Point3D newPosition{ 256 * cos(counter), 0, 256 * sin(counter) };
+		counter += 0.02;
+
+		camera.SetPosition(newPosition);
+		SetView(camera.getView());
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glPointSize(5);
+		glBegin(GL_POINTS);
+		for(int i=0; i < numVertices ; i ++)
+			glVertex(vertices[i]);
+		glEnd();
+	}
+}
+
 void SCRenderer::RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock)
 {
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-
-	//Matrix* projectionMatrix = camera.GetProjectionMatrix();
-	//glLoadMatrixf(projectionMatrix->ToGL());
-	glLoadMatrixHMM(camera.proj);
+	SetProj(camera.proj);
 
 	glPointSize(4);
 	glEnable(GL_DEPTH_TEST);
@@ -982,3 +963,5 @@ void SCRenderer::RenderWorldPoints(const RSArea& area, int LOD, int verticesPerB
 			RenderObjects(area,i);
 	}
 }
+
+#endif

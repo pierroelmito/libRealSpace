@@ -32,20 +32,18 @@ SCMainMenu::~SCMainMenu(){
     
 }
 
-void SCMainMenu::Init(void){
-    
-    
-    TreArchive* gameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-    TreEntry* entry = gameFlow->GetEntryByName(MAINMENU_PAK_PATH);
+void SCMainMenu::Init(void)
+{
+	TreArchive& gameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	TreEntry* entry = gameFlow.GetEntryByName(MAINMENU_PAK_PATH);
 	mainMenupak.InitFromRAM("MAINMENU.PAK",*entry);
-    
-    LoadPalette();
-    LoadButtons();
-    LoadBoard();
-    LoadBackgrounds();
-    
-    
-    SetTitle("Neo Strike Commander");
+
+	LoadPalette();
+	LoadButtons();
+	LoadBoard();
+	LoadBackgrounds();
+
+	SetTitle("Neo Strike Commander");
 }
 
 /*
@@ -132,31 +130,32 @@ void SCMainMenu::LoadBoard(void)
 
 void SCMainMenu::LoadPalette(void)
 {
-    ByteStream paletteReader;
-    
+	ByteStream paletteReader;
+
 	this->palette = VGA.GetPalette();
 	//Load the default palette
 
-	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName(OPTPALS_PAK_PATH);
-    PakArchive palettesPak;
+	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(OPTPALS_PAK_PATH);
+	PakArchive palettesPak;
 	palettesPak.InitFromRAM("OPTSHPS.PAK",*palettesEntry);
-    //palettesPak.List(stdout);
-    
+	//palettesPak.List(stdout);
+
 	paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_MOUTAIN_PALETTE_PATCH_ID).data); //mountains Good but not sky
-    this->palette.ReadPatch(&paletteReader);
+	this->palette.ReadPatch(&paletteReader);
 	paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_SKY_PALETTE_PATCH_ID).data); //Sky Good but not mountains
-    this->palette.ReadPatch(&paletteReader);
-    
-    //Third palette patch (for silver board and buttons)
+	this->palette.ReadPatch(&paletteReader);
+
+	//Third palette patch (for silver board and buttons)
 	const PakEntry& palettePatchEntry = mainMenupak.GetEntry(MAINMENU_PAK_BOARD_PALETTE);
 	paletteReader.Set(palettePatchEntry.data);
-    this->palette.ReadPatch(&paletteReader);
-    
+	this->palette.ReadPatch(&paletteReader);
 }
 
 void SCMainMenu::LoadBackgrounds(void)
 {
-	TreEntry* entryMountain = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK");
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+
+	TreEntry* entryMountain = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTSHPS.PAK");
 	PakArchive pak;
 	pak.InitFromRAM("",*entryMountain);
 
@@ -169,7 +168,7 @@ void SCMainMenu::LoadBackgrounds(void)
 	skyPak.InitFromRAM("subPak sky", pak.GetEntry(OptionShapeID::SKY));
 	sky.Init(skyPak.GetEntry(0));
 
-	TreEntry* entryCloud = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\MIDGAMES\\MIDGAMES.PAK");
+	TreEntry* entryCloud = treGameFlow.GetEntryByName(TRE_DATA "MIDGAMES\\MIDGAMES.PAK");
 	PakArchive subcloudPak;
 	subcloudPak.InitFromRAM("cloud oak entry", *entryCloud);
 

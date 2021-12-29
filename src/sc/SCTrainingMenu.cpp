@@ -22,7 +22,9 @@ SCTrainingMenu::~SCTrainingMenu()
 
 void SCTrainingMenu::Init()
 {
-	TreEntry* objViewPAK = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\OBJVIEW.PAK");
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+
+	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OBJVIEW.PAK");
 	PakArchive assets;
 	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);
 	assets.List(stdout);
@@ -54,7 +56,7 @@ void SCTrainingMenu::Init()
 	title.Init(up.GetEntry(0)->data, up.GetEntry(0)->size);
 	 */
 
-	TreEntry* trButtonsEntry = Assets.tres[AssetManager::TRE_GAMEFLOW]->GetEntryByName("..\\..\\DATA\\GAMEFLOW\\TM.SHP");
+	TreEntry* trButtonsEntry = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\TM.SHP");
 	PakArchive trButtonsPack;
 	trButtonsPack.InitFromRAM("TM.SHP", *trButtonsEntry);
 
@@ -69,7 +71,7 @@ void SCTrainingMenu::Init()
 	Point2D sanDPosition = {positionBoard.x+16,positionBoard.y+9};
 	button->InitBehavior(sanDPosition,sandDDimension, [] {
 		Game.MakeActivity<SCStrike>();
-		//Game.MakeActivity<SCSelectWeaponF16>();
+		Game.MakeActivity<SCSelectWeaponF16>();
 	});
 	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(1),&sanDPosition);
 	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(2),&sanDPosition);

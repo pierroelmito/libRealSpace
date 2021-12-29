@@ -14,30 +14,27 @@
 class SCObjectViewer : public IActivity
 {
 public:
-    SCObjectViewer();
-    ~SCObjectViewer();
-    
+	SCObjectViewer();
+	~SCObjectViewer();
+
 	void Init( ) override;
 	void RunFrame(const FrameParams& p) override;
 	void NextObject();
 
-private:
+protected:
+	void ParseObjList(IffLexer* lexer);
+	void ParseAssets(PakArchive* archive);
 
 	struct RSShowCase
 	{
-        float cameraDist;
-        RSEntity* entity;
-        char displayName[20];
+		float cameraDist;
+		RSEntity* entity;
+		char displayName[20];
 	};
-    
-    std::vector<RSShowCase> showCases;
-    
-    void ParseObjList(IffLexer* lexer);
-    void ParseAssets(PakArchive* archive);
-    
-    RLEShape bluePrint;
-    RLEShape title;
-    RLEShape board;
-    
-    uint32_t currentObject;
+	std::vector<RSShowCase> showCases;
+	uint32_t currentObject;
+
+	RLEShape bluePrint;
+	RLEShape title;
+	RLEShape board;
 };

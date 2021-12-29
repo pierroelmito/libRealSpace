@@ -13,34 +13,35 @@
 
 class RSFont;
 
-class RSVGA{
-    
+class RSVGA
+{
 public:
-    
-    RSVGA();
-    ~RSVGA();
-    
-    
-    void Init(void);
-    
-    void Activate(void);
+	static constexpr uint32_t WIDTH = 320;
+	static constexpr uint32_t HEIGHT = 200;
+
+	RSVGA();
+	~RSVGA();
+
+	void Init(void);
+
+	void Activate(void);
 	void SetPalette(const VGAPalette& newPalette);
-	const VGAPalette& GetPalette() const;
-    
+	const VGAPalette& GetPalette() const { return palette; }
+
 	bool DrawShape(RLEShape& shape);
-    void DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_t start, uint32_t size,size_t interLetterSpace, size_t spaceSize);
-    
-    void VSync(void);
-    
-    void Clear(void);
-    
-    inline uint8_t* GetFrameBuffer(void){ return frameBuffer;}
-    
-    void FillLineColor(size_t lineIndex, uint8_t color);
+	void DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_t start, uint32_t size,size_t interLetterSpace, size_t spaceSize);
+
+	void VSync(void);
+
+	void Clear(void);
+
+	inline uint8_t* GetFrameBuffer(void){ return frameBuffer;}
+
+	void FillLineColor(size_t lineIndex, uint8_t color);
 private:
-    
-    VGAPalette palette;
-    uint8_t frameBuffer[320*200];
-    
-    uint32_t textureID;
+
+	VGAPalette palette;
+	uint8_t frameBuffer[WIDTH * HEIGHT];
+
+	uint32_t textureID;
 };

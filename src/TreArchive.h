@@ -17,6 +17,9 @@
 
 #include "ByteSlice.h"
 
+class PakArchive;
+class ByteStream;
+
 struct Char_String_Comparator
 {
 	bool operator()(char const *a, char const *b) const
@@ -34,53 +37,45 @@ struct TreEntry : public ByteSlice
 class TreArchive
 {
 public:
-     TreArchive();
-    ~TreArchive();
- 
-    bool InitFromFile(const char* filepath);
-    void InitFromRAM(const char* name, uint8_t* data, size_t size);
-    
-    char* GetPath(void);
-    
-    void List(FILE* output);
-    
-    //Direct access to a TRE entry.
-    TreEntry* GetEntryByName(const char* entryName);
-    
-    //Build a pak directly
-    bool GetPAKByName(const char* entryName,PakArchive* pak);
-    
-    //A way to iterate through all entries in the TRE.
-    TreEntry* GetEntryByID(size_t entryID);
-    size_t GetNumEntries(void);
-    
-    bool Decompress(const char* dstDirectory);
-    
-    
-    static inline bool Compare(TreEntry* any, TreEntry* other){
-        return any->data < other->data;
-    }
-    
-    inline uint8_t* GetData(void){ return data; }
-    
-    inline bool IsValid(void){ return this->valid;}
-    
+	 TreArchive();
+	~TreArchive();
+
+	bool InitFromFile(const char* filepath);
+	void InitFromRAM(const char* name, uint8_t* data, size_t size);
+	void Release();
+
+	char* GetPath(void);
+
+	void List(FILE* output);
+
+	//Direct access to a TRE entry.
+	TreEntry* GetEntryByName(const char* entryName);
+
+	//Build a pak directly
+	bool GetPAKByName(const char* entryName,PakArchive* pak);
+
+	//A way to iterate through all entries in the TRE.
+	TreEntry* GetEntryByID(size_t entryID);
+	size_t GetNumEntries(void);
+
+	bool Decompress(const char* dstDirectory);
+
+	static inline bool Compare(TreEntry* any, TreEntry* other) {
+		return any->data < other->data;
+	}
+
+	inline uint8_t* GetData() const { return data; }
+	inline bool IsValid() const { return this->valid;}
+
 private:
-
-	bool valid{ false };
-
-	std::vector<TreEntry*> entries;
-
 	void ReadEntry(ByteStream* stream, TreEntry* entry);
-    void Parse(void);
+	void Parse(void);
 
-	//
-    char path[512];
-    uint8_t* data;
-    size_t   size;
-
-	// allows to know if we should free the TRE data
-	bool initalizedFromFile{ false };
-
-    std::map<const char*,TreEntry*,Char_String_Comparator> mappedEntries;
+	char path[512];
+	std::vector<TreEntry*> entries;
+	std::map<const char*,TreEntry*,Char_String_Comparator> mappedEntries;
+	uint8_t* data{ nullptr };
+	size_t size{ 0 };
+	bool valid{ false };
+	bool initalizedFromFile{ false }; // allows to know if we should free the TRE data
 };
