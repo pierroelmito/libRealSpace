@@ -25,5 +25,19 @@ void SCStrike::Init(void )
 
 void SCStrike::RunFrame(const FrameParams& p)
 {
-	Renderer.RenderWorldSolid(area,BLOCK_LOD_MAX,400);
+	GTime currentTime = p.currentTime * TimeToMSec;
+	const RSVector3 lookAt{ 3856, 0, 2856};
+	RSVector3 newPosition{ 4100, 100, 3000 };
+	newPosition.X =  lookAt.X + 300 * cos(currentTime/2000.0f);
+	newPosition.Z =  lookAt.Z + 300 * sin(currentTime/2000.0f);
+	auto& cam = Renderer.GetCamera();
+	cam.SetPosition(newPosition);
+	cam.LookAt(lookAt);
+
+	const RSVector3 light = HMM_NormalizeVec3({ 1, 4, 1 });
+
+	Renderer.SetLight(light);
+	Renderer.Draw3D({}, [&] () {
+		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, 400);
+	});
 }

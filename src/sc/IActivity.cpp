@@ -61,11 +61,11 @@ SCButton* IActivity::CheckButtons(void)
 		//HIT !
 		Mouse.SetMode(SCMouse::VISOR);
 
-		if (Mouse.buttons[MouseButton::LEFT].event == MouseButton::PRESSED)
+		if (Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::PRESSED)
 			button->SetAppearance(SCButton::APR_DOWN);
 
 		//If the mouse button has just been released: trigger action.
-		if (Mouse.buttons[MouseButton::LEFT].event == MouseButton::RELEASED)
+		if (Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::RELEASED)
 			button->OnAction();
 
 		return button;

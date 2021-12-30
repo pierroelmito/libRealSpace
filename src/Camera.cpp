@@ -8,24 +8,24 @@
 
 #include "precomp.h"
 
-void Camera::SetPersective(float fovy, float aspect, float zNear, float zFar)
+void RSCamera::SetPersective(float fovy, float aspect, float zNear, float zFar)
 {
 	proj = HMM_Perspective(fovy, aspect, zNear, zFar);
 }
 
-void Camera::SetPosition(const Point3D& position)
+void RSCamera::SetPosition(const RSVector3& position)
 {
 	this->position = position;
 	dirtyView = true;
 }
 
-void Camera::LookAt(const Point3D& lookAt)
+void RSCamera::LookAt(const RSVector3& lookAt)
 {
 	this->lookAt = lookAt;
 	dirtyView = true;
 }
 
-Matrix& Camera::getView()
+RSMatrix& RSCamera::getView()
 {
 	if (dirtyView)
 		view = HMM_LookAt(position, lookAt, { 0, 1, 0 });

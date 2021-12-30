@@ -24,7 +24,7 @@ void SCTrainingMenu::Init()
 {
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 
-	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OBJVIEW.PAK");
+	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");
 	PakArchive assets;
 	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);
 	assets.List(stdout);
@@ -56,7 +56,7 @@ void SCTrainingMenu::Init()
 	title.Init(up.GetEntry(0)->data, up.GetEntry(0)->size);
 	 */
 
-	TreEntry* trButtonsEntry = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\TM.SHP");
+	TreEntry* trButtonsEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "TM.SHP");
 	PakArchive trButtonsPack;
 	trButtonsPack.InitFromRAM("TM.SHP", *trButtonsEntry);
 

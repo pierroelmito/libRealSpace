@@ -18,7 +18,6 @@ SCSelectWeaponF16::~SCSelectWeaponF16()
 {
 }
 
-#define OPTPALS_PAK_PATH "..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK"
 void SCSelectWeaponF16::Init( )
 {
 	//Palette
@@ -28,13 +27,13 @@ void SCSelectWeaponF16::Init( )
 
 	//Patch palette
 	ByteStream paletteReader;
-	TreEntry* palettesEntry = treGameFlow.GetEntryByName(OPTPALS_PAK_PATH);
+	TreEntry* palettesEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTPALS.PAK");
 	PakArchive palettesPak;
 	palettesPak.InitFromRAM("OPTSHPS.PAK", *palettesEntry);
 	paletteReader.Set(palettesPak.GetEntry(12).data);
 	this->palette.ReadPatch(&paletteReader);
 
-	TreEntry* optionShapesEntry = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTSHPS.PAK");
+	TreEntry* optionShapesEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTSHPS.PAK");
 
 	PakArchive optionShapes;
 	optionShapes.InitFromRAM("", *optionShapesEntry);

@@ -22,57 +22,54 @@ class RSImage;
 class IffChunk;
 class IffLexer;
 
-#define LOD_LEVEL_MAX 0
-#define LOD_LEVEL_MED 1
-#define LOD_LEVEL_MIN 2
-
-struct MapVertex{
-    Point3D v;
-
-    uint8_t flag;
-    uint8_t type;
-    uint8_t lowerImageID;
-    uint8_t upperImageID;
-    
-    float color[4];
-    
+enum LOD_LEVEL {
+	LOD_LEVEL_MAX,
+	LOD_LEVEL_MED,
+	LOD_LEVEL_MIN,
 };
 
-
-
-
-struct BoudingBox{
-    Point3D min;
-    Point3D max;
+struct MapVertex
+{
+	RSVector3 v;
+	uint8_t flag;
+	uint8_t type;
+	uint8_t lowerImageID;
+	uint8_t upperImageID;
+	float color[4];
 };
 
-struct UV{
-    uint8_t u;
-    uint8_t v;
+struct BoudingBox
+{
+	RSVector3 min;
+	RSVector3 max;
 };
 
-struct uvxyEntry{
-    
-    uint8_t triangleID;
-    uint8_t textureID;
-    UV uvs[3];
+struct UV
+{
+	uint8_t u;
+	uint8_t v;
 };
 
-struct Triangle{
-    
-    uint8_t property;
-    uint8_t ids[3];
-    
-    uint8_t color;
-    uint8_t flags[3];
-    
+struct uvxyEntry
+{
+	uint8_t triangleID;
+	uint8_t textureID;
+	UV uvs[3];
 };
 
-struct Lod{
-    
-    uint32_t dist;
-    uint16_t numTriangles;
-    uint16_t triangleIDs[256];
+struct Triangle
+{
+	uint8_t property;
+	uint8_t ids[3];
+	uint8_t color;
+	uint8_t flags[3];
+};
+
+struct Lod
+{
+	uint32_t dist;
+	uint16_t numTriangles;
+	uint16_t triangleIDs[256];
 };
 
 class RSEntity
@@ -86,13 +83,13 @@ public:
 	void InitFromIFF(IffLexer* lexer);
 
 	void AddImage(RSImage* image);
-	void AddVertex(const Point3D& vertex);
+	void AddVertex(const RSVector3& vertex);
 	void AddUV(uvxyEntry* uv);
 	void AddLod(Lod* lod);
 	void AddTriangle(Triangle* triangle);
 
 	std::vector<RSImage*> images;
-	std::vector<Point3D> vertices;
+	std::vector<RSVector3> vertices;
 	std::vector<uvxyEntry> uvs;
 	std::vector<Lod> lods;
 	std::vector<Triangle> triangles;
@@ -102,8 +99,8 @@ public:
 	const BoudingBox& GetBoudingBpx() const { return bb; }
 
 	//For rendering
-	Point3D position;
-	Quaternion orientation;
+	RSVector3 position;
+	RSQuaternion orientation;
 
 	bool IsPrepared() const { return prepared; }
 	bool prepared{ false };

@@ -101,7 +101,7 @@ private:
     
     char name[16];
     
-    void AddJet(TreArchive* tre, const char* name, Quaternion* orientation, Point3D* position);
+	void AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation, RSVector3* position);
 	void AddJets();
 
 	std::vector<RSEntity*> jets;

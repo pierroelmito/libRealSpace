@@ -191,7 +191,7 @@ void SCConvPlayer::SetID(int32_t id)
 {
 	this->conversationID = id;
 
-	TreEntry* convEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA "GAMEFLOW\\CONV.PAK");
+	TreEntry* convEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "CONV.PAK");
 
 	PakArchive convPak;
 	convPak.InitFromRAM("CONV.PAK", *convEntry);
@@ -215,7 +215,7 @@ void SCConvPlayer::Init( )
 void SCConvPlayer::CheckFrameExpired(const FrameParams& p)
 {
 	//A frame expires either after a player press a key, click or 6 seconds elapse.
-	if(Game.AnyInput() || p.currentTime - currentFrame.creationTime > 5000)
+	if(Game.AnyInput() || TimeToMSec * (p.currentTime - currentFrame.creationTime) > 5000)
 		this->currentFrame.SetExpired(true);
 }
 
@@ -318,7 +318,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 	//
 	if (currentFrame.mode == ConvFrame::CONV_CLOSEUP || currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE) {
 
-		TreEntry* convPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA "GAMEFLOW\\CONVPALS.PAK");
+		TreEntry* convPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "CONVPALS.PAK");
 		PakArchive convPals;
 		convPals.InitFromRAM("CONVPALS.PAK", *convPalettesEntry);
 
@@ -362,7 +362,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//12 mouth something
 
 		for (size_t i = 3; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP; i++) {
-			RLEShape* s = shapes[3 + (p.currentTime / 100) % 10];
+			RLEShape* s = shapes[3 + (int(TimeToMSec * (p.currentTime - startTime)) / 100) % 10];
 			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
 		}

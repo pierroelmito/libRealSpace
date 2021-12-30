@@ -28,7 +28,7 @@ public:
     
     void ClearContent(void);
     
-    Texture* GetTexture(void);
+	RSTexture* GetTexture(void);
     void SyncTexture(void);
     
     uint8_t* GetData(void);
@@ -58,7 +58,7 @@ private:
     
     Point2D position;
     
-    Texture texture;
+	RSTexture texture;
     
     
     bool dirty;

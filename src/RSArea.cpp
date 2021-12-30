@@ -8,6 +8,8 @@
 
 #include "precomp.h"
 
+#include "AssetManager.h"
+
 RSArea::RSArea()
 {
 }
@@ -276,7 +278,7 @@ void RSArea::ParseTriFile(const PakEntry* entry)
 		return (coo>>8) + (coo&0x000000FF)/255.0;
 	};
 
-	Point3D* vertices = new Point3D[300];
+	RSVector3* vertices = new RSVector3[300];
 
 	ByteStream stream(entry->data);
 	/*const auto v0 =*/ stream.ReadInt32LE();
@@ -487,7 +489,7 @@ RSImage* RSArea::GetImageByID(size_t ID) const
 	return textures[0]->GetImageById(ID);
 }
 
-void RSArea::AddJet(TreArchive* tre, const char* name, Quaternion* orientation, Point3D* position)
+void RSArea::AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation, RSVector3* position)
 {
 	TreEntry* jetEntry = tre->GetEntryByName(name);
 	RSEntity* entity = new RSEntity();
@@ -508,24 +510,24 @@ void RSArea::AddJets()
 
 	const float angle = 15.0f;
 
-	Matrix f16m = HMM_Rotate(angle, { 1, 0, 0 });
-	Quaternion rot = HMM_Mat4ToQuaternion(f16m);
-	Point3D pos = {4066,95,2980};
-	AddJet(&tre,"..\\..\\DATA\\OBJECTS\\F-16DES.IFF",&rot,&pos);
+	RSMatrix f16m = HMM_Rotate(angle, { 1, 0, 0 });
+	RSQuaternion rot = HMM_Mat4ToQuaternion(f16m);
+	RSVector3 pos = {4066,95,2980};
+	AddJet(&tre, TRE_DATA_OBJECTS "F-16DES.IFF", &rot, &pos);
 
 	f16m = HMM_Rotate(-angle, { 1, 0, 0 });
 	rot = HMM_Mat4ToQuaternion(f16m);
 	pos = {4010,100,2990};
-	AddJet(&tre,"..\\..\\DATA\\OBJECTS\\F-22.IFF",&rot,&pos);
+	AddJet(&tre, TRE_DATA_OBJECTS "F-22.IFF", &rot, &pos);
 
 	//pos = {3886,300,2886};
-	//AddJet(&tre,"..\\..\\DATA\\OBJECTS\\MIG29.IFF",&rot,&pos);
+	//AddJet(&tre,TRE_DATA_GAMEFLOW "MIG29.IFF",&rot,&pos);
 
-	//const char* jetPath = "..\\..\\DATA\\OBJECTS\\F-22.IFF";
-	//const char* jetPath = "..\\..\\DATA\\OBJECTS\\F-15.IFF";
-	//const char* jetPath = "..\\..\\DATA\\OBJECTS\\YF23.IFF";
-	//const char* jetPath = "..\\..\\DATA\\OBJECTS\\MIG21.IFF";
-	//const char* jetPath = "..\\..\\DATA\\OBJECTS\\MIG29.IFF";
+	//const char* jetPath = TRE_DATA_GAMEFLOW "F-22.IFF";
+	//const char* jetPath = TRE_DATA_GAMEFLOW "F-15.IFF";
+	//const char* jetPath = TRE_DATA_GAMEFLOW "YF23.IFF";
+	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG21.IFF";
+	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG29.IFF";
 }
 
 void RSArea::InitFromPAKFileName(const char* pakFilename)
@@ -566,7 +568,7 @@ void RSArea::InitFromPAKFileName(const char* pakFilename)
 	TreEntry* treEntry = NULL;
 	RSMapTextureSet* set;
 
-	const char* txmPakName = "..\\..\\DATA\\TXM\\TXMPACK.PAK";
+	const char* txmPakName = TRE_DATA "TXM\\TXMPACK.PAK";
 	treEntry = treArchive.GetEntryByName(txmPakName);
 	PakArchive txmPakArchive;
 	txmPakArchive.InitFromRAM(txmPakName,*treEntry);
@@ -575,7 +577,7 @@ void RSArea::InitFromPAKFileName(const char* pakFilename)
 	textures.push_back(set);
 
 	//ACCPACK.PAK seems to contain runway textures
-	const char* accPakName = "..\\..\\DATA\\TXM\\ACCPACK.PAK";
+	const char* accPakName = TRE_DATA "TXM\\ACCPACK.PAK";
 	treEntry = treArchive.GetEntryByName(accPakName);
 	PakArchive accPakArchive;
 	accPakArchive.InitFromRAM(accPakName,*treEntry);

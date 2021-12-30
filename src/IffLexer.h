@@ -62,7 +62,7 @@ public:
     ~IffLexer();
     
     bool InitFromFile(const char* filepath);
-    bool InitFromRAM(uint8_t* data, size_t size);
+	bool InitFromRAM(uint8_t* data, size_t size);
 	bool InitFromRAM(const ByteSlice& bytes);
 
     void List(FILE* output);

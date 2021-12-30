@@ -18,6 +18,8 @@ public:
 
 	void Init(int32_t zoomFactor);
 	void SetTitle(const char* title);
+	bool StartFrame();
+	void EndFrame();
 	void Refresh(void);
 
 	int32_t width;

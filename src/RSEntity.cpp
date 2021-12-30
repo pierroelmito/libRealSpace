@@ -19,7 +19,7 @@ RSEntity::RSEntity()
 
 RSEntity::~RSEntity()
 {
-	while(!images.empty()){
+	while(!images.empty()) {
 		RSImage* image = images.back();
 		images.pop_back();
 		delete image;
@@ -60,7 +60,7 @@ void RSEntity::ParseTXMS(IffChunk* chunk)
 	/*uint32_t version =*/ stream.ReadUInt32LE();
 	//printf("TXMS Version: %u.\n",);
 
-	for(int i =1; i < chunk->childs.size() ; i++){
+	for(int i =1; i < chunk->childs.size() ; i++) {
 		IffChunk* maybeTXMS = chunk->childs[i];
 		if (maybeTXMS->id == IdToUInt("TXMP"))
 			ParseTXMP(maybeTXMS);
@@ -137,8 +137,8 @@ void RSEntity::ParseUVXY(IffChunk* chunk)
 	ByteStream stream(chunk->data);
 	const size_t numEntries = chunk->size/8;
 
-	uvxyEntry uvEntry;
 	for (size_t i=0; i < numEntries; i++) {
+		uvxyEntry uvEntry;
 
 		uvEntry.triangleID = stream.ReadByte();
 		uvEntry.textureID =  stream.ReadByte();
@@ -164,7 +164,7 @@ void RSEntity::InitFromRAM(const ByteSlice& bytes)
 void RSEntity::InitFromRAM(uint8_t* data, size_t size)
 {
 	IffLexer lexer;
-	lexer.InitFromRAM(data,size);
+	lexer.InitFromRAM(data, size);
 	InitFromIFF(&lexer);
 }
 
@@ -210,7 +210,7 @@ void RSEntity::CalcBoundingBox(void)
 	this->bb.max.Z = FLT_MIN;
 
 	for(size_t i =0; i < this->vertices.size() ; i++) {
-		Point3D vertex = vertices[i];
+		RSVector3 vertex = vertices[i];
 
 		if (bb.min.X > vertex.X)
 			bb.min.X = vertex.X;
@@ -228,22 +228,27 @@ void RSEntity::CalcBoundingBox(void)
 	}
 }
 
-void RSEntity::AddImage(RSImage* image){
-    this->images.push_back(image);
+void RSEntity::AddImage(RSImage* image)
+{
+	this->images.push_back(image);
 }
 
-void RSEntity::AddVertex(const Point3D& vertex){
+void RSEntity::AddVertex(const RSVector3& vertex)
+{
 	this->vertices.push_back(vertex);
 }
 
-void RSEntity::AddUV(uvxyEntry* uv){
-    this->uvs.push_back(*uv);
+void RSEntity::AddUV(uvxyEntry* uv)
+{
+	this->uvs.push_back(*uv);
 }
 
-void RSEntity::AddLod(Lod* lod){
-    this->lods.push_back(*lod);
+void RSEntity::AddLod(Lod* lod)
+{
+	this->lods.push_back(*lod);
 }
 
-void RSEntity::AddTriangle(Triangle* triangle){
-    this->triangles.push_back(*triangle);
+void RSEntity::AddTriangle(Triangle* triangle)
+{
+	this->triangles.push_back(*triangle);
 }

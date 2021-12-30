@@ -44,10 +44,10 @@ void RSImage::UpdateContent(uint8_t* src){
 void RSImage::SyncTexture(void){
     
     //Check that we have a texture with an id on the GPU
-    if ((texture.locFlag & Texture::VRAM) != Texture::VRAM){
+	if ((texture.locFlag & RSTexture::VRAM) != RSTexture::VRAM){
         //Create texture in the GPU
         Renderer.CreateTextureInGPU(&texture);
-        texture.locFlag |= Texture::VRAM;
+		texture.locFlag |= RSTexture::VRAM;
     }
     
     //Check if we are synchornized with GPU
@@ -76,7 +76,7 @@ void RSImage::SetPalette(VGAPalette* palette){
     dirty = true;
 }
 
-Texture* RSImage::GetTexture(void){
+RSTexture* RSImage::GetTexture(void){
     
     SyncTexture();
     

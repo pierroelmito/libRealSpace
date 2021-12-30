@@ -10,4 +10,4 @@
 
 #include "HandmadeMath.h"
 
-using Quaternion = hmm_quaternion;
+using RSQuaternion = hmm_quaternion;

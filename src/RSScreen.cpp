@@ -10,10 +10,17 @@
 
 #include "precomp.h"
 
-#include <SDL2/SDL.h>
+#if USE_RAYLIB
 
+#include <raylib.h>
+
+#else
+
+#include <SDL2/SDL.h>
 static SDL_Window *sdlWindow;
 static SDL_Renderer *sdlRenderer;
+
+#endif
 
 RSScreen::RSScreen()
 {
@@ -25,7 +32,11 @@ RSScreen::~RSScreen()
 
 void RSScreen::SetTitle(const char* title)
 {
+#if USE_RAYLIB
+	SetWindowTitle(title);
+#else
 	SDL_SetWindowTitle(sdlWindow, title);
+#endif
 }
 
 void RSScreen::Init(int32_t zoomFactor)
@@ -37,6 +48,10 @@ void RSScreen::Init(int32_t zoomFactor)
 	this->width = w;
 	this->height = h;
 
+#if USE_RAYLIB
+	InitWindow(width, height, "yolo");
+	SetTargetFPS(60);
+#else
 	SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_HIDDEN, &sdlWindow, &sdlRenderer);
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
@@ -49,9 +64,36 @@ void RSScreen::Init(int32_t zoomFactor)
 	SDL_GL_CreateContext(sdlWindow);
 	//glViewport(0,0,this->width,this->height); // Reset The Current Viewport
 	SDL_ShowWindow(sdlWindow);
+#endif
+}
+
+bool RSScreen::StartFrame()
+{
+#if USE_RAYLIB
+	const bool r = !WindowShouldClose();
+	BeginDrawing();
+	ClearBackground(PINK);
+	return r;
+#else
+	return true;
+#endif
+}
+
+void RSScreen::EndFrame()
+{
+#if USE_RAYLIB
+	const int fps = GetFPS();
+	char buffer[512]{};
+	snprintf(buffer, sizeof(buffer), "toto %d", fps);
+	DrawText(buffer, 0, 0, 20, DARKBLUE);
+	EndDrawing();
+#endif
 }
 
 void RSScreen::Refresh(void)
 {
+#if USE_RAYLIB
+#else
 	SDL_GL_SwapWindow(sdlWindow);
+#endif
 }

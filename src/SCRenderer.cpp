@@ -11,18 +11,78 @@
 #include <algorithm>
 #include <cassert>
 
+#if USE_RAYLIB
+#include <raylib.h>
+#else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#endif
 
-void glVertex(const Point3D& p)
+template <class K, class V>
+class ObjectCacheManager
+{
+public:
+	template <typename FN>
+	V& GetData(const K* ptr, FN&& fn)
+	{
+		uint32_t& dataIndex = objectToDataIndex[ptr];
+		if (dataIndex == 0) {
+			dataIndex = allData.size() + 1;
+			allData.push_back({});
+			V& tmp = allData[dataIndex - 1];
+			fn(ptr, tmp);
+		}
+		return allData[dataIndex - 1];
+	}
+protected:
+	std::map<const K*, uint32_t> objectToDataIndex;
+	std::vector<V> allData;
+};
+
+struct AreaVertex
+{
+	RSVector3 pos;
+	hmm_vec2 uv;
+	hmm_vec4 color;
+};
+
+struct ObjVertex
+{
+	RSVector3 pos;
+	RSVector3 normal;
+	std::array<float, 2> uv;
+	std::array<uint8_t, 4> col;
+};
+
+#if USE_RAYLIB
+using ModelData = Model;
+#else
+template <typename T> using GenericMeshData = std::pair<std::vector<T>, std::vector<uint16_t>>;
+using MeshData = GenericMeshData<ObjVertex>;
+using ModelData = std::map<uint32_t, MeshData>;
+#endif
+using AreaCache = std::map<uint32_t, std::vector<AreaVertex>>;
+
+ObjectCacheManager<RSEntity, ModelData> cacheEntityToModel;
+ObjectCacheManager<RSArea, AreaCache> cacheAreaToModel;
+
+// DIRTY...
+const uint32_t PASS_VCOLOR = 0x12345678;
+const uint32_t PASS_BLEND = 0x12345679;
+
+#if !USE_RAYLIB
+
+void glVertex(const RSVector3& p)
 {
 	glVertex3f(p.X, p.Y, p.Z);
 }
 
-void glLoadMatrixHMM(const Matrix& m)
+void glLoadMatrixHMM(const RSMatrix& m)
 {
 	glLoadMatrixf((float*)m.Elements);
 }
+
+#endif
 
 SCRenderer::SCRenderer()
 : initialized(false)
@@ -32,23 +92,48 @@ SCRenderer::SCRenderer()
 SCRenderer::~SCRenderer(){
 }
 
+#if !USE_RAYLIB
+
 void
-SCRenderer::SetProj(const Matrix& m)
+SCRenderer::SetProj(const RSMatrix& m)
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixHMM(m);
 }
 
 void
-SCRenderer::SetView(const Matrix& m)
+SCRenderer::SetView(const RSMatrix& m)
 {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixHMM(m);
 }
 
+#endif
+
 void
 SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 {
+#if USE_RAYLIB
+	auto toVec3 = [] (auto v) -> Vector3 {
+		return { v.X, v.Y, v.Z };
+	};
+
+	Camera3D cam{
+		toVec3(camera.position),
+		toVec3(camera.lookAt),
+		{ 0, 1, 0 },
+		50,
+		CAMERA_PERSPECTIVE
+	};
+	BeginMode3D(cam);
+
+	f();
+
+	EndMode3D();
+#else
+	Renderer.SetProj(camera.proj);
+	Renderer.SetView(camera.getView());
+
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
@@ -56,6 +141,7 @@ SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 	f();
 
 	glDisable(GL_DEPTH_TEST);
+#endif
 }
 
 void SCRenderer::Init(int32_t zoomFactor)
@@ -73,11 +159,13 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	this->palette = *palette.GetColorPalette();
 
+#if !USE_RAYLIB
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
 	//glClearDepth(1.0f);								// Depth Buffer Setup
 	glDisable(GL_DEPTH_TEST);							// Disable Depth Testing
+#endif
 
-	camera.SetPersective(50.0f, width / (float)height,10.0f,12000.0f);
+	camera.SetPersective(50.0f, width / (float)height, 10.0f, 12000.0f);
 
 	light = { 300, 300, 300 };
 
@@ -87,20 +175,33 @@ void SCRenderer::Init(int32_t zoomFactor)
 void SCRenderer::SetClearColor(uint8_t red, uint8_t green, uint8_t blue){
 	if (!initialized)
 		return;
+#if !USE_RAYLIB
 	glClearColor(red/255.0f, green/255.0f, blue/255.0f, 1.0f);
+#endif
 }
 
-void SCRenderer::Clear(void)
+void SCRenderer::Clear()
 {
 	if (!initialized)
 		return;
+#if !USE_RAYLIB
 	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 	glColor4f(1, 1, 1, 1);
+#endif
 }
 
-uint32_t SCRenderer::MakeTexture(uint32_t w, uint32_t h, bool nearest)
+void* SCRenderer::MakeTexture(uint32_t w, uint32_t h, bool nearest)
 {
-	uint32_t textureID;
+#if USE_RAYLIB
+	Texture* ptextureID = new Texture();
+	Texture& textureID = *ptextureID;
+	Image img = GenImageColor(w, h, BLUE);
+	textureID = LoadTextureFromImage(img);
+	UnloadImage(img);
+	return ptextureID;
+#else
+	uint32_t* ptextureID = new uint32_t();
+	uint32_t& textureID = *ptextureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 
@@ -121,32 +222,44 @@ uint32_t SCRenderer::MakeTexture(uint32_t w, uint32_t h, bool nearest)
 	uint8_t* data = (uint8_t* )calloc(1, 320*200*4);
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	free(data);
-
-	return textureID;
+	return ptextureID;
+#endif
 }
 
-void SCRenderer::UpdateBitmapQuad(uint32_t textureID, Texel* data)
+void SCRenderer::UpdateBitmapQuad(void* ptextureID, Texel* data)
 {
+#if USE_RAYLIB
+	Texture& textureID = *((Texture*)ptextureID);
+	UpdateTexture(textureID, data);
+	Camera2D cam{
+		{ 0, 0 },
+		{ 0, 0 },
+		0,
+		3.0f
+	};
+	BeginMode2D(cam);
+	DrawTexture(textureID, 0, 0, RAYWHITE);
+	EndMode2D();
+#else
+	uint32_t textureID = *((uint32_t*)ptextureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, 320, 200, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
 	glBegin(GL_QUADS);
 	glTexCoord2f(0, 1);
 	glVertex2d(0,0);
-
 	glTexCoord2f(1, 1);
 	glVertex2d(320,0);
-
 	glTexCoord2f(1, 0);
 	glVertex2d(320, 200);
-
 	glTexCoord2f(0, 0);
 	glVertex2d(0,200);
 	glEnd();
+#endif
 }
 
 void SCRenderer::ResetState()
 {
+#if !USE_RAYLIB
 	glMatrixMode(GL_PROJECTION); // Select The Projection Matrix
 	glLoadIdentity(); // Reset The Projection Matrix
 	glOrtho(0, 320, 0, 200, -10, 10) ;
@@ -157,19 +270,19 @@ void SCRenderer::ResetState()
 	glDisable(GL_DEPTH_TEST); // Disable Depth Testing
 	glDisable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
+#endif
 }
 
-void SCRenderer::CreateTextureInGPU(Texture* texture)
+void SCRenderer::CreateTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
 
+#if !USE_RAYLIB
 	glGenTextures(1, &texture->id);
 	glBindTexture(GL_TEXTURE_2D, texture->id);
-
 	glEnable(GL_TEXTURE_2D);
 	//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -177,30 +290,36 @@ void SCRenderer::CreateTextureInGPU(Texture* texture)
 	//glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	//glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	//glDisable(GL_TEXTURE_2D);
+#endif
 }
 
-void SCRenderer::UploadTextureContentToGPU(Texture* texture)
+void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
+#if !USE_RAYLIB
 	glBindTexture(GL_TEXTURE_2D, texture->id);
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)texture->width, (GLsizei)texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data);
+#endif
 }
 
-void SCRenderer::DeleteTextureInGPU(Texture* texture)
+void SCRenderer::DeleteTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
-	glDeleteTextures(1, &texture->id);
+#if !USE_RAYLIB
+	if (texture->id)
+		glDeleteTextures(1, &texture->id);
+#endif
 }
 
 
-Vector3D SCRenderer::GetNormal(RSEntity* object, const Triangle* triangle)
+RSVector3 SCRenderer::GetNormal(const RSEntity* object, const Triangle* triangle) const
 {
 	//Calculate the normal for this triangle
-	const Vector3D edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
-	const Vector3D edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
-	Vector3D normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
+	const RSVector3 edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
+	const RSVector3 edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
+	RSVector3 normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
 
 #if 0
 	// All normals are supposed to point outward in modern GPU but SC triangles
@@ -210,9 +329,9 @@ Vector3D SCRenderer::GetNormal(RSEntity* object, const Triangle* triangle)
 	// How can we replicate this ?
 	// - Take the normal and compare it to the sign of the direction to the camera.
 	// - If the signs don't match: reverse the normal.
-	const Point3D& cameraPosition = camera.position;
-	const Point3D& vertexOnTriangle = object->vertices[triangle->ids[0]];
-	const Point3D cameraDirection = HMM_NormalizeVec3(cameraPosition - vertexOnTriangle);
+	const RSVector3& cameraPosition = camera.position;
+	const RSVector3& vertexOnTriangle = object->vertices[triangle->ids[0]];
+	const RSVector3 cameraDirection = HMM_NormalizeVec3(cameraPosition - vertexOnTriangle);
 	if (HMM_Dot(cameraDirection, normal) < 0)
 		normal *= -1.0f;
 #endif
@@ -220,11 +339,75 @@ Vector3D SCRenderer::GetNormal(RSEntity* object, const Triangle* triangle)
 	return normal;
 }
 
-// DIRTY...
-const uint32_t PASS_VCOLOR = 0x12345678;
-const uint32_t PASS_BLEND = 0x12345679;
+#if USE_RAYLIB
 
-void SCRenderer::PrepareModel(RSEntity* object, size_t lodLevel, std::map<uint32_t, std::vector<ObjVertex>>& vertice)
+void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelData& mdata)
+{
+#if 1
+	const Lod& lod = object->lods[lodLevel];
+
+	struct MeshData {
+		std::map<std::tuple<uint32_t, uint8_t, uint8_t>, uint16_t> lookup;
+		std::vector<ObjVertex> vertice;
+		std::vector<uint16_t> indice;
+		int total = 0;
+	};
+
+	auto resolveVertex = [&] (MeshData& data, uint32_t index, uint8_t colIdx, uint8_t texSet) -> uint16_t {
+		++data.total;
+		uint16_t& res = data.lookup[{ index, colIdx, texSet }];
+		if (res == 0) {
+			res = data.vertice.size() + 1;
+			const Texel* tx = r.GetPalette().GetRGBColor(colIdx);
+			data.vertice.push_back({ object->vertices[index], { 0, 1, 0 }, { 0.5f, 0.5f }, { tx->r, tx->g, tx->b, tx->a } });
+		}
+		return res - 1;
+	};
+
+	MeshData d;
+
+	for (int i = 0 ; i < lod.numTriangles ; i++) {
+		uint16_t triangleID = lod.triangleIDs[i];
+		const Triangle& tri = object->triangles[triangleID];
+		if (tri.property == RSEntity::TRANSPARENT)
+			continue;
+		const uint16_t v0 = resolveVertex(d, tri.ids[0], tri.color, 255);
+		const uint16_t v1 = resolveVertex(d, tri.ids[1], tri.color, 255);
+		const uint16_t v2 = resolveVertex(d, tri.ids[2], tri.color, 255);
+		d.indice.push_back(v0);
+		d.indice.push_back(v1);
+		d.indice.push_back(v2);
+		d.indice.push_back(v0);
+		d.indice.push_back(v2);
+		d.indice.push_back(v1);
+	}
+
+	Mesh msh;
+	memset(&msh, 0, sizeof(msh));
+	msh.vertexCount = d.vertice.size();
+	msh.triangleCount = d.indice.size() / 3;
+	msh.vertices = (float*)RL_MALLOC(sizeof(float) * 3 * msh.vertexCount);
+	msh.colors = (uint8_t*)RL_MALLOC(4 * msh.vertexCount);
+	msh.indices = (uint16_t*)RL_MALLOC(sizeof(uint16_t) * 3 * msh.triangleCount);
+	for (int i = 0; i < msh.vertexCount; ++i) {
+		const auto& vert = d.vertice[i];
+		memcpy(&msh.vertices[3 * i], vert.pos.Elements, 3 * 4);
+		memcpy(&msh.colors[4 * i], &vert.col[0], 4);
+	}
+	for (int i = 0; i < msh.triangleCount * 3; ++i) {
+		msh.indices[i] = d.indice[i];
+	}
+	UploadMesh(&msh, true);
+#else
+	Mesh msh = GenMeshCube(10, 2, 10);
+#endif
+
+	mdata = LoadModelFromMesh(msh);
+}
+
+#else
+
+void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelData& mdata)
 {
 	const Lod& lod = object->lods[lodLevel];
 	const std::array<uint8_t, 4> white{ 0xff, 0xff, 0xff, 0xff };
@@ -236,76 +419,107 @@ void SCRenderer::PrepareModel(RSEntity* object, size_t lodLevel, std::map<uint32
 			if (textInfo.textureID >= object->images.size())
 				continue;
 			RSImage* image = object->images[textInfo.textureID];
-			const Texture* texture = image->GetTexture();
-			auto& verts = vertice[texture->id];
+			const RSTexture* texture = image->GetTexture();
+			auto& verts = mdata[texture->id];
 			const Triangle& tri = object->triangles[textInfo.triangleID];
-			const Vector3D normal = GetNormal(object, &tri);
+			const RSVector3 normal = r.GetNormal(object, &tri);
 			for(int j = 0; j < 3; j++){
-				Point3D vertice = object->vertices[tri.ids[j]];
+				RSVector3 vertice = object->vertices[tri.ids[j]];
 				const float u = textInfo.uvs[j].u / (float)texture->width;
 				const float v = textInfo.uvs[j].v / (float)texture->height;
-				verts.push_back({ vertice, normal, { u, v }, white });
+				verts.first.push_back({ vertice, normal, { u, v }, white });
 			}
 		}
 	}
 
 	{
-		std::vector<ObjVertex> blend;
+		ModelData::mapped_type blend;
 		for(int i = 0 ; i < lod.numTriangles ; i++) {
 			uint16_t triangleID = lod.triangleIDs[i];
 			const Triangle& tri = object->triangles[triangleID];
 			if (tri.property != RSEntity::TRANSPARENT)
 				continue;
-			const Vector3D normal = GetNormal(object, &tri);
+			const RSVector3 normal = r.GetNormal(object, &tri);
 			for (int j = 0; j < 3; j++) {
-				Point3D vertice = object->vertices[tri.ids[j]];
-				blend.push_back({ vertice, normal, noUv, white });
+				RSVector3 vertice = object->vertices[tri.ids[j]];
+				blend.first.push_back({ vertice, normal, noUv, white });
 			}
 		}
-		if (!blend.empty())
-			vertice[PASS_BLEND] = std::move(blend);
+		if (!blend.first.empty())
+			mdata[PASS_BLEND] = std::move(blend);
 	}
 
 	{
-		std::vector<ObjVertex> opaque;
+		ModelData::mapped_type opaque;
 		for (int i = 0 ; i < lod.numTriangles ; i++) {
 			//for(int i = 60 ; i < 62 ; i++){  //Debug purpose only back governal of F-16 is 60-62
 			uint16_t triangleID = lod.triangleIDs[i];
 			const Triangle& tri = object->triangles[triangleID];
 			if (tri.property == RSEntity::TRANSPARENT)
 				continue;
-			const Vector3D normal = GetNormal(object, &tri);
+			const RSVector3 normal = r.GetNormal(object, &tri);
 			for(int j=0 ; j < 3 ; j++) {
-				Point3D vertice = object->vertices[tri.ids[j]];
-				const Texel* texel = palette.GetRGBColor(tri.color);
-				opaque.push_back({ vertice, normal, noUv, { texel->r, texel->g, texel->b, texel->a } });
+				RSVector3 vertice = object->vertices[tri.ids[j]];
+				const Texel* texel = r.GetPalette().GetRGBColor(tri.color);
+				opaque.first.push_back({ vertice, normal, noUv, { texel->r, texel->g, texel->b, texel->a } });
 			}
 		}
-		if (!opaque.empty())
-			vertice[PASS_VCOLOR] = std::move(opaque);
+		if (!opaque.first.empty())
+			mdata[PASS_VCOLOR] = std::move(opaque);
 	}
 }
 
-void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel)
+#endif
+
+void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos, const RSQuaternion& orientation)
 {
 	if (!initialized)
 		return;
 
 	if (lodLevel >= object->lods.size()){
-		printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n",
-			std::min(0UL, object->lods.size() - 1));
+		const auto maxl = std::min(0UL, object->lods.size() - 1);
+		printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n", maxl);
 		return;
 	}
 
-	const Vector3D lighDirection = HMM_NormalizeVec3({ 10, 30, 10 });
+#if !USE_RAYLIB
+	const RSVector3 lighDirection = HMM_NormalizeVec3({ 10, 30, 10 });
+
+	auto pushTransform = [&] () {
+		glMatrixMode(GL_MODELVIEW);
+		RSMatrix objMatrix = HMM_QuaternionToMat4(orientation);
+		objMatrix.Elements[3][0] = pos.X;
+		objMatrix.Elements[3][1] = pos.Y;
+		objMatrix.Elements[3][2] = pos.Z;
+		glPushMatrix();
+		glMultMatrixf((float*)objMatrix.Elements);
+	};
+
+	auto popTransform = [&] () {
+		glPopMatrix();
+	};
+#endif
 
 #if 1
+
+	ModelData& vertice = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelData& mdl) {
+		PrepareModel(*this, o, lodLevel, mdl);
+	});
+
+#if USE_RAYLIB
+
 	// need to fix normals... flip in shader??
+	RSMatrix objMatrix = HMM_QuaternionToMat4(orientation);
+	objMatrix.Elements[3][0] = pos.X;
+	objMatrix.Elements[3][1] = pos.Y;
+	objMatrix.Elements[3][2] = pos.Z;
+	auto tmp = HMM_Transpose(objMatrix);
+	DrawMesh(vertice.meshes[0], vertice.materials[0], *((Matrix*)&tmp));
 
-	std::map<uint32_t, std::vector<ObjVertex>> vertice;
-	PrepareModel(object, lodLevel, vertice);
+#else
 
-	const auto renderObj = [&] (const std::vector<ObjVertex>& vert) {
+	const auto renderObj = [&] (const MeshData& mdata) {
+		const auto& vert = mdata.first;
 		glBegin(GL_TRIANGLES);
 		for (const ObjVertex& v : vert) {
 			const float l = std::max(0.2f, HMM_Dot(v.normal, lighDirection));
@@ -321,6 +535,8 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel)
 		}
 		glEnd();
 	};
+
+	pushTransform();
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
@@ -358,11 +574,17 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel)
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
 
+	popTransform();
+
+#endif
+
 #else
 
 	const float ambientLamber = 0.4f;
 
 	const Lod* lod = &object->lods[lodLevel];
+
+	pushTransform();
 
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
@@ -390,12 +612,12 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel)
 
 			const Triangle* triangle = &object->triangles[textInfo.triangleID];
 
-			const Vector3D normal = GetNormal(object, triangle);
+			const RSVector3 normal = GetNormal(object, triangle);
 
 			glBegin(GL_TRIANGLES);
 			for(int j=0 ; j < 3 ; j++){
-				Point3D vertice = object->vertices[triangle->ids[j]];
-				Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
+				RSVector3 vertice = object->vertices[triangle->ids[j]];
+				RSVector3 lighDirection = HMM_NormalizeVec3(light - vertice);
 
 				float lambertianFactor = HMM_Dot(lighDirection, normal);
 				if (lambertianFactor < 0  )
@@ -428,13 +650,13 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel)
 		if (triangle->property != RSEntity::TRANSPARENT)
 			continue;
 
-		const Vector3D normal = GetNormal(object,triangle);
+		const RSVector3 normal = GetNormal(object,triangle);
 
 		glBegin(GL_TRIANGLES);
 
 		for(int j=0 ; j < 3 ; j++) {
-			Point3D vertice = object->vertices[triangle->ids[j]];
-			Vector3D sunDirection = HMM_NormalizeVec3(light - vertice);
+			RSVector3 vertice = object->vertices[triangle->ids[j]];
+			RSVector3 sunDirection = HMM_NormalizeVec3(light - vertice);
 
 			float lambertianFactor = HMM_Dot(sunDirection, normal);
 			if (lambertianFactor < 0  )
@@ -464,12 +686,12 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel)
 		if (triangle->property == RSEntity::TRANSPARENT)
 			continue;
 
-		const Vector3D normal = GetNormal(object, triangle);
+		const RSVector3 normal = GetNormal(object, triangle);
 
 		glBegin(GL_TRIANGLES);
 		for(int j=0 ; j < 3 ; j++){
-			Point3D vertice = object->vertices[triangle->ids[j]];
-			Vector3D lighDirection = HMM_NormalizeVec3(light - vertice);
+			RSVector3 vertice = object->vertices[triangle->ids[j]];
+			RSVector3 lighDirection = HMM_NormalizeVec3(light - vertice);
 
 			float lambertianFactor = HMM_Dot(lighDirection, normal);
 			if (lambertianFactor < 0  )
@@ -488,10 +710,12 @@ void SCRenderer::DrawModel(RSEntity* object, size_t lodLevel)
 		glEnd();
 	}
 
+	popTransform();
+
 #endif
 }
 
-void SCRenderer::SetLight(const Point3D& l){
+void SCRenderer::SetLight(const RSVector3& l){
 	this->light = l;
 }
 
@@ -539,7 +763,6 @@ void SCRenderer::RenderTexturedTriangle(
 	int triangleType)
 {
 	const float white[4] { 1, 1, 1, 1 };
-	glColor4fv(white);
 
 	RSImage* image = NULL;
 	if (triangleType == LOWER_TRIANGE)
@@ -557,7 +780,11 @@ void SCRenderer::RenderTexturedTriangle(
 	const bool is64 = image->width == 64;
 	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
 
+#if USE_RAYLIB
+	const uint32_t texId = 0;
+#else
 	const uint32_t texId = image->GetTexture()->GetTextureID();
+#endif
 	vfunc(texId, tri0->v, white, ttc[triangleType][0]);
 	vfunc(texId, tri1->v, white, ttc[triangleType][1]);
 	vfunc(texId, tri2->v, white, ttc[triangleType][2]);
@@ -582,14 +809,13 @@ void SCRenderer::RenderColoredTriangle(
 				tri = tri0;
 			else
 				tri = tri2;
-		vfunc(0u, tri0->v, tri->color, noUv);
-		vfunc(0u, tri1->v, tri->color, noUv);
-		vfunc(0u, tri2->v, tri->color, noUv);
-	}
-	else{
-		vfunc(0u, tri0->v, tri0->color, noUv);
-		vfunc(0u, tri1->v, tri1->color, noUv);
-		vfunc(0u, tri2->v, tri2->color, noUv);
+		vfunc(PASS_VCOLOR, tri0->v, tri->color, noUv);
+		vfunc(PASS_VCOLOR, tri1->v, tri->color, noUv);
+		vfunc(PASS_VCOLOR, tri2->v, tri->color, noUv);
+	} else{
+		vfunc(PASS_VCOLOR, tri0->v, tri0->color, noUv);
+		vfunc(PASS_VCOLOR, tri1->v, tri1->color, noUv);
+		vfunc(PASS_VCOLOR, tri2->v, tri2->color, noUv);
 	}
 }
 
@@ -672,32 +898,23 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 
 void SCRenderer::RenderJets(const RSArea& area)
 {
-	glMatrixMode(GL_MODELVIEW);
-
 	for(RSEntity* entity : area.GetJets())
-	{
-		Matrix objMatrix = HMM_QuaternionToMat4(entity->orientation);
-
-		Point3D pos = entity->position;
-		objMatrix.Elements[3][0] = pos.X;
-		objMatrix.Elements[3][1] = pos.Y;
-		objMatrix.Elements[3][2] = pos.Z;
-
-		glPushMatrix();
-		glMultMatrixf((float*)objMatrix.Elements);
-		DrawModel(entity, LOD_LEVEL_MAX);
-		glPopMatrix();
-	}
+		DrawModel(entity, LOD_LEVEL_MAX, entity->position, entity->orientation);
 }
 
 void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock)
 {
 	running = true;
 
+#if 0
 	// Camera
-	const Point3D lookAt{ 3856, 0, 2856};
-	Point3D newPosition{ 4100, 100, 3000 };
+	const RSVector3 lookAt{ 3856, 0, 2856};
+	RSVector3 newPosition{ 4100, 100, 3000 };
+#if USE_RAYLIB
+	double currentTime = GetTime();
+#else
 	uint32_t currentTime = SDL_GetTicks();
+#endif
 	newPosition.X =  lookAt.X + 300 * cos(currentTime/2000.0f);
 	newPosition.Z =  lookAt.Z + 300 * sin(currentTime/2000.0f);
 	camera.SetPosition(newPosition);
@@ -728,21 +945,22 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	///*
 
 	//*/
+#endif
 
 	//counter += 0.02;
 
-	if (!areaCache) {
+	const AreaCache& areaCache = cacheAreaToModel.GetData(&area, [&] (const RSArea* a, AreaCache& cache) {
 		//struct PointComparator
 		//{
-		//	bool operator() (const Point3D& a, const Point3D& b) const {
+		//	bool operator() (const RSVector3& a, const RSVector3& b) const {
 		//		if (a.X != b.X) return a.X < b.X;
 		//		if (a.Y != b.Y) return a.Y < b.Y;
 		//		return a.Z < b.Z;
 		//	}
 		//};
-		//std::map<Point3D, uint32_t, PointComparator> pointToIndex;
+		//std::map<RSVector3, uint32_t, PointComparator> pointToIndex;
 		AreaCache tmp;
-		AddVertex vadd = [&] (uint32_t texId, const Point3D& pos, const float* col, const float* uv) {
+		AddVertex vadd = [&] (uint32_t texId, const RSVector3& pos, const float* col, const float* uv) {
 			//uint32_t& idx = pointToIndex[pos];
 			//if (idx == 0)
 			//	idx = pointToIndex.size();
@@ -750,7 +968,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			const auto r = col[0];
 			const auto g = col[1];
 			const auto b = col[2];
-			const bool useVertex = std::abs(pos.Y) > 0.01f || texId != 0 || b < r || b < g;
+			const bool useVertex = std::abs(pos.Y) > 0.01f || texId != PASS_VCOLOR || b < r || b < g;
 			if (useVertex)
 				vert.push_back({ pos, { uv[0], uv[1] }, { r, g, b, col[3] } });
 		};
@@ -758,8 +976,14 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			RenderBlock(vadd, area, LOD, i, false);
 		for(int i = 0; i < BLOCKS_PER_MAP; i++)
 			RenderBlock(vadd, area, LOD, i, true);
-		areaCache = std::move(tmp);
-	}
+		cache = std::move(tmp);
+	});
+
+#if USE_RAYLIB
+
+	DrawPlane({ 0, 0, 0 }, { 3000, 3000 }, GREEN);
+
+#else
 
 	const GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
 	const GLuint fogfilter= 0;                    // Which Fog To Use
@@ -775,7 +999,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
-	if (auto itV = areaCache->find(0); itV != areaCache->end()) {
+	if (auto itV = areaCache.find(PASS_VCOLOR); itV != areaCache.end()) {
 		const auto& vert = itV->second;
 		glBegin(GL_TRIANGLES);
 		for (const AreaVertex& v : vert) {
@@ -789,8 +1013,8 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	glDepthFunc(GL_EQUAL);
-	for (const auto& [k, vert] : *areaCache) {
-		if (k == 0)
+	for (const auto& [k, vert] : areaCache) {
+		if (k == PASS_VCOLOR)
 			continue;
 		glBindTexture(GL_TEXTURE_2D, k);
 		glBegin(GL_TRIANGLES);
@@ -804,11 +1028,12 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	glDisable(GL_BLEND);
 	glDisable(GL_TEXTURE_2D);
 
+#endif
+
 	//Render objects on the map
 	//for(int i=97 ; i < 98 ; i++)
 	//for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
 	//   RenderObjects(area,i);
-
 	RenderJets(area);
 }
 
@@ -893,14 +1118,14 @@ void SCRenderer::RenderObjects(const RSArea& area,size_t blockID)
 	glEnd();
 }
 
-void SCRenderer::RenderVerticeField(Point3D* vertices, int numVertices)
+void SCRenderer::RenderVerticeField(RSVector3* vertices, int numVertices)
 {
 	SetProj(camera.proj);
 
 	running = true;
 	float counter = 0;
 	while (running) {
-		const Point3D newPosition{ 256 * cos(counter), 0, 256 * sin(counter) };
+		const RSVector3 newPosition{ 256 * cos(counter), 0, 256 * sin(counter) };
 		counter += 0.02;
 
 		camera.SetPosition(newPosition);
@@ -932,11 +1157,11 @@ void SCRenderer::RenderWorldPoints(const RSArea& area, int LOD, int verticesPerB
 
 		glMatrixMode(GL_MODELVIEW);
 
-		Point3D lookAt = { 256*16,100,256*16 };
+		RSVector3 lookAt = { 256*16,100,256*16 };
 
 		Renderer.GetCamera().LookAt(lookAt);
 
-		Point3D newPosition = camera.position;
+		RSVector3 newPosition = camera.position;
 		newPosition.X = lookAt.X + 5256*cos(counter/2);
 		newPosition.Y = 3700;
 		newPosition.Z = lookAt.Z + 5256*sin(counter/2);

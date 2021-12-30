@@ -43,5 +43,5 @@ private:
 	VGAPalette palette;
 	uint8_t frameBuffer[WIDTH * HEIGHT];
 
-	uint32_t textureID;
+	void* textureID;
 };

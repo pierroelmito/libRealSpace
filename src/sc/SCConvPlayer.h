@@ -37,7 +37,7 @@ public:
 	std::vector<RLEShape*>* bgLayers;
 	std::vector<uint8_t*> * bgPalettes;
 
-	uint32_t creationTime; // Used to check when a frame expires.
+	GTime creationTime; // Used to check when a frame expires.
 
 	inline void SetExpired(bool exp){ this->expired = exp;}
 	inline bool IsExpired(void){ return this->expired;}

@@ -8,11 +8,4 @@
 
 #pragma once
 
-#include "HandmadeMath.h"
-
 #include "Math.h"
-
-using Point3D = hmm_vec3;
-using Vector3D = hmm_vec3;
-using Matrix = hmm_mat4;
-

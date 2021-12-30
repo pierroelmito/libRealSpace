@@ -66,7 +66,7 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer)
 	tre.InitFromFile("OBJECTS.TRE");
 
 	//The object all follow the same path:
-	const char* OBJ_PATH = TRE_DATA "OBJECTS\\";
+	const char* OBJ_PATH = TRE_DATA_OBJECTS;
 	const char* OBJ_EXTENSION = ".IFF";
 
 	IffChunk* chunk = lexer->GetChunkByID("OBJS");
@@ -79,8 +79,9 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer)
 
 	size_t numObjectInList = chunk->size / 33;
 
-	for(int objIndex=0 ; objIndex < numObjectInList ; objIndex++) {
-		RSShowCase showCase;
+	showCases.reserve(numObjectInList);
+	for(int objIndex = 0; objIndex < numObjectInList; objIndex++) {
+		RSShowCase& showCase = showCases.emplace_back();
 
 		char objName[9];
 		for(int k = 0 ; k < 9 ; k++)
@@ -107,9 +108,6 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer)
 		uint32_t fixedPointDist = stream.ReadInt32LE();
 		showCase.cameraDist = (fixedPointDist >> 8) + (fixedPointDist & 0xFF)/255.0f ;
 		//showCase.cameraDist = 200000;
-
-		showCases.push_back(showCase);
-
 	}
 }
 
@@ -299,8 +297,8 @@ void SCObjectViewer::ParseAssets(PakArchive* archive)
 void SCObjectViewer::Init(void)
 {
 	auto treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-	TreEntry* objViewIFF = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OBJVIEW.IFF");
-	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OBJVIEW.PAK");
+	TreEntry* objViewIFF = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
+	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");
 
 	PakArchive assets;
 	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);
@@ -324,26 +322,22 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 {
 	Frame2D({ &bluePrint, &title });
 
-	const uint32_t totalTime = p.currentTime - startTime;
-
 	const RSShowCase& showCase = showCases[currentObject];
-	Camera& camera = Renderer.GetCamera();
 
-	Point3D newPosition;
+	const uint32_t totalTime = TimeToMSec * (p.currentTime - startTime);
+	RSVector3 newPosition;
 	newPosition.X = showCase.cameraDist / 150 * cos(totalTime / 2000.0f);
 	newPosition.Y = showCase.cameraDist / 350;
 	newPosition.Z = showCase.cameraDist / 150 * sin(totalTime / 2000.0f);
-	camera.SetPosition(newPosition);
-	camera.LookAt({ 0, 0, 0 });
+	auto& cam = Renderer.GetCamera();
+	cam.SetPosition(newPosition);
+	cam.LookAt({ 0, 0, 0 });
 
 	const float t = -totalTime/20000.0f;
-	const Point3D light = { 4 * cos(t), 4, 4 * sin(t) };
+	const RSVector3 light = HMM_NormalizeVec3({ 4 * cos(t), 4, 4 * sin(t) });
 
-	//Ok now time to draw the model
+	Renderer.SetLight(light);
 	Renderer.Draw3D({}, [&] () {
-		Renderer.SetLight(light);
-		Renderer.SetProj(camera.proj);
-		Renderer.SetView(camera.getView());
 		Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX);
 	});
 }

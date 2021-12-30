@@ -10,9 +10,12 @@
 
 #include "HandmadeMath.h"
 
-struct Point2D{
-    int32_t x;
-    int32_t y;
+struct Point2D
+{
+	int32_t x;
+	int32_t y;
 };
 
-using Vector2D = Point2D;
+using RSVector3 = hmm_vec3;
+using RSMatrix = hmm_mat4;
+

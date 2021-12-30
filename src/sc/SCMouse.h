@@ -12,7 +12,7 @@
 
 class RLEShape;
 
-struct MouseButton
+struct SCMouseButton
 {
 	enum BUTTON_ID {LEFT, MIDDLE, RIGHT} ;
 	enum EventType{NONE, PRESSED, RELEASED} ;
@@ -39,7 +39,7 @@ public:
 	void SetMode(Mode mode){this->mode = mode;}
 
 	void FlushEvents(void);
-	MouseButton buttons[3];
+	SCMouseButton buttons[3];
 
 private:
 	RLEShape* appearances[4];

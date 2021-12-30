@@ -12,17 +12,17 @@
 
 #include "Matrix.h"
 
-class Camera
+class RSCamera
 {
 public:
 	void SetPersective(float fovy, float aspect, float zNear, float zFar);
-	void SetPosition(const Point3D& position);
-	void LookAt(const Point3D& lookAt);
-	Matrix& getView();
+	void SetPosition(const RSVector3& position);
+	void LookAt(const RSVector3& lookAt);
+	RSMatrix& getView();
 
-	Matrix view;
-	Matrix proj;
-	Vector3D position;
-	Vector3D lookAt;
+	RSMatrix view;
+	RSMatrix proj;
+	RSVector3 position;
+	RSVector3 lookAt;
 	bool dirtyView{ true };
 };

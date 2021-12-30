@@ -8,21 +8,20 @@
 
 #include "precomp.h"
 
-Texture::Texture()
+RSTexture::RSTexture()
 : data(0)
 , locFlag(DISK)
 {
 }
 
-Texture::~Texture()
+RSTexture::~RSTexture()
 {
-	if (id)
-		Renderer.DeleteTextureInGPU(this);
+	Renderer.DeleteTextureInGPU(this);
 	if (data)
 		free(data);
 }
 
-void Texture::Set(RSImage* image)
+void RSTexture::Set(RSImage* image)
 {
 	strncpy(this->name,image->name,8);
 	this->width = image->width;
@@ -32,12 +31,7 @@ void Texture::Set(RSImage* image)
 	//UpdateContent(image);
 }
 
-uint32_t Texture::GetTextureID(void)
-{
-	return id;
-}
-
-void Texture::UpdateContent(RSImage* image)
+void RSTexture::UpdateContent(RSImage* image)
 {
 	uint8_t* src = image->data;
 	uint8_t* dst = this->data;

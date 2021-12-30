@@ -57,8 +57,10 @@ void RSVGA::SetPalette(const VGAPalette& newPalette){
 void RSVGA::VSync(void)
 {
 	Texel data[WIDTH*HEIGHT];
-	for (size_t i = 0; i < WIDTH*HEIGHT; i++)
+	for (size_t i = 0; i < WIDTH*HEIGHT; i++) {
 		data[i] = *palette.GetRGBColor(frameBuffer[i]);
+		data[i].a = 0xff;
+	}
 	SCRenderer::UpdateBitmapQuad(textureID, data);
 }
 

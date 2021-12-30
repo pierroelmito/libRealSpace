@@ -20,19 +20,27 @@
 
 class SCButton;
 
+#if USE_RAYLIB
+using GTime = double;
+constexpr GTime TimeToMSec = 1000.0;
+#else
+using GTime = uint32_t;
+constexpr GTime TimeToMSec = 1;
+#endif
+
 class IActivity
 {
 public:
 	struct FrameParams
 	{
-		uint32_t currentTime{};
+		GTime currentTime{};
 	};
 
 	virtual ~IActivity();
 
 	virtual void Focus() { focused = true;}
 	virtual void UnFocus() { focused = false;}
-	virtual void Start(uint32_t startTime)
+	virtual void Start(GTime startTime)
 	{
 		this->startTime = startTime;
 		this->running = true;
@@ -53,7 +61,7 @@ protected:
 
 	VGAPalette palette;
 	std::vector<SCButton*> buttons;
-	uint32_t startTime{};
+	GTime startTime{};
 
 private:
 	bool running;

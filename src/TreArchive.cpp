@@ -144,12 +144,9 @@ bool TreArchive::GetPAKByName(const char* entryName,PakArchive* pak)
 	TreEntry* entry = GetEntryByName(entryName);
 	if (entry == NULL)
 		return false;
-
 	pak->InitFromRAM(entryName, *entry);
-
 	if (!pak->IsReady())
 		return false;
-
 	return true;
 }
 

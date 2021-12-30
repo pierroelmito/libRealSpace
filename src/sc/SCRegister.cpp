@@ -26,7 +26,7 @@ void SCRegister::Init()
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 
 	//Load book
-	TreEntry* entryMountain = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTSHPS.PAK");
+	TreEntry* entryMountain = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTSHPS.PAK");
 	PakArchive pak;
 	pak.InitFromRAM("", *entryMountain);
 
@@ -37,7 +37,7 @@ void SCRegister::Init()
 	//Load palette
 	this->palette = VGA.GetPalette();
 
-	TreEntry* palettesEntry = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTPALS.PAK");
+	TreEntry* palettesEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTPALS.PAK");
 	PakArchive palettesPak;
 	palettesPak.InitFromRAM("OPTSHPS.PAK", *palettesEntry);
 

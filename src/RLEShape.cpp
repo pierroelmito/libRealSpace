@@ -129,7 +129,7 @@ bool RLEShape::Expand(uint8_t* dst, size_t* byteRead)
 	while( frag.type != FRAG_END) {
 		bool error = ExpandFragment(&frag, dst);
 		if (error) {
-		   // printf("RLE is attempting to write out of the frameBuffer\n");
+			// printf("RLE is attempting to write out of the frameBuffer\n");
 			return true;
 		}
 		ReadFragment(&frag);

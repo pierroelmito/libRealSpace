@@ -13,8 +13,6 @@
 
 #include "precomp.h"
 
-#define MAINMENU_PAK_PATH "..\\..\\DATA\\GAMEFLOW\\MAINMENU.PAK"
-
 #define MAINMENU_PAK_BUTTONS_INDICE 0
 #define MAINMENU_PAK_BOARD_INDICE   1
 #define MAINMENU_PAK_BOARD_PALETTE  2
@@ -35,7 +33,7 @@ SCMainMenu::~SCMainMenu(){
 void SCMainMenu::Init(void)
 {
 	TreArchive& gameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-	TreEntry* entry = gameFlow.GetEntryByName(MAINMENU_PAK_PATH);
+	TreEntry* entry = gameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "MAINMENU.PAK");
 	mainMenupak.InitFromRAM("MAINMENU.PAK",*entry);
 
 	LoadPalette();
@@ -155,7 +153,7 @@ void SCMainMenu::LoadBackgrounds(void)
 {
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 
-	TreEntry* entryMountain = treGameFlow.GetEntryByName(TRE_DATA "GAMEFLOW\\OPTSHPS.PAK");
+	TreEntry* entryMountain = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTSHPS.PAK");
 	PakArchive pak;
 	pak.InitFromRAM("",*entryMountain);
 

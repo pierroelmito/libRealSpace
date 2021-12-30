@@ -62,6 +62,6 @@ void SCMouse::Draw()
 void SCMouse::FlushEvents(void)
 {
 	for (size_t i = 0 ; i < 3 ; i++) {
-		buttons[i].event = MouseButton::NONE;
+		buttons[i].event = SCMouseButton::NONE;
 	}
 }
