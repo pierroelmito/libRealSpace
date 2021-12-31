@@ -14,6 +14,7 @@
 #include <functional>
 #include <optional>
 #include <map>
+#include <string>
 
 #include "Matrix.h"
 #include "Quaternion.h"

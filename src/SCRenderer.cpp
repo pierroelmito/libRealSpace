@@ -13,6 +13,7 @@
 
 #if USE_RAYLIB
 #include <raylib.h>
+//#include <rlgl.h>
 #else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -34,6 +35,7 @@ public:
 		}
 		return allData[dataIndex - 1];
 	}
+	const std::vector<V>& AllData() const { return allData; }
 protected:
 	std::map<const K*, uint32_t> objectToDataIndex;
 	std::vector<V> allData;
@@ -61,10 +63,10 @@ template <typename T> using GenericMeshData = std::pair<std::vector<T>, std::vec
 using MeshData = GenericMeshData<ObjVertex>;
 using ModelData = std::map<uint32_t, MeshData>;
 #endif
-using AreaCache = std::map<uint32_t, std::vector<AreaVertex>>;
+using BlockCache = std::map<uint32_t, std::vector<AreaVertex>>;
 
 ObjectCacheManager<RSEntity, ModelData> cacheEntityToModel;
-ObjectCacheManager<RSArea, AreaCache> cacheAreaToModel;
+ObjectCacheManager<AreaBlock, BlockCache> cacheBlockToModel;
 
 // DIRTY...
 const uint32_t PASS_VCOLOR = 0x12345678;
@@ -125,6 +127,8 @@ SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 		50,
 		CAMERA_PERSPECTIVE
 	};
+
+	//rlSetFrustrumFarClip();
 	BeginMode3D(cam);
 
 	f();
@@ -476,7 +480,14 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 	if (!initialized)
 		return;
 
-	if (lodLevel >= object->lods.size()){
+	if (object == nullptr) {
+#if USE_RAYLIB
+		//DrawCube({ pos.X, pos.Y, pos.Z }, 10, 10, 10, YELLOW);
+#endif
+		return;
+	}
+
+	if (lodLevel >= object->lods.size()) {
 		const auto maxl = std::min(0UL, object->lods.size() - 1);
 		printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n", maxl);
 		return;
@@ -857,7 +868,7 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 	}
 
 	//Inter-block right side
-	if ( i % 18 != 17){
+	if (i % 18 != 17){
 		const AreaBlock& currentBlock = block;
 		const AreaBlock& rightBlock = area.GetAreaBlockByID(LOD, i+1);
 		for (int y=0 ; y < sideSize-1 ; y ++){
@@ -870,7 +881,7 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 	}
 
 	//Inter-block bottom side
-	if ( i / 18 != 17) {
+	if (i / 18 != 17) {
 		const AreaBlock& currentBlock = block;
 		const AreaBlock& bottomBlock = area.GetAreaBlockByID(LOD, i+BLOCK_PER_MAP_SIDE);
 		for (int x=0 ; x < sideSize-1 ; x++){
@@ -883,7 +894,7 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 	}
 
 	//Inter bottom-right quad
-	if ( i % 18 != 17 && i / 18 != 17) {
+	if (i % 18 != 17 && i / 18 != 17) {
 		const AreaBlock& currentBlock = block;
 		const AreaBlock& rightBlock = area.GetAreaBlockByID(LOD, i+1);
 		const AreaBlock& rightBottonBlock = area.GetAreaBlockByID(LOD, i+1+BLOCK_PER_MAP_SIDE);
@@ -949,35 +960,37 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 
 	//counter += 0.02;
 
-	const AreaCache& areaCache = cacheAreaToModel.GetData(&area, [&] (const RSArea* a, AreaCache& cache) {
-		//struct PointComparator
-		//{
-		//	bool operator() (const RSVector3& a, const RSVector3& b) const {
-		//		if (a.X != b.X) return a.X < b.X;
-		//		if (a.Y != b.Y) return a.Y < b.Y;
-		//		return a.Z < b.Z;
-		//	}
-		//};
-		//std::map<RSVector3, uint32_t, PointComparator> pointToIndex;
-		AreaCache tmp;
-		AddVertex vadd = [&] (uint32_t texId, const RSVector3& pos, const float* col, const float* uv) {
-			//uint32_t& idx = pointToIndex[pos];
-			//if (idx == 0)
-			//	idx = pointToIndex.size();
-			auto& vert = tmp[texId];
-			const auto r = col[0];
-			const auto g = col[1];
-			const auto b = col[2];
-			const bool useVertex = std::abs(pos.Y) > 0.01f || texId != PASS_VCOLOR || b < r || b < g;
-			if (useVertex)
-				vert.push_back({ pos, { uv[0], uv[1] }, { r, g, b, col[3] } });
-		};
-		for(int i = 0; i < BLOCKS_PER_MAP; i++)
+	for(int i = 0; i < BLOCKS_PER_MAP; i++) {
+		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
+		const BlockCache& cache = cacheBlockToModel.GetData(&block, [&] (const AreaBlock* block, BlockCache& cache) {
+			//struct PointComparator
+			//{
+			//	bool operator() (const RSVector3& a, const RSVector3& b) const {
+			//		if (a.X != b.X) return a.X < b.X;
+			//		if (a.Y != b.Y) return a.Y < b.Y;
+			//		return a.Z < b.Z;
+			//	}
+			//};
+			//std::map<RSVector3, uint32_t, PointComparator> pointToIndex;
+			BlockCache tmp;
+			AddVertex vadd = [&] (uint32_t texId, const RSVector3& pos, const float* col, const float* uv) {
+				//uint32_t& idx = pointToIndex[pos];
+				//if (idx == 0)
+				//	idx = pointToIndex.size();
+				auto& vert = tmp[texId];
+				const auto r = col[0];
+				const auto g = col[1];
+				const auto b = col[2];
+				//const bool useVertex = std::abs(pos.Y) > 0.01f || texId != PASS_VCOLOR || b < r || b < g;
+				const bool useVertex = true;
+				if (useVertex)
+					vert.push_back({ pos, { uv[0], uv[1] }, { r, g, b, col[3] } });
+			};
 			RenderBlock(vadd, area, LOD, i, false);
-		for(int i = 0; i < BLOCKS_PER_MAP; i++)
 			RenderBlock(vadd, area, LOD, i, true);
-		cache = std::move(tmp);
-	});
+			cache = std::move(tmp);
+		});
+	}
 
 #if USE_RAYLIB
 
@@ -999,31 +1012,35 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
-	if (auto itV = areaCache.find(PASS_VCOLOR); itV != areaCache.end()) {
-		const auto& vert = itV->second;
-		glBegin(GL_TRIANGLES);
-		for (const AreaVertex& v : vert) {
-			glTexCoord2fv(v.uv.Elements);
-			glColor4fv(v.color.Elements);
-			glVertex3fv(v.pos.Elements);
+	for (const BlockCache& bc : cacheBlockToModel.AllData()) {
+		if (auto itV = bc.find(PASS_VCOLOR); itV != bc.end()) {
+			const auto& vert = itV->second;
+			glBegin(GL_TRIANGLES);
+			for (const AreaVertex& v : vert) {
+				glTexCoord2fv(v.uv.Elements);
+				glColor4fv(v.color.Elements);
+				glVertex3fv(v.pos.Elements);
+			}
+			glEnd();
 		}
-		glEnd();
 	}
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	glDepthFunc(GL_EQUAL);
-	for (const auto& [k, vert] : areaCache) {
-		if (k == PASS_VCOLOR)
-			continue;
-		glBindTexture(GL_TEXTURE_2D, k);
-		glBegin(GL_TRIANGLES);
-		for (const AreaVertex& v : vert) {
-			glTexCoord2fv(v.uv.Elements);
-			glColor4fv(v.color.Elements);
-			glVertex3fv(v.pos.Elements);
+	for (const BlockCache& bc : cacheBlockToModel.AllData()) {
+		for (const auto& [k, vert] : bc) {
+			if (k == PASS_VCOLOR)
+				continue;
+			glBindTexture(GL_TEXTURE_2D, k);
+			glBegin(GL_TRIANGLES);
+			for (const AreaVertex& v : vert) {
+				glTexCoord2fv(v.uv.Elements);
+				glColor4fv(v.color.Elements);
+				glVertex3fv(v.pos.Elements);
+			}
+			glEnd();
 		}
-		glEnd();
 	}
 	glDisable(GL_BLEND);
 	glDisable(GL_TEXTURE_2D);
@@ -1032,8 +1049,30 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 
 	//Render objects on the map
 	//for(int i=97 ; i < 98 ; i++)
-	//for(int i=0 ; i < BLOCKS_PER_MAP ; i++)
-	//   RenderObjects(area,i);
+	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
+		const std::vector<MapObject>& objects = area.objects[id];
+		const uint32_t BLOCK_WIDTH = 512;
+		for (const MapObject& object : objects)
+		{
+			int32_t offset[3];
+			offset[0] = id % 18 * BLOCK_WIDTH;
+			offset[1] = area.elevation[id];
+			offset[2] = (int32_t)id / 18 * BLOCK_WIDTH;
+
+			int32_t localDelta[3];
+			localDelta[0] = object.position[0] / 65355.0f*BLOCK_WIDTH;
+			localDelta[1] = object.position[1]; // / HEIGHT_DIVIDER
+			localDelta[2] = object.position[2] / 65355.0f*BLOCK_WIDTH;
+
+			size_t toDraw[3];
+			toDraw[0] = localDelta[0] + offset[0];
+			toDraw[1] = localDelta[1] + offset[1];
+			toDraw[2] = localDelta[2] + offset[2];
+
+			const RSVector3 worldPos{ (float)toDraw[0], (float)toDraw[1], (float)toDraw[2] };
+			DrawModel(object.entity, LOD_LEVEL_MAX, worldPos);
+		}
+	}
 	RenderJets(area);
 }
 

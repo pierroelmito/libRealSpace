@@ -85,7 +85,7 @@ void RSScreen::EndFrame()
 	const int fps = GetFPS();
 	char buffer[512]{};
 	snprintf(buffer, sizeof(buffer), "toto %d", fps);
-	DrawText(buffer, 0, 0, 20, DARKBLUE);
+	DrawText(buffer, 4, 4, 20, DARKBLUE);
 	EndDrawing();
 #endif
 }

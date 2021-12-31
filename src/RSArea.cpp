@@ -528,6 +528,29 @@ void RSArea::AddJets()
 	//const char* jetPath = TRE_DATA_GAMEFLOW "YF23.IFF";
 	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG21.IFF";
 	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG29.IFF";
+
+	std::map<std::string, RSEntity*> entities;
+	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
+		std::vector<MapObject>& blockObjects = objects[id];
+		for (MapObject& object : blockObjects) {
+			if (object.entity == nullptr) {
+				RSEntity*& e = entities[object.name];
+				if (e == nullptr) {
+					e = new RSEntity();
+					char buffer[512];
+					snprintf(buffer, sizeof(buffer), "%s%s.IFF", TRE_DATA_OBJECTS, object.name);
+					TreEntry* entry = tre.GetEntryByName(buffer);
+					IffLexer lexer;
+					lexer.InitFromRAM(*entry);
+					e->InitFromIFF(&lexer);
+				}
+				if (e == nullptr) {
+					printf("Unable to load area object '%s'\n", object.name);
+				}
+				object.entity = e;
+			}
+		}
+	}
 }
 
 void RSArea::InitFromPAKFileName(const char* pakFilename)

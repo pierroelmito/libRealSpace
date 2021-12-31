@@ -9,4 +9,3 @@ target("sc")
 	--add_links("GL", "SDL2")
 	add_defines("USE_RAYLIB=1")
 	add_links("raylib")
-

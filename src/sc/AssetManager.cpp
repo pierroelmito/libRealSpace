@@ -37,6 +37,7 @@ void AssetManager::Init()
 		tre.InitFromFile(nameIds[i].filename);
 		if (!tre.IsValid())
 			Game.Terminate("Unable to load asset '%s' (Did you set the SC base folder ?).", nameIds[i].filename);
+		tre.List(stdout);
 	}
 }
 

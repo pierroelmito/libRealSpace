@@ -20,10 +20,10 @@ class PakArchive;
 
 struct MapObject
 {
-    char name[9];
-    char destroyedName[9];
-    uint32_t position[3];
-    RSEntity* entity;
+	char name[9]{};
+	char destroyedName[9]{};
+	uint32_t position[3]{};
+	RSEntity* entity{ nullptr };
 };
 
 struct AreaBlock
