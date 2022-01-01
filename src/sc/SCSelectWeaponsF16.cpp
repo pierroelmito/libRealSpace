@@ -45,7 +45,7 @@ void SCSelectWeaponF16::Init( )
 
 void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 {
-	if (Game.IsKeyPressed('\r'))
+	if (Game.IsKeyPressed(257 /*'\r'*/))
 		Stop();
 	Frame2D({ &background });
 }

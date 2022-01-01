@@ -20,11 +20,44 @@
 
 extern GLFWwindow* win;
 
+template <typename T>
+sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, const std::vector<T>& data = {})
+{
+	sg_image_desc idesc{};
+	idesc.width = w;
+	idesc.height = h;
+	idesc.pixel_format = fmt;
+	idesc.usage = usage;
+	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
+	return sg_make_image(&idesc);
+}
+
+sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage)
+{
+	sg_image_desc idesc{};
+	idesc.width = w;
+	idesc.height = h;
+	idesc.pixel_format = fmt;
+	idesc.usage = usage;
+	return sg_make_image(&idesc);
+}
+
+template <typename T>
+sg_buffer MakeBuffer(sg_buffer_type bt, sg_usage usage, const std::vector<T>& data)
+{
+	sg_buffer_desc vdesc{};
+	vdesc.type = bt;
+	vdesc.usage = usage;
+	vdesc.data = { &data[0], data.size() * sizeof(T) };
+	vdesc.size = vdesc.data.size;
+	return sg_make_buffer(vdesc);
+}
+
 struct ModelRenderData
 {
 	sg_shader shd{};
 	sg_pipeline pip{};
-	sg_bindings bind{};
+	sg_image white{};
 
 	struct Mesh
 	{
@@ -35,14 +68,44 @@ struct ModelRenderData
 
 	ModelRenderData()
 	{
+		std::vector<uint32_t> pixels = { 0xffffffffu };
+		white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, pixels);
+
 		shd = sg_make_shader(model_shader_desc(sg_query_backend()));
 
 		{
 			sg_pipeline_desc pdesc{};
 			pdesc.shader = shd;
 			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
-			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_UBYTE4N;
+			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
+			pdesc.layout.attrs[2].format = SG_VERTEXFORMAT_UBYTE4N;
 			pdesc.index_type = SG_INDEXTYPE_UINT16;
+			pip = sg_make_pipeline(&pdesc);
+		}
+	}
+};
+
+struct GroundRenderData
+{
+	sg_shader shd{};
+	sg_pipeline pip{};
+
+	struct Mesh
+	{
+		sg_buffer vbuf{};
+		int pcount{};
+	};
+
+	GroundRenderData()
+	{
+		shd = sg_make_shader(ground_shader_desc(sg_query_backend()));
+
+		{
+			sg_pipeline_desc pdesc{};
+			pdesc.shader = shd;
+			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
+			pdesc.layout.attrs[2].format = SG_VERTEXFORMAT_UBYTE4N;
 			pip = sg_make_pipeline(&pdesc);
 		}
 	}
@@ -55,9 +118,13 @@ struct FullscreenBitmapData
 	sg_shader shd{};
 	sg_pipeline pip{};
 	sg_bindings bind{};
+	sg_image white{};
 
 	FullscreenBitmapData(uint32_t width, uint32_t height)
 	{
+		std::vector<uint32_t> pixels = { 0xffffffffu };
+		white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, pixels);
+
 		shd = sg_make_shader(bitmap_shader_desc(sg_query_backend()));
 
 		{
@@ -76,14 +143,7 @@ struct FullscreenBitmapData
 			vbuf = sg_make_buffer(&bdesc);
 		}
 
-		{
-			sg_image_desc idesc{};
-			idesc.width = width;
-			idesc.height = height;
-			idesc.pixel_format = SG_PIXELFORMAT_RGBA8;
-			idesc.usage = SG_USAGE_STREAM;
-			img = sg_make_image(&idesc);
-		}
+		img = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM);
 
 		{
 			sg_pipeline_desc pdesc{};
@@ -99,6 +159,7 @@ struct FullscreenBitmapData
 
 std::optional<FullscreenBitmapData> FbdRender;
 std::optional<ModelRenderData> modelRender;
+std::optional<GroundRenderData> groundRender;
 
 template <class K, class V>
 class ObjectCacheManager
@@ -122,36 +183,15 @@ protected:
 	std::vector<V> allData;
 };
 
-struct AreaVertex
-{
-	RSVector3 pos;
-	hmm_vec2 uv;
-	hmm_vec4 color;
-};
-
 using ModelData = ModelRenderData::Mesh;
-using BlockCache = std::map<uint32_t, std::vector<AreaVertex>>;
+using GroundData = GroundRenderData::Mesh;
 
 ObjectCacheManager<RSEntity, ModelData> cacheEntityToModel;
-ObjectCacheManager<AreaBlock, BlockCache> cacheBlockToModel;
+ObjectCacheManager<AreaBlock, GroundData> cacheBlockToModel;
 
 // DIRTY...
 const uint32_t PASS_VCOLOR = 0x12345678;
 const uint32_t PASS_BLEND = 0x12345679;
-
-void glVertex(const RSVector3& p)
-{
-#if 0
-	glVertex3f(p.X, p.Y, p.Z);
-#endif
-}
-
-void glLoadMatrixHMM(const RSMatrix& m)
-{
-#if 0
-	glLoadMatrixf((float*)m.Elements);
-#endif
-}
 
 SCRenderer::SCRenderer()
 : initialized(false)
@@ -165,7 +205,8 @@ void
 SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 {
 	sg_pass_action pass_action = {0};
-	pass_action.colors[0].action = SG_ACTION_DONTCARE;
+	if (!params.clearColors)
+		pass_action.colors[0].action = SG_ACTION_DONTCARE;
 	int cur_width{}, cur_height{};
 	glfwGetFramebufferSize(win, &cur_width, &cur_height);
 	sg_begin_default_pass(&pass_action, cur_width, cur_height);
@@ -328,7 +369,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 	{
 		RSVector3 pos;
 		//RSVector3 normal;
-		//std::array<float, 2> uv;
+		hmm_vec2 uv;
 		std::array<uint8_t, 4> col;
 	};
 
@@ -345,7 +386,8 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		if (res == 0) {
 			res = data.vertice.size() + 1;
 			const Texel* tx = r.GetPalette().GetRGBColor(colIdx);
-			data.vertice.push_back({ object->vertices[index], /* { 0, 1, 0 }, { 0.5f, 0.5f }, */ { tx->r, tx->g, tx->b, tx->a } });
+			//data.vertice.push_back({ object->vertices[index], /* { 0, 1, 0 }, */ { 0.5f, 0.5f }, { tx->r, tx->g, tx->b, tx->a } });
+			data.vertice.push_back({ object->vertices[index], /* { 0, 1, 0 }, */ { 0.5f, 0.5f }, { tx->r, tx->g, tx->b, tx->a } });
 		}
 		return res - 1;
 	};
@@ -384,31 +426,15 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		d.indice.push_back(v0);
 		d.indice.push_back(v1);
 		d.indice.push_back(v2);
-		d.indice.push_back(v0);
-		d.indice.push_back(v2);
-		d.indice.push_back(v1);
+		//d.indice.push_back(v0);
+		//d.indice.push_back(v2);
+		//d.indice.push_back(v1);
 	}
 
 	const auto& d = opaque;
 
-	{
-		sg_buffer_desc vdesc{};
-		vdesc.type = SG_BUFFERTYPE_VERTEXBUFFER;
-		vdesc.usage = SG_USAGE_IMMUTABLE;
-		vdesc.data = { &d.vertice[0], d.vertice.size() * sizeof(decltype(d.vertice)::value_type) };
-		vdesc.size = vdesc.data.size;
-		mdata.vbuf = sg_make_buffer(vdesc);
-	}
-
-	{
-		sg_buffer_desc idesc{};
-		idesc.type = SG_BUFFERTYPE_INDEXBUFFER;
-		idesc.usage = SG_USAGE_IMMUTABLE;
-		idesc.data = { &d.indice[0], d.indice.size() * sizeof(decltype(d.indice)::value_type) };
-		idesc.size = idesc.data.size;
-		mdata.ibuf = sg_make_buffer(idesc);
-	}
-
+	mdata.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, d.vertice);
+	mdata.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, d.indice);
 	mdata.pcount = d.indice.size();
 }
 
@@ -503,13 +529,16 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 		PrepareModel(*this, o, lodLevel, mdl);
 	});
 
-	RSMatrix id = HMM_Mat4d(1);
+	RSMatrix world = HMM_QuaternionToMat4(orientation);
+	world.Elements[3][0] = pos.X;
+	world.Elements[3][1] = pos.Y;
+	world.Elements[3][2] = pos.Z;
 	const RSMatrix& view = camera.getView();
 	const RSMatrix& proj = camera.proj;
 	model_vs_params_t params;
 	memcpy(params.proj, &proj, 64);
 	memcpy(params.view, &view, 64);
-	memcpy(params.world, &id, 64);
+	memcpy(params.world, &world, 64);
 
 	sg_apply_pipeline(modelRender->pip);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
@@ -942,9 +971,12 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 
 	//counter += 0.02;
 
+	if (!groundRender)
+		groundRender.emplace();
+
 	for(int i = 0; i < BLOCKS_PER_MAP; i++) {
 		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
-		const BlockCache& cache = cacheBlockToModel.GetData(&block, [&] (const AreaBlock* block, BlockCache& cache) {
+		const GroundData& cache = cacheBlockToModel.GetData(&block, [&] (const AreaBlock* block, GroundData& cache) {
 			//struct PointComparator
 			//{
 			//	bool operator() (const RSVector3& a, const RSVector3& b) const {
@@ -954,6 +986,13 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			//	}
 			//};
 			//std::map<RSVector3, uint32_t, PointComparator> pointToIndex;
+			struct AreaVertex
+			{
+				RSVector3 pos;
+				hmm_vec2 uv;
+				std::array<uint8_t, 4> col;
+			};
+			using BlockCache = std::map<uint32_t, std::vector<AreaVertex>>;
 			BlockCache tmp;
 			AddVertex vadd = [&] (uint32_t texId, const RSVector3& pos, const float* col, const float* uv) {
 				//uint32_t& idx = pointToIndex[pos];
@@ -965,13 +1004,31 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 				const auto b = col[2];
 				//const bool useVertex = std::abs(pos.Y) > 0.01f || texId != PASS_VCOLOR || b < r || b < g;
 				const bool useVertex = true;
+				auto toByte = [] (float v) { return uint8_t(v * 255.99f); };
 				if (useVertex)
-					vert.push_back({ pos, { uv[0], uv[1] }, { r, g, b, col[3] } });
+					vert.push_back({ pos, { uv[0], uv[1] }, { toByte(r), toByte(g), toByte(b), toByte(col[3]) } });
 			};
 			RenderBlock(vadd, area, LOD, i, false);
 			RenderBlock(vadd, area, LOD, i, true);
-			cache = std::move(tmp);
+			const auto& data = tmp[PASS_VCOLOR];
+			cache.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, data);
+			cache.pcount = data.size();
 		});
+
+		RSMatrix world = HMM_Mat4d(1.0f);
+		const RSMatrix& view = camera.getView();
+		const RSMatrix& proj = camera.proj;
+		model_vs_params_t params;
+		memcpy(params.proj, &proj, 64);
+		memcpy(params.view, &view, 64);
+		memcpy(params.world, &world, 64);
+
+		sg_apply_pipeline(groundRender->pip);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+		sg_bindings bind{};
+		bind.vertex_buffers[0] = cache.vbuf;
+		sg_apply_bindings(bind);
+		sg_draw(0, cache.pcount, 1);
 	}
 
 #if 0

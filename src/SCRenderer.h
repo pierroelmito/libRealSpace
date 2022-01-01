@@ -62,7 +62,9 @@ public:
 	void RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock);
 	void RenderJets(const RSArea& area);
 
-	struct Render3DParams {};
+	struct Render3DParams {
+		bool clearColors{ true };
+	};
 	void Draw3D(const Render3DParams& params, std::function<void()>&& f);
 
 	RSCamera& GetCamera() { return camera; }

@@ -51,7 +51,7 @@ void SCWildCatBase::Init()
 
 void SCWildCatBase::RunFrame(const FrameParams& p)
 {
-	if (Game.IsKeyPressed('\r')) {
+	if (Game.IsKeyPressed(257 /*'\r'*/)) {
 		Stop();
 		SCConvPlayer* conv = new SCConvPlayer();
 		conv->Init();

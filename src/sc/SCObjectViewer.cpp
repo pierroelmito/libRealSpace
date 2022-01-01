@@ -337,7 +337,7 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	const RSVector3 light = HMM_NormalizeVec3({ 4 * cos(t), 4, 4 * sin(t) });
 
 	Renderer.SetLight(light);
-	Renderer.Draw3D({}, [&] () {
+	Renderer.Draw3D({ false }, [&] () {
 		Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX);
 	});
 }

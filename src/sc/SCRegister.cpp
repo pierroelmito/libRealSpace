@@ -48,7 +48,7 @@ void SCRegister::Init()
 
 void SCRegister::RunFrame(const FrameParams& p)
 {
-	if (Game.IsKeyPressed('\r')) {
+	if (Game.IsKeyPressed(257 /*'\r'*/)) {
 		Stop();
 		//Add both animation and next location on the stack.
 		Game.MakeActivity<SCWildCatBase>();

@@ -1,4 +1,6 @@
 
+// fullscreen bitmap
+
 @vs bitmap_vs
 layout(location=0) in vec4 position;
 out vec2 uv;
@@ -18,6 +20,10 @@ void main() {
 }
 @end
 
+@program bitmap bitmap_vs bitmap_fs
+
+// model rendering
+
 @vs model_vs
 uniform model_vs_params {
 	mat4 view;
@@ -25,10 +31,13 @@ uniform model_vs_params {
 	mat4 world;
 };
 layout(location=0) in vec4 position;
-layout(location=1) in vec4 vcolor;
+layout(location=1) in vec4 texcoord;
+layout(location=2) in vec4 vcolor;
 out vec4 color;
+out vec2 uv;
 void main() {
 	color = vcolor;
+	uv = texcoord.xy;
 	gl_Position = (proj * view * world) * position;
 }
 @end
@@ -36,11 +45,43 @@ void main() {
 @fs model_fs
 uniform sampler2D bitmap;
 in vec4 color;
+in vec2 uv;
 out vec4 frag_color;
 void main() {
 	frag_color = vec4(color.rgb, 1);
 }
 @end
 
-@program bitmap bitmap_vs bitmap_fs
 @program model model_vs model_fs
+
+// ground rendering
+
+@vs ground_vs
+uniform model_vs_params {
+	mat4 view;
+	mat4 proj;
+	mat4 world;
+};
+layout(location=0) in vec4 position;
+layout(location=1) in vec4 texcoord;
+layout(location=2) in vec4 vcolor;
+out vec4 color;
+out vec2 uv;
+void main() {
+	color = vcolor;
+	uv = texcoord.xy;
+	gl_Position = (proj * view * world) * position;
+}
+@end
+
+@fs ground_fs
+uniform sampler2D bitmap;
+in vec4 color;
+in vec2 uv;
+out vec4 frag_color;
+void main() {
+	frag_color = vec4(color.rgb, 1);
+}
+@end
+
+@program ground ground_vs ground_fs
