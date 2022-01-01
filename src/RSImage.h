@@ -26,12 +26,12 @@ public:
     
     void SetPalette(VGAPalette* palette);
     
-    void ClearContent(void);
+	void ClearContent();
     
-	RSTexture* GetTexture(void);
-    void SyncTexture(void);
+	RSTexture* GetTexture();
+	void SyncTexture();
     
-    uint8_t* GetData(void);
+	uint8_t* GetData();
     
     size_t width;
     size_t height;
@@ -52,7 +52,7 @@ public:
     
     
     inline void SetPosition(const Point2D position){ this->position = position; }
-    inline Point2D GetPosition(void) { return this->position; }
+	inline Point2D GetPosition() { return this->position; }
     
 private:
     

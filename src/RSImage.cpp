@@ -41,7 +41,7 @@ void RSImage::UpdateContent(uint8_t* src){
     
 }
 
-void RSImage::SyncTexture(void){
+void RSImage::SyncTexture(){
     
     //Check that we have a texture with an id on the GPU
 	if ((texture.locFlag & RSTexture::VRAM) != RSTexture::VRAM){
@@ -61,24 +61,25 @@ void RSImage::SyncTexture(void){
 }
 
 
-uint8_t* RSImage::GetData(void){
+uint8_t* RSImage::GetData(){
     dirty = true;
     return data;
 }
 
-void RSImage::ClearContent(void){
-    memset(this->data,0,this->width*this->height);
-    dirty = true;
+void RSImage::ClearContent()
+{
+	memset(this->data,0,this->width*this->height);
+	dirty = true;
 }
 
-void RSImage::SetPalette(VGAPalette* palette){
-    this->palette = palette;
-    dirty = true;
+void RSImage::SetPalette(VGAPalette* palette)
+{
+	this->palette = palette;
+	dirty = true;
 }
 
-RSTexture* RSImage::GetTexture(void){
-    
-    SyncTexture();
-    
-    return &this->texture;
+RSTexture* RSImage::GetTexture()
+{
+	SyncTexture();
+	return &texture;
 }

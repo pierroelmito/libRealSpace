@@ -8,8 +8,9 @@
 
 #include "precomp.h"
 
-#include <algorithm>
 #include <cassert>
+
+#include <algorithm>
 
 #define SOKOL_GLCORE33
 #include "sokol_gfx.h"
@@ -21,7 +22,7 @@
 extern GLFWwindow* win;
 
 template <typename T>
-sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, const std::vector<T>& data = {})
+sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps, const std::vector<T>& data = {})
 {
 	sg_image_desc idesc{};
 	idesc.width = w;
@@ -32,7 +33,7 @@ sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, const std:
 	return sg_make_image(&idesc);
 }
 
-sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage)
+sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps)
 {
 	sg_image_desc idesc{};
 	idesc.width = w;
@@ -57,29 +58,30 @@ struct ModelRenderData
 {
 	sg_shader shd{};
 	sg_pipeline pip{};
-	sg_image white{};
 
-	struct Mesh
+	struct MeshItem
 	{
+		sg_image texture{};
 		sg_buffer vbuf{};
 		sg_buffer ibuf{};
 		int pcount{};
 	};
+	using Mesh = std::vector<MeshItem>;
 
 	ModelRenderData()
 	{
-		std::vector<uint32_t> pixels = { 0xffffffffu };
-		white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, pixels);
-
 		shd = sg_make_shader(model_shader_desc(sg_query_backend()));
 
 		{
 			sg_pipeline_desc pdesc{};
 			pdesc.shader = shd;
 			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
-			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
-			pdesc.layout.attrs[2].format = SG_VERTEXFORMAT_UBYTE4N;
+			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT2;
+			pdesc.layout.attrs[3].format = SG_VERTEXFORMAT_UBYTE4N;
 			pdesc.index_type = SG_INDEXTYPE_UINT16;
+			pdesc.depth.write_enabled = true;
+			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
 			pip = sg_make_pipeline(&pdesc);
 		}
 	}
@@ -90,11 +92,13 @@ struct GroundRenderData
 	sg_shader shd{};
 	sg_pipeline pip{};
 
-	struct Mesh
+	struct MeshItem
 	{
+		sg_image texture{};
 		sg_buffer vbuf{};
 		int pcount{};
 	};
+	using Mesh = std::vector<MeshItem>;
 
 	GroundRenderData()
 	{
@@ -118,13 +122,9 @@ struct FullscreenBitmapData
 	sg_shader shd{};
 	sg_pipeline pip{};
 	sg_bindings bind{};
-	sg_image white{};
 
 	FullscreenBitmapData(uint32_t width, uint32_t height)
 	{
-		std::vector<uint32_t> pixels = { 0xffffffffu };
-		white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, pixels);
-
 		shd = sg_make_shader(bitmap_shader_desc(sg_query_backend()));
 
 		{
@@ -143,7 +143,7 @@ struct FullscreenBitmapData
 			vbuf = sg_make_buffer(&bdesc);
 		}
 
-		img = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM);
+		img = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, false);
 
 		{
 			sg_pipeline_desc pdesc{};
@@ -157,6 +157,7 @@ struct FullscreenBitmapData
 	}
 };
 
+sg_image white{};
 std::optional<FullscreenBitmapData> FbdRender;
 std::optional<ModelRenderData> modelRender;
 std::optional<GroundRenderData> groundRender;
@@ -171,9 +172,7 @@ public:
 		uint32_t& dataIndex = objectToDataIndex[ptr];
 		if (dataIndex == 0) {
 			dataIndex = allData.size() + 1;
-			allData.push_back({});
-			V& tmp = allData[dataIndex - 1];
-			fn(ptr, tmp);
+			fn(ptr, allData.emplace_back());
 		}
 		return allData[dataIndex - 1];
 	}
@@ -231,45 +230,15 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	this->palette = *palette.GetColorPalette();
 
-	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
-	////glClearDepth(1.0f);								// Depth Buffer Setup
-	//glDisable(GL_DEPTH_TEST);							// Disable Depth Testing
-
 	camera.SetPersective(50.0f, width / (float)height, 10.0f, 12000.0f);
 
 	light = { 300, 300, 300 };
 
+	std::vector<uint32_t> pixels = { 0xffffffffu };
+	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, pixels);
+
 	initialized = true;
 }
-
-#if 0
-void* SCRenderer::MakeTexture(uint32_t w, uint32_t h, bool nearest)
-{
-	uint32_t* ptextureID = new uint32_t();
-	uint32_t& textureID = *ptextureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
-	glEnable(GL_TEXTURE_2D);
-	//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	if (nearest) {
-		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	} else {
-		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	}
-
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	uint8_t* data = (uint8_t* )calloc(1, 320*200*4);
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	free(data);
-	return ptextureID;
-}
-#endif
 
 void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
 {
@@ -280,15 +249,13 @@ void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
 	idata.subimage[0][0] = { data, width * height * sizeof(Texel) };
 	sg_update_image(FbdRender->img, idata);
 
-	sg_pass_action pass_action = {0};
 	int cur_width{}, cur_height{};
 	glfwGetFramebufferSize(win, &cur_width, &cur_height);
+	sg_pass_action pass_action = {0};
 	sg_begin_default_pass(&pass_action, cur_width, cur_height);
-
 	sg_apply_pipeline(FbdRender->pip);
 	sg_apply_bindings(&FbdRender->bind);
 	sg_draw(0, 6, 1);
-
 	sg_end_pass();
 }
 
@@ -296,42 +263,24 @@ void SCRenderer::CreateTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
-
-#if 0
-	glGenTextures(1, &texture->id);
-	glBindTexture(GL_TEXTURE_2D, texture->id);
-	glEnable(GL_TEXTURE_2D);
-	//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	//glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	//glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glDisable(GL_TEXTURE_2D);
-#endif
+	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, true);
+	texture->id = img.id;
 }
 
 void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
-
-#if 0
-	glBindTexture(GL_TEXTURE_2D, texture->id);
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)texture->width, (GLsizei)texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data);
-#endif
+	sg_image_data data;
+	data.subimage[0][0] = { texture->data, texture->width * texture->height * 4 };
+	sg_update_image({ texture->id }, data);
 }
 
 void SCRenderer::DeleteTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
-
-#if 0
-	if (texture->id)
-		glDeleteTextures(1, &texture->id);
-#endif
+	sg_destroy_image({ texture->id });
 }
 
 RSVector3 SCRenderer::GetNormal(const RSEntity* object, const Triangle* triangle) const
@@ -339,27 +288,8 @@ RSVector3 SCRenderer::GetNormal(const RSEntity* object, const Triangle* triangle
 	//Calculate the normal for this triangle
 	const RSVector3 edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
 	const RSVector3 edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
-	RSVector3 normal = HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
-
-#if 0
-	// All normals are supposed to point outward in modern GPU but SC triangles
-	// don't have consistent winding. They can be CW or CCW (the back governal of a jet  is
-	// typically one triangle that must be visible from both sides !
-	// As a result, gouraud shading was probably performed in screen space.
-	// How can we replicate this ?
-	// - Take the normal and compare it to the sign of the direction to the camera.
-	// - If the signs don't match: reverse the normal.
-	const RSVector3& cameraPosition = camera.position;
-	const RSVector3& vertexOnTriangle = object->vertices[triangle->ids[0]];
-	const RSVector3 cameraDirection = HMM_NormalizeVec3(cameraPosition - vertexOnTriangle);
-	if (HMM_Dot(cameraDirection, normal) < 0)
-		normal *= -1.0f;
-#endif
-
-	return normal;
+	return HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
 }
-
-#if 1
 
 void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelData& mdata)
 {
@@ -368,141 +298,128 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 	struct ObjVertex
 	{
 		RSVector3 pos;
-		//RSVector3 normal;
+		RSVector3 normal;
 		hmm_vec2 uv;
 		std::array<uint8_t, 4> col;
 	};
 
-	struct MeshData {
-		std::map<std::tuple<uint32_t, uint8_t, uint8_t>, uint16_t> lookup;
-		std::vector<ObjVertex> vertice;
-		std::vector<uint16_t> indice;
-		int total = 0;
+	struct VKey
+	{
+		RSVector3 n;
+		hmm_vec2 uv;
+		uint32_t id;
+		uint8_t col;
+		uint8_t tex;
+		bool operator< (const VKey& other) const
+		{
+			if (id != other.id) return id < other.id;
+			if (col != other.col) return col < other.col;
+			if (tex != other.tex) return tex < other.tex;
+			if (uv.X != other.uv.X) return uv.X < other.uv.X;
+			if (uv.Y != other.uv.Y) return uv.Y < other.uv.Y;
+			if (n.X != other.n.X) return n.X < other.n.X;
+			if (n.Y != other.n.Y) return n.Y < other.n.Y;
+			if (n.Z != other.n.Z) return n.Z < other.n.Z;
+			return false;
+		}
 	};
 
-	auto resolveVertex = [&] (MeshData& data, uint32_t index, uint8_t colIdx, uint8_t texSet) -> uint16_t {
-		++data.total;
-		uint16_t& res = data.lookup[{ index, colIdx, texSet }];
+	struct MeshData {
+		std::map<VKey, uint16_t> lookup;
+		std::vector<ObjVertex> vertice;
+		std::vector<uint16_t> indice;
+		size_t total = 0;
+	};
+
+	auto resolveVertex = [&] (MeshData& currentData, uint32_t index, uint8_t colIdx, uint8_t texSet, RSVector3 n, hmm_vec2 uv) -> uint16_t {
+		++currentData.total;
+		uint16_t& res = currentData.lookup[{ n, uv, index, colIdx, texSet }];
 		if (res == 0) {
-			res = data.vertice.size() + 1;
+			res = currentData.vertice.size() + 1;
 			const Texel* tx = r.GetPalette().GetRGBColor(colIdx);
 			//data.vertice.push_back({ object->vertices[index], /* { 0, 1, 0 }, */ { 0.5f, 0.5f }, { tx->r, tx->g, tx->b, tx->a } });
-			data.vertice.push_back({ object->vertices[index], /* { 0, 1, 0 }, */ { 0.5f, 0.5f }, { tx->r, tx->g, tx->b, tx->a } });
+			currentData.vertice.push_back({ object->vertices[index], n, uv, { tx->r, tx->g, tx->b, tx->a } });
+			if (texSet == 0)
+				currentData.vertice.back().col = { 255, 255, 255, 255 };
 		}
+		assert(currentData.vertice[res - 1].uv == uv);
 		return res - 1;
 	};
 
-	MeshData opaque;
-	MeshData blend;
+	mdata.emplace_back();
 
 	if (lodLevel == 0){
+		std::map<uint32_t, MeshData> textureData;
 		for (const uvxyEntry& textInfo : object->uvs) {
 			//Seems we have a textureID that we don't have :( !
 			if (textInfo.textureID >= object->images.size())
 				continue;
 			RSImage* image = object->images[textInfo.textureID];
 			const RSTexture* texture = image->GetTexture();
-			/*
-			auto& verts = mdata[texture->id];
+			auto& d = textureData[texture->id];
 			const Triangle& tri = object->triangles[textInfo.triangleID];
 			const RSVector3 normal = r.GetNormal(object, &tri);
+			uint16_t vid[3];
 			for(int j = 0; j < 3; j++){
 				RSVector3 vertice = object->vertices[tri.ids[j]];
 				const float u = textInfo.uvs[j].u / (float)texture->width;
 				const float v = textInfo.uvs[j].v / (float)texture->height;
-				verts.first.push_back({ vertice, normal, { u, v }, white });
+				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, normal, { u, v });
 			}
-			*/
+			d.indice.push_back(vid[0]);
+			d.indice.push_back(vid[1]);
+			d.indice.push_back(vid[2]);
+			d.indice.push_back(vid[0]);
+			d.indice.push_back(vid[2]);
+			d.indice.push_back(vid[1]);
+		}
+		for (const auto& kv : textureData) {
+			if (!kv.second.indice.empty()) {
+				const bool opt = kv.second.total != kv.second.vertice.size();
+				printf("opt: %s...\n", opt ? "yes" : "no");
+				auto& msh = mdata.emplace_back();
+				msh.texture = { kv.first };
+				msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, kv.second.vertice);
+				msh.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, kv.second.indice);
+				msh.pcount = kv.second.indice.size();
+			}
 		}
 	}
 
+	MeshData opaque;
+	MeshData blend;
 	for (int i = 0 ; i < lod.numTriangles ; i++) {
 		uint16_t triangleID = lod.triangleIDs[i];
 		const Triangle& tri = object->triangles[triangleID];
 		MeshData& d = tri.property == RSEntity::TRANSPARENT ? blend : opaque;
-		const uint16_t v0 = resolveVertex(d, tri.ids[0], tri.color, 255);
-		const uint16_t v1 = resolveVertex(d, tri.ids[1], tri.color, 255);
-		const uint16_t v2 = resolveVertex(d, tri.ids[2], tri.color, 255);
+		const RSVector3 normal = r.GetNormal(object, &tri);
+		const uint16_t v0 = resolveVertex(d, tri.ids[0], tri.color, 255, normal, { 0.5f, 0.5f });
+		const uint16_t v1 = resolveVertex(d, tri.ids[1], tri.color, 255, normal, { 0.5f, 0.5f });
+		const uint16_t v2 = resolveVertex(d, tri.ids[2], tri.color, 255, normal, { 0.5f, 0.5f });
 		d.indice.push_back(v0);
 		d.indice.push_back(v1);
 		d.indice.push_back(v2);
-		//d.indice.push_back(v0);
-		//d.indice.push_back(v2);
-		//d.indice.push_back(v1);
+		d.indice.push_back(v0);
+		d.indice.push_back(v2);
+		d.indice.push_back(v1);
 	}
 
-	const auto& d = opaque;
-
-	mdata.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, d.vertice);
-	mdata.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, d.indice);
-	mdata.pcount = d.indice.size();
-}
-
-#else
-
-void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelData& mdata)
-{
-	const Lod& lod = object->lods[lodLevel];
-	const std::array<uint8_t, 4> white{ 0xff, 0xff, 0xff, 0xff };
-	const std::array<float, 2> noUv{ 0.5f, 0.5f };
-
-	if (lodLevel == 0){
-		for (const uvxyEntry& textInfo : object->uvs) {
-			//Seems we have a textureID that we don't have :( !
-			if (textInfo.textureID >= object->images.size())
-				continue;
-			RSImage* image = object->images[textInfo.textureID];
-			const RSTexture* texture = image->GetTexture();
-			auto& verts = mdata[texture->id];
-			const Triangle& tri = object->triangles[textInfo.triangleID];
-			const RSVector3 normal = r.GetNormal(object, &tri);
-			for(int j = 0; j < 3; j++){
-				RSVector3 vertice = object->vertices[tri.ids[j]];
-				const float u = textInfo.uvs[j].u / (float)texture->width;
-				const float v = textInfo.uvs[j].v / (float)texture->height;
-				verts.first.push_back({ vertice, normal, { u, v }, white });
-			}
-		}
+	auto& mshOpaque = mdata[0];
+	if (!opaque.indice.empty()) {
+		mshOpaque.texture = white;
+		mshOpaque.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, opaque.vertice);
+		mshOpaque.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, opaque.indice);
+		mshOpaque.pcount = opaque.indice.size();
 	}
 
-	{
-		ModelData::mapped_type blend;
-		for(int i = 0 ; i < lod.numTriangles ; i++) {
-			uint16_t triangleID = lod.triangleIDs[i];
-			const Triangle& tri = object->triangles[triangleID];
-			if (tri.property != RSEntity::TRANSPARENT)
-				continue;
-			const RSVector3 normal = r.GetNormal(object, &tri);
-			for (int j = 0; j < 3; j++) {
-				RSVector3 vertice = object->vertices[tri.ids[j]];
-				blend.first.push_back({ vertice, normal, noUv, white });
-			}
-		}
-		if (!blend.first.empty())
-			mdata[PASS_BLEND] = std::move(blend);
-	}
-
-	{
-		ModelData::mapped_type opaque;
-		for (int i = 0 ; i < lod.numTriangles ; i++) {
-			//for(int i = 60 ; i < 62 ; i++){  //Debug purpose only back governal of F-16 is 60-62
-			uint16_t triangleID = lod.triangleIDs[i];
-			const Triangle& tri = object->triangles[triangleID];
-			if (tri.property == RSEntity::TRANSPARENT)
-				continue;
-			const RSVector3 normal = r.GetNormal(object, &tri);
-			for(int j=0 ; j < 3 ; j++) {
-				RSVector3 vertice = object->vertices[tri.ids[j]];
-				const Texel* texel = r.GetPalette().GetRGBColor(tri.color);
-				opaque.first.push_back({ vertice, normal, noUv, { texel->r, texel->g, texel->b, texel->a } });
-			}
-		}
-		if (!opaque.first.empty())
-			mdata[PASS_VCOLOR] = std::move(opaque);
+	auto& mshBlend = mdata.emplace_back();
+	if (!blend.indice.empty()) {
+		mshBlend.texture = white;
+		mshBlend.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, blend.vertice);
+		mshBlend.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, blend.indice);
+		mshBlend.pcount = blend.indice.size();
 	}
 }
-
-#endif
 
 void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos, const RSQuaternion& orientation)
 {
@@ -520,13 +437,11 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 
 	const RSVector3 lighDirection = HMM_NormalizeVec3({ 10, 30, 10 });
 
-#if 1
-
 	if (!modelRender)
 		modelRender.emplace();
 
-	ModelData& vertice = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelData& mdl) {
-		PrepareModel(*this, o, lodLevel, mdl);
+	ModelData& meshes = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelData& tmp) {
+		PrepareModel(*this, o, lodLevel, tmp);
 	});
 
 	RSMatrix world = HMM_QuaternionToMat4(orientation);
@@ -539,210 +454,21 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 	memcpy(params.proj, &proj, 64);
 	memcpy(params.view, &view, 64);
 	memcpy(params.world, &world, 64);
+	memcpy(params.camPos, &camera.position, 12);
+	memcpy(params.lightDir, &light, 12);
 
 	sg_apply_pipeline(modelRender->pip);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
-	sg_bindings bind{};
-	bind.vertex_buffers[0] = vertice.vbuf;
-	bind.index_buffer = vertice.ibuf;
-	sg_apply_bindings(bind);
-	sg_draw(0, vertice.pcount, 1);
-
-#if 0
-	const auto renderObj = [&] (const MeshData& mdata) {
-		const auto& vert = mdata.first;
-		glBegin(GL_TRIANGLES);
-		for (const ObjVertex& v : vert) {
-			const float l = std::max(0.2f, HMM_Dot(v.normal, lighDirection));
-			const float col[4] = {
-				l * (v.col[0] / 255.0f),
-				l * (v.col[1] / 255.0f),
-				l * (v.col[2] / 255.0f),
-				1.0f
-			};
-			glTexCoord2f(v.uv[0], v.uv[1]);
-			glColor4fv(col);
-			glVertex(v.pos);
+	for (const auto& msh : meshes) {
+		if (msh.pcount != 0) {
+			sg_bindings bind{};
+			bind.vertex_buffers[0] = msh.vbuf;
+			bind.index_buffer = msh.ibuf;
+			bind.fs_images[0] = msh.texture;
+			sg_apply_bindings(bind);
+			sg_draw(0, msh.pcount, 1);
 		}
-		glEnd();
-	};
-
-	pushTransform();
-
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_ALPHA_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
-	glDisable(GL_CULL_FACE);
-
-	if (auto itVColor = vertice.find(PASS_VCOLOR); itVColor != vertice.end()) {
-		renderObj(itVColor->second);
 	}
-
-	glEnable(GL_TEXTURE_2D);
-	glAlphaFunc(GL_GREATER, 0.0f);
-	glEnable(GL_ALPHA_TEST);
-
-	for (const auto& [k, vert] : vertice)
-	{
-		if (k == PASS_BLEND || k == PASS_VCOLOR)
-			continue;
-		glBindTexture(GL_TEXTURE_2D, k);
-		renderObj(vert);
-	}
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-	glBlendFunc(GL_ONE, GL_ONE);
-	glBlendEquation(GL_ADD);
-
-	if (auto itBlend = vertice.find(PASS_BLEND); itBlend != vertice.end()) {
-		renderObj(itBlend->second);
-	}
-
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_BLEND);
-
-	popTransform();
-#endif
-
-#else
-
-	const float ambientLamber = 0.4f;
-
-	const Lod* lod = &object->lods[lodLevel];
-
-	pushTransform();
-
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-
-	//Texture pass
-	if (lodLevel == 0){
-		glEnable(GL_TEXTURE_2D);
-		//glDepthFunc(GL_EQUAL);
-		glAlphaFunc ( GL_GREATER, 0.0 ) ;
-		glEnable ( GL_ALPHA_TEST ) ;
-
-		for (const uvxyEntry& textInfo : object->uvs) {
-			//Seems we have a textureID that we don't have :( !
-			if (textInfo.textureID >= object->images.size())
-				continue;
-
-			RSImage* image = object->images[textInfo.textureID];
-
-			const Texture* texture = image->GetTexture();
-
-			glBindTexture(GL_TEXTURE_2D, texture->id);
-
-			const Triangle* triangle = &object->triangles[textInfo.triangleID];
-
-			const RSVector3 normal = GetNormal(object, triangle);
-
-			glBegin(GL_TRIANGLES);
-			for(int j=0 ; j < 3 ; j++){
-				RSVector3 vertice = object->vertices[triangle->ids[j]];
-				RSVector3 lighDirection = HMM_NormalizeVec3(light - vertice);
-
-				float lambertianFactor = HMM_Dot(lighDirection, normal);
-				if (lambertianFactor < 0  )
-					lambertianFactor = 0;
-				lambertianFactor+= ambientLamber;
-				if (lambertianFactor > 1)
-					lambertianFactor = 1;
-
-				glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
-				glTexCoord2f(textInfo.uvs[j].u/(float)texture->width, textInfo.uvs[j].v/(float)texture->height);
-				glVertex(object->vertices[triangle->ids[j]]);
-			}
-			glEnd();
-		}
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_BLEND);
-	}
-
-	//Pass 3: Let's draw the transparent stuff render RSEntity::TRANSPARENT)
-	glDisable(GL_TEXTURE_2D);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE);
-	glBlendEquation(GL_ADD);
-	//glDepthFunc(GL_LESS);
-
-	for(int i = 0 ; i < lod->numTriangles ; i++) {
-		uint16_t triangleID = lod->triangleIDs[i];
-		Triangle* triangle = &object->triangles[triangleID];
-
-		if (triangle->property != RSEntity::TRANSPARENT)
-			continue;
-
-		const RSVector3 normal = GetNormal(object,triangle);
-
-		glBegin(GL_TRIANGLES);
-
-		for(int j=0 ; j < 3 ; j++) {
-			RSVector3 vertice = object->vertices[triangle->ids[j]];
-			RSVector3 sunDirection = HMM_NormalizeVec3(light - vertice);
-
-			float lambertianFactor = HMM_Dot(sunDirection, normal);
-			if (lambertianFactor < 0  )
-				lambertianFactor = 0;
-			lambertianFactor=0.2f;
-
-			//int8_t gouraud = 255 * lambertianFactor;
-			//gouraud = 255;
-			glColor4f(lambertianFactor, lambertianFactor, lambertianFactor,1);
-			glVertex(vertice);
-		}
-
-		glEnd();
-	}
-
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_BLEND);
-
-	//Pass 1, draw color
-	for(int i = 0 ; i < lod->numTriangles ; i++){
-		//for(int i = 60 ; i < 62 ; i++){  //Debug purpose only back governal of F-16 is 60-62
-
-		uint16_t triangleID = lod->triangleIDs[i];
-
-		Triangle* triangle = &object->triangles[triangleID];
-
-		if (triangle->property == RSEntity::TRANSPARENT)
-			continue;
-
-		const RSVector3 normal = GetNormal(object, triangle);
-
-		glBegin(GL_TRIANGLES);
-		for(int j=0 ; j < 3 ; j++){
-			RSVector3 vertice = object->vertices[triangle->ids[j]];
-			RSVector3 lighDirection = HMM_NormalizeVec3(light - vertice);
-
-			float lambertianFactor = HMM_Dot(lighDirection, normal);
-			if (lambertianFactor < 0  )
-				lambertianFactor = 0;
-			lambertianFactor+= ambientLamber;
-			if (lambertianFactor > 1)
-				lambertianFactor = 1;
-
-			const Texel* texel = palette.GetRGBColor(triangle->color);
-
-			glColor4f(texel->r/255.0f*lambertianFactor, texel->g/255.0f*lambertianFactor, texel->b/255.0f*lambertianFactor,1);
-			//glColor4f(texel->r/255.0f, texel->g/255.0f, texel->b/255.0f,1);
-
-			glVertex(object->vertices[triangle->ids[j]]);
-		}
-		glEnd();
-	}
-
-	popTransform();
-
-#endif
 }
 
 void SCRenderer::SetLight(const RSVector3& l){
@@ -974,9 +700,19 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	if (!groundRender)
 		groundRender.emplace();
 
+	RSMatrix world = HMM_Mat4d(1.0f);
+	const RSMatrix& view = camera.getView();
+	const RSMatrix& proj = camera.proj;
+	ground_vs_params_t params;
+	memcpy(params.proj, &proj, 64);
+	memcpy(params.view, &view, 64);
+	memcpy(params.world, &world, 64);
+	sg_apply_pipeline(groundRender->pip);
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+
 	for(int i = 0; i < BLOCKS_PER_MAP; i++) {
 		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
-		const GroundData& cache = cacheBlockToModel.GetData(&block, [&] (const AreaBlock* block, GroundData& cache) {
+		const GroundData& meshes = cacheBlockToModel.GetData(&block, [&] (const AreaBlock* block, GroundData& meshes) {
 			//struct PointComparator
 			//{
 			//	bool operator() (const RSVector3& a, const RSVector3& b) const {
@@ -1011,74 +747,33 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			RenderBlock(vadd, area, LOD, i, false);
 			RenderBlock(vadd, area, LOD, i, true);
 			const auto& data = tmp[PASS_VCOLOR];
-			cache.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, data);
-			cache.pcount = data.size();
+			if (data.size() != 0) {
+				auto& msh = meshes.emplace_back();
+				msh.texture = white;
+				msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, data);
+				msh.pcount = data.size();
+			}
+			for (const auto& kv : tmp) {
+				if (kv.first == PASS_VCOLOR)
+					continue;
+				const auto& data = kv.second;
+				if (data.size() != 0) {
+					auto& msh = meshes.emplace_back();
+					msh.texture = { kv.first };
+					msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, data);
+					msh.pcount = data.size();
+				}
+			}
 		});
 
-		RSMatrix world = HMM_Mat4d(1.0f);
-		const RSMatrix& view = camera.getView();
-		const RSMatrix& proj = camera.proj;
-		model_vs_params_t params;
-		memcpy(params.proj, &proj, 64);
-		memcpy(params.view, &view, 64);
-		memcpy(params.world, &world, 64);
-
-		sg_apply_pipeline(groundRender->pip);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
-		sg_bindings bind{};
-		bind.vertex_buffers[0] = cache.vbuf;
-		sg_apply_bindings(bind);
-		sg_draw(0, cache.pcount, 1);
-	}
-
-#if 0
-	const GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
-	const GLuint fogfilter= 0;                    // Which Fog To Use
-	const GLfloat fogColor[4]= {1.0f, 1.0f, 1.0f, 1.0f};
-	glFogi(GL_FOG_MODE, fogMode[fogfilter]);        // Fog Mode
-	glFogfv(GL_FOG_COLOR, fogColor);            // Set Fog Color
-	glFogf(GL_FOG_DENSITY, 0.0002f);              // How Dense Will The Fog Be
-	glHint(GL_FOG_HINT, GL_DONT_CARE);          // Fog Hint Value
-	glFogf(GL_FOG_START, 600.0f);             // Fog Start Depth
-	glFogf(GL_FOG_END, 8000.0f);               // Fog End Depth
-	glEnable(GL_FOG);
-	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	for (const BlockCache& bc : cacheBlockToModel.AllData()) {
-		if (auto itV = bc.find(PASS_VCOLOR); itV != bc.end()) {
-			const auto& vert = itV->second;
-			glBegin(GL_TRIANGLES);
-			for (const AreaVertex& v : vert) {
-				glTexCoord2fv(v.uv.Elements);
-				glColor4fv(v.color.Elements);
-				glVertex3fv(v.pos.Elements);
-			}
-			glEnd();
+		for (const auto& msh : meshes) {
+			sg_bindings bind{};
+			bind.vertex_buffers[0] = msh.vbuf;
+			bind.fs_images[0] = msh.texture;
+			sg_apply_bindings(bind);
+			sg_draw(0, msh.pcount, 1);
 		}
 	}
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-	glDepthFunc(GL_EQUAL);
-	for (const BlockCache& bc : cacheBlockToModel.AllData()) {
-		for (const auto& [k, vert] : bc) {
-			if (k == PASS_VCOLOR)
-				continue;
-			glBindTexture(GL_TEXTURE_2D, k);
-			glBegin(GL_TRIANGLES);
-			for (const AreaVertex& v : vert) {
-				glTexCoord2fv(v.uv.Elements);
-				glColor4fv(v.color.Elements);
-				glVertex3fv(v.pos.Elements);
-			}
-			glEnd();
-		}
-	}
-	glDisable(GL_BLEND);
-	glDisable(GL_TEXTURE_2D);
-#endif
 
 	//Render objects on the map
 	//for(int i=97 ; i < 98 ; i++)
@@ -1106,6 +801,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			DrawModel(object.entity, LOD_LEVEL_MAX, worldPos);
 		}
 	}
+
 	RenderJets(area);
 }
 

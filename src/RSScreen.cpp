@@ -51,6 +51,7 @@ void RSScreen::Init(int32_t zoomFactor)
 
 	sg_desc desc{ 0 };
 	desc.buffer_pool_size = 1 << 15;
+	desc.image_pool_size = 1 << 15;
 	sg_setup(desc);
 }
 
