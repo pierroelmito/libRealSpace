@@ -291,7 +291,6 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 
 	CheckButtons();
 
-	VGA.Activate();
 	VGA.Clear();
 
 	//Update the palette for the current background

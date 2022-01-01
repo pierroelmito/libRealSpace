@@ -11,13 +11,94 @@
 #include <algorithm>
 #include <cassert>
 
-#if USE_RAYLIB
-#include <raylib.h>
-//#include <rlgl.h>
-#else
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#endif
+#define SOKOL_GLCORE33
+#include "sokol_gfx.h"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
+#include "shaders/shaders.h"
+
+extern GLFWwindow* win;
+
+struct ModelRenderData
+{
+	sg_shader shd{};
+	sg_pipeline pip{};
+	sg_bindings bind{};
+
+	struct Mesh
+	{
+		sg_buffer vbuf{};
+		sg_buffer ibuf{};
+		int pcount{};
+	};
+
+	ModelRenderData()
+	{
+		shd = sg_make_shader(model_shader_desc(sg_query_backend()));
+
+		{
+			sg_pipeline_desc pdesc{};
+			pdesc.shader = shd;
+			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_UBYTE4N;
+			pdesc.index_type = SG_INDEXTYPE_UINT16;
+			pip = sg_make_pipeline(&pdesc);
+		}
+	}
+};
+
+struct FullscreenBitmapData
+{
+	sg_buffer vbuf{};
+	sg_image img{};
+	sg_shader shd{};
+	sg_pipeline pip{};
+	sg_bindings bind{};
+
+	FullscreenBitmapData(uint32_t width, uint32_t height)
+	{
+		shd = sg_make_shader(bitmap_shader_desc(sg_query_backend()));
+
+		{
+			const float N = -1.0f;
+			const float P = -N;
+			const float vertices[] = {
+				N, P, 0.5f,
+				P, P, 0.5f,
+				N, N, 0.5f,
+				P, P, 0.5f,
+				P, N, 0.5f,
+				N, N, 0.5f,
+			};
+			sg_buffer_desc bdesc{};
+			bdesc.data = SG_RANGE(vertices);
+			vbuf = sg_make_buffer(&bdesc);
+		}
+
+		{
+			sg_image_desc idesc{};
+			idesc.width = width;
+			idesc.height = height;
+			idesc.pixel_format = SG_PIXELFORMAT_RGBA8;
+			idesc.usage = SG_USAGE_STREAM;
+			img = sg_make_image(&idesc);
+		}
+
+		{
+			sg_pipeline_desc pdesc{};
+			pdesc.shader = shd;
+			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
+			pip = sg_make_pipeline(&pdesc);
+		}
+
+		bind.vertex_buffers[0] = vbuf;
+		bind.fs_images[0] = img;
+	}
+};
+
+std::optional<FullscreenBitmapData> FbdRender;
+std::optional<ModelRenderData> modelRender;
 
 template <class K, class V>
 class ObjectCacheManager
@@ -48,21 +129,7 @@ struct AreaVertex
 	hmm_vec4 color;
 };
 
-struct ObjVertex
-{
-	RSVector3 pos;
-	RSVector3 normal;
-	std::array<float, 2> uv;
-	std::array<uint8_t, 4> col;
-};
-
-#if USE_RAYLIB
-using ModelData = Model;
-#else
-template <typename T> using GenericMeshData = std::pair<std::vector<T>, std::vector<uint16_t>>;
-using MeshData = GenericMeshData<ObjVertex>;
-using ModelData = std::map<uint32_t, MeshData>;
-#endif
+using ModelData = ModelRenderData::Mesh;
 using BlockCache = std::map<uint32_t, std::vector<AreaVertex>>;
 
 ObjectCacheManager<RSEntity, ModelData> cacheEntityToModel;
@@ -72,19 +139,19 @@ ObjectCacheManager<AreaBlock, BlockCache> cacheBlockToModel;
 const uint32_t PASS_VCOLOR = 0x12345678;
 const uint32_t PASS_BLEND = 0x12345679;
 
-#if !USE_RAYLIB
-
 void glVertex(const RSVector3& p)
 {
+#if 0
 	glVertex3f(p.X, p.Y, p.Z);
+#endif
 }
 
 void glLoadMatrixHMM(const RSMatrix& m)
 {
+#if 0
 	glLoadMatrixf((float*)m.Elements);
-}
-
 #endif
+}
 
 SCRenderer::SCRenderer()
 : initialized(false)
@@ -94,58 +161,18 @@ SCRenderer::SCRenderer()
 SCRenderer::~SCRenderer(){
 }
 
-#if !USE_RAYLIB
-
-void
-SCRenderer::SetProj(const RSMatrix& m)
-{
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixHMM(m);
-}
-
-void
-SCRenderer::SetView(const RSMatrix& m)
-{
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixHMM(m);
-}
-
-#endif
-
 void
 SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 {
-#if USE_RAYLIB
-	auto toVec3 = [] (auto v) -> Vector3 {
-		return { v.X, v.Y, v.Z };
-	};
-
-	Camera3D cam{
-		toVec3(camera.position),
-		toVec3(camera.lookAt),
-		{ 0, 1, 0 },
-		50,
-		CAMERA_PERSPECTIVE
-	};
-
-	//rlSetFrustrumFarClip();
-	BeginMode3D(cam);
+	sg_pass_action pass_action = {0};
+	pass_action.colors[0].action = SG_ACTION_DONTCARE;
+	int cur_width{}, cur_height{};
+	glfwGetFramebufferSize(win, &cur_width, &cur_height);
+	sg_begin_default_pass(&pass_action, cur_width, cur_height);
 
 	f();
 
-	EndMode3D();
-#else
-	Renderer.SetProj(camera.proj);
-	Renderer.SetView(camera.getView());
-
-	glClearDepth(1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-
-	f();
-
-	glDisable(GL_DEPTH_TEST);
-#endif
+	sg_end_pass();
 }
 
 void SCRenderer::Init(int32_t zoomFactor)
@@ -163,11 +190,9 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	this->palette = *palette.GetColorPalette();
 
-#if !USE_RAYLIB
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
-	//glClearDepth(1.0f);								// Depth Buffer Setup
-	glDisable(GL_DEPTH_TEST);							// Disable Depth Testing
-#endif
+	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);				// Black Background
+	////glClearDepth(1.0f);								// Depth Buffer Setup
+	//glDisable(GL_DEPTH_TEST);							// Disable Depth Testing
 
 	camera.SetPersective(50.0f, width / (float)height, 10.0f, 12000.0f);
 
@@ -176,34 +201,9 @@ void SCRenderer::Init(int32_t zoomFactor)
 	initialized = true;
 }
 
-void SCRenderer::SetClearColor(uint8_t red, uint8_t green, uint8_t blue){
-	if (!initialized)
-		return;
-#if !USE_RAYLIB
-	glClearColor(red/255.0f, green/255.0f, blue/255.0f, 1.0f);
-#endif
-}
-
-void SCRenderer::Clear()
-{
-	if (!initialized)
-		return;
-#if !USE_RAYLIB
-	glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-	glColor4f(1, 1, 1, 1);
-#endif
-}
-
+#if 0
 void* SCRenderer::MakeTexture(uint32_t w, uint32_t h, bool nearest)
 {
-#if USE_RAYLIB
-	Texture* ptextureID = new Texture();
-	Texture& textureID = *ptextureID;
-	Image img = GenImageColor(w, h, BLUE);
-	textureID = LoadTextureFromImage(img);
-	UnloadImage(img);
-	return ptextureID;
-#else
 	uint32_t* ptextureID = new uint32_t();
 	uint32_t& textureID = *ptextureID;
 	glGenTextures(1, &textureID);
@@ -227,54 +227,28 @@ void* SCRenderer::MakeTexture(uint32_t w, uint32_t h, bool nearest)
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	free(data);
 	return ptextureID;
-#endif
 }
-
-void SCRenderer::UpdateBitmapQuad(void* ptextureID, Texel* data)
-{
-#if USE_RAYLIB
-	Texture& textureID = *((Texture*)ptextureID);
-	UpdateTexture(textureID, data);
-	Camera2D cam{
-		{ 0, 0 },
-		{ 0, 0 },
-		0,
-		3.0f
-	};
-	BeginMode2D(cam);
-	DrawTexture(textureID, 0, 0, RAYWHITE);
-	EndMode2D();
-#else
-	uint32_t textureID = *((uint32_t*)ptextureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, 320, 200, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0, 1);
-	glVertex2d(0,0);
-	glTexCoord2f(1, 1);
-	glVertex2d(320,0);
-	glTexCoord2f(1, 0);
-	glVertex2d(320, 200);
-	glTexCoord2f(0, 0);
-	glVertex2d(0,200);
-	glEnd();
 #endif
-}
 
-void SCRenderer::ResetState()
+void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
 {
-#if !USE_RAYLIB
-	glMatrixMode(GL_PROJECTION); // Select The Projection Matrix
-	glLoadIdentity(); // Reset The Projection Matrix
-	glOrtho(0, 320, 0, 200, -10, 10) ;
-	glMatrixMode(GL_MODELVIEW); // Select The Modelview Matrix
-	glLoadIdentity();
-	glColor4f(1, 1, 1,1);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST); // Disable Depth Testing
-	glDisable(GL_BLEND);
-	glEnable(GL_TEXTURE_2D);
-#endif
+	if (!FbdRender)
+		FbdRender.emplace(width, height);
+
+	sg_image_data idata{};
+	idata.subimage[0][0] = { data, width * height * sizeof(Texel) };
+	sg_update_image(FbdRender->img, idata);
+
+	sg_pass_action pass_action = {0};
+	int cur_width{}, cur_height{};
+	glfwGetFramebufferSize(win, &cur_width, &cur_height);
+	sg_begin_default_pass(&pass_action, cur_width, cur_height);
+
+	sg_apply_pipeline(FbdRender->pip);
+	sg_apply_bindings(&FbdRender->bind);
+	sg_draw(0, 6, 1);
+
+	sg_end_pass();
 }
 
 void SCRenderer::CreateTextureInGPU(RSTexture* texture)
@@ -282,7 +256,7 @@ void SCRenderer::CreateTextureInGPU(RSTexture* texture)
 	if (!initialized)
 		return;
 
-#if !USE_RAYLIB
+#if 0
 	glGenTextures(1, &texture->id);
 	glBindTexture(GL_TEXTURE_2D, texture->id);
 	glEnable(GL_TEXTURE_2D);
@@ -301,7 +275,8 @@ void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
-#if !USE_RAYLIB
+
+#if 0
 	glBindTexture(GL_TEXTURE_2D, texture->id);
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)texture->width, (GLsizei)texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data);
 #endif
@@ -311,12 +286,12 @@ void SCRenderer::DeleteTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
-#if !USE_RAYLIB
+
+#if 0
 	if (texture->id)
 		glDeleteTextures(1, &texture->id);
 #endif
 }
-
 
 RSVector3 SCRenderer::GetNormal(const RSEntity* object, const Triangle* triangle) const
 {
@@ -343,12 +318,19 @@ RSVector3 SCRenderer::GetNormal(const RSEntity* object, const Triangle* triangle
 	return normal;
 }
 
-#if USE_RAYLIB
+#if 1
 
 void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelData& mdata)
 {
-#if 1
 	const Lod& lod = object->lods[lodLevel];
+
+	struct ObjVertex
+	{
+		RSVector3 pos;
+		//RSVector3 normal;
+		//std::array<float, 2> uv;
+		std::array<uint8_t, 4> col;
+	};
 
 	struct MeshData {
 		std::map<std::tuple<uint32_t, uint8_t, uint8_t>, uint16_t> lookup;
@@ -363,18 +345,39 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		if (res == 0) {
 			res = data.vertice.size() + 1;
 			const Texel* tx = r.GetPalette().GetRGBColor(colIdx);
-			data.vertice.push_back({ object->vertices[index], { 0, 1, 0 }, { 0.5f, 0.5f }, { tx->r, tx->g, tx->b, tx->a } });
+			data.vertice.push_back({ object->vertices[index], /* { 0, 1, 0 }, { 0.5f, 0.5f }, */ { tx->r, tx->g, tx->b, tx->a } });
 		}
 		return res - 1;
 	};
 
-	MeshData d;
+	MeshData opaque;
+	MeshData blend;
+
+	if (lodLevel == 0){
+		for (const uvxyEntry& textInfo : object->uvs) {
+			//Seems we have a textureID that we don't have :( !
+			if (textInfo.textureID >= object->images.size())
+				continue;
+			RSImage* image = object->images[textInfo.textureID];
+			const RSTexture* texture = image->GetTexture();
+			/*
+			auto& verts = mdata[texture->id];
+			const Triangle& tri = object->triangles[textInfo.triangleID];
+			const RSVector3 normal = r.GetNormal(object, &tri);
+			for(int j = 0; j < 3; j++){
+				RSVector3 vertice = object->vertices[tri.ids[j]];
+				const float u = textInfo.uvs[j].u / (float)texture->width;
+				const float v = textInfo.uvs[j].v / (float)texture->height;
+				verts.first.push_back({ vertice, normal, { u, v }, white });
+			}
+			*/
+		}
+	}
 
 	for (int i = 0 ; i < lod.numTriangles ; i++) {
 		uint16_t triangleID = lod.triangleIDs[i];
 		const Triangle& tri = object->triangles[triangleID];
-		if (tri.property == RSEntity::TRANSPARENT)
-			continue;
+		MeshData& d = tri.property == RSEntity::TRANSPARENT ? blend : opaque;
 		const uint16_t v0 = resolveVertex(d, tri.ids[0], tri.color, 255);
 		const uint16_t v1 = resolveVertex(d, tri.ids[1], tri.color, 255);
 		const uint16_t v2 = resolveVertex(d, tri.ids[2], tri.color, 255);
@@ -386,27 +389,27 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		d.indice.push_back(v1);
 	}
 
-	Mesh msh;
-	memset(&msh, 0, sizeof(msh));
-	msh.vertexCount = d.vertice.size();
-	msh.triangleCount = d.indice.size() / 3;
-	msh.vertices = (float*)RL_MALLOC(sizeof(float) * 3 * msh.vertexCount);
-	msh.colors = (uint8_t*)RL_MALLOC(4 * msh.vertexCount);
-	msh.indices = (uint16_t*)RL_MALLOC(sizeof(uint16_t) * 3 * msh.triangleCount);
-	for (int i = 0; i < msh.vertexCount; ++i) {
-		const auto& vert = d.vertice[i];
-		memcpy(&msh.vertices[3 * i], vert.pos.Elements, 3 * 4);
-		memcpy(&msh.colors[4 * i], &vert.col[0], 4);
-	}
-	for (int i = 0; i < msh.triangleCount * 3; ++i) {
-		msh.indices[i] = d.indice[i];
-	}
-	UploadMesh(&msh, true);
-#else
-	Mesh msh = GenMeshCube(10, 2, 10);
-#endif
+	const auto& d = opaque;
 
-	mdata = LoadModelFromMesh(msh);
+	{
+		sg_buffer_desc vdesc{};
+		vdesc.type = SG_BUFFERTYPE_VERTEXBUFFER;
+		vdesc.usage = SG_USAGE_IMMUTABLE;
+		vdesc.data = { &d.vertice[0], d.vertice.size() * sizeof(decltype(d.vertice)::value_type) };
+		vdesc.size = vdesc.data.size;
+		mdata.vbuf = sg_make_buffer(vdesc);
+	}
+
+	{
+		sg_buffer_desc idesc{};
+		idesc.type = SG_BUFFERTYPE_INDEXBUFFER;
+		idesc.usage = SG_USAGE_IMMUTABLE;
+		idesc.data = { &d.indice[0], d.indice.size() * sizeof(decltype(d.indice)::value_type) };
+		idesc.size = idesc.data.size;
+		mdata.ibuf = sg_make_buffer(idesc);
+	}
+
+	mdata.pcount = d.indice.size();
 }
 
 #else
@@ -480,12 +483,8 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 	if (!initialized)
 		return;
 
-	if (object == nullptr) {
-#if USE_RAYLIB
-		//DrawCube({ pos.X, pos.Y, pos.Z }, 10, 10, 10, YELLOW);
-#endif
+	if (object == nullptr)
 		return;
-	}
 
 	if (lodLevel >= object->lods.size()) {
 		const auto maxl = std::min(0UL, object->lods.size() - 1);
@@ -493,42 +492,34 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 		return;
 	}
 
-#if !USE_RAYLIB
 	const RSVector3 lighDirection = HMM_NormalizeVec3({ 10, 30, 10 });
 
-	auto pushTransform = [&] () {
-		glMatrixMode(GL_MODELVIEW);
-		RSMatrix objMatrix = HMM_QuaternionToMat4(orientation);
-		objMatrix.Elements[3][0] = pos.X;
-		objMatrix.Elements[3][1] = pos.Y;
-		objMatrix.Elements[3][2] = pos.Z;
-		glPushMatrix();
-		glMultMatrixf((float*)objMatrix.Elements);
-	};
-
-	auto popTransform = [&] () {
-		glPopMatrix();
-	};
-#endif
-
 #if 1
+
+	if (!modelRender)
+		modelRender.emplace();
 
 	ModelData& vertice = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelData& mdl) {
 		PrepareModel(*this, o, lodLevel, mdl);
 	});
 
-#if USE_RAYLIB
+	RSMatrix id = HMM_Mat4d(1);
+	const RSMatrix& view = camera.getView();
+	const RSMatrix& proj = camera.proj;
+	model_vs_params_t params;
+	memcpy(params.proj, &proj, 64);
+	memcpy(params.view, &view, 64);
+	memcpy(params.world, &id, 64);
 
-	// need to fix normals... flip in shader??
-	RSMatrix objMatrix = HMM_QuaternionToMat4(orientation);
-	objMatrix.Elements[3][0] = pos.X;
-	objMatrix.Elements[3][1] = pos.Y;
-	objMatrix.Elements[3][2] = pos.Z;
-	auto tmp = HMM_Transpose(objMatrix);
-	DrawMesh(vertice.meshes[0], vertice.materials[0], *((Matrix*)&tmp));
+	sg_apply_pipeline(modelRender->pip);
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+	sg_bindings bind{};
+	bind.vertex_buffers[0] = vertice.vbuf;
+	bind.index_buffer = vertice.ibuf;
+	sg_apply_bindings(bind);
+	sg_draw(0, vertice.pcount, 1);
 
-#else
-
+#if 0
 	const auto renderObj = [&] (const MeshData& mdata) {
 		const auto& vert = mdata.first;
 		glBegin(GL_TRIANGLES);
@@ -586,7 +577,6 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 	glDisable(GL_BLEND);
 
 	popTransform();
-
 #endif
 
 #else
@@ -791,11 +781,7 @@ void SCRenderer::RenderTexturedTriangle(
 	const bool is64 = image->width == 64;
 	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
 
-#if USE_RAYLIB
-	const uint32_t texId = 0;
-#else
 	const uint32_t texId = image->GetTexture()->GetTextureID();
-#endif
 	vfunc(texId, tri0->v, white, ttc[triangleType][0]);
 	vfunc(texId, tri1->v, white, ttc[triangleType][1]);
 	vfunc(texId, tri2->v, white, ttc[triangleType][2]);
@@ -921,11 +907,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	// Camera
 	const RSVector3 lookAt{ 3856, 0, 2856};
 	RSVector3 newPosition{ 4100, 100, 3000 };
-#if USE_RAYLIB
-	double currentTime = GetTime();
-#else
 	uint32_t currentTime = SDL_GetTicks();
-#endif
 	newPosition.X =  lookAt.X + 300 * cos(currentTime/2000.0f);
 	newPosition.Z =  lookAt.Z + 300 * sin(currentTime/2000.0f);
 	camera.SetPosition(newPosition);
@@ -992,12 +974,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 		});
 	}
 
-#if USE_RAYLIB
-
-	DrawPlane({ 0, 0, 0 }, { 3000, 3000 }, GREEN);
-
-#else
-
+#if 0
 	const GLuint fogMode[]= { GL_EXP, GL_EXP2, GL_LINEAR };   // Storage For Three Types Of Fog
 	const GLuint fogfilter= 0;                    // Which Fog To Use
 	const GLfloat fogColor[4]= {1.0f, 1.0f, 1.0f, 1.0f};
@@ -1044,7 +1021,6 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	}
 	glDisable(GL_BLEND);
 	glDisable(GL_TEXTURE_2D);
-
 #endif
 
 	//Render objects on the map

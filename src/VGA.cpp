@@ -22,8 +22,7 @@ RSVGA::~RSVGA()
 
 void RSVGA::Clear(void)
 {
-	memset(frameBuffer, 0, WIDTH*HEIGHT);
-	//glClear(GL_COLOR_BUFFER_BIT);
+	memset(frameBuffer, 0, WIDTH * HEIGHT);
 }
 
 bool RSVGA::DrawShape(RLEShape& shape)
@@ -41,32 +40,27 @@ void RSVGA::Init(void)
 
 	RSPalette palette;
 	palette.InitFromIFF(&lexer);
-	this->palette = *palette.GetColorPalette();
-	this->textureID = SCRenderer::MakeTexture(WIDTH, HEIGHT, true);
+	SetPalette(*palette.GetColorPalette());
 }
 
-void RSVGA::Activate(void)
+void RSVGA::SetPalette(const VGAPalette& newPalette)
 {
-	SCRenderer::ResetState();
-}
-
-void RSVGA::SetPalette(const VGAPalette& newPalette){
-	this->palette = newPalette;
+	palette = newPalette;
 }
 
 void RSVGA::VSync(void)
 {
-	Texel data[WIDTH*HEIGHT];
-	for (size_t i = 0; i < WIDTH*HEIGHT; i++) {
+	Texel data[WIDTH * HEIGHT];
+	for (size_t i = 0; i < WIDTH * HEIGHT; i++) {
 		data[i] = *palette.GetRGBColor(frameBuffer[i]);
 		data[i].a = 0xff;
 	}
-	SCRenderer::UpdateBitmapQuad(textureID, data);
+	SCRenderer::UpdateBitmapQuad(data, WIDTH, HEIGHT);
 }
 
 void RSVGA::FillLineColor(size_t lineIndex, uint8_t color)
 {
-	memset(frameBuffer+lineIndex*WIDTH, color, WIDTH);
+	memset(frameBuffer+lineIndex * WIDTH, color, WIDTH);
 }
 
 void RSVGA::DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_t start, uint32_t size,size_t interLetterSpace, size_t spaceSize)

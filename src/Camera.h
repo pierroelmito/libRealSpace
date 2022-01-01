@@ -20,9 +20,11 @@ public:
 	void LookAt(const RSVector3& lookAt);
 	RSMatrix& getView();
 
-	RSMatrix view;
 	RSMatrix proj;
 	RSVector3 position;
 	RSVector3 lookAt;
 	bool dirtyView{ true };
+
+protected:
+	RSMatrix view;
 };

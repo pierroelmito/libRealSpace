@@ -20,13 +20,8 @@
 
 class SCButton;
 
-#if USE_RAYLIB
 using GTime = double;
 constexpr GTime TimeToMSec = 1000.0;
-#else
-using GTime = uint32_t;
-constexpr GTime TimeToMSec = 1;
-#endif
 
 class IActivity
 {

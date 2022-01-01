@@ -83,11 +83,9 @@ public:
 	enum Location{ DISK=0x1,RAM=0x2,VRAM=0x4};
 	uint8_t locFlag;
 
-#if !USE_RAYLIB
 	//GPU stuff
-	uint32_t id;
+	uint32_t id{ 0 };
 	uint32_t GetTextureID(void) { return id; }
-#endif
 
 	void UpdateContent(RSImage* image);
 private:

@@ -34,15 +34,12 @@ public:
 
 	void Prepare();
 	void Init(int32_t zoom);
-	void Clear();
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos = { 0, 0, 0 }, const RSQuaternion& orientation = { 0, 0, 0, 1 });
 	void CreateTextureInGPU(RSTexture* texture);
 	void UploadTextureContentToGPU(RSTexture* texture);
 	void DeleteTextureInGPU(RSTexture* texture);
 
-	static void* MakeTexture(uint32_t w, uint32_t h, bool nearest = true);
-	static void UpdateBitmapQuad(void* textureID, Texel* data);
-	static void ResetState();
+	static void UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height);
 
 	VGAPalette& GetPalette() { return palette; }
 
@@ -73,16 +70,10 @@ public:
 
 	bool IsPaused() const { return paused; }
 	void Pause(){ paused = true; }
-	void SetClearColor(uint8_t red, uint8_t green, uint8_t blue);
 	void Prepare(RSEntity* object);
 	RSVector3 GetNormal(const RSEntity* object, const Triangle* triangle) const;
 
 private:
-#if !USE_RAYLIB
-	void SetProj(const RSMatrix& m);
-	void SetView(const RSMatrix& m);
-#endif
-
 	VGAPalette palette;
 	RSCamera camera;
 	RSVector3 light;

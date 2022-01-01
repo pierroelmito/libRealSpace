@@ -8,19 +8,34 @@
 
 #include "precomp.h"
 
-#if USE_RAYLIB
-#include <raylib.h>
-#else
-#include <SDL2/SDL.h>
-#endif
+#define SOKOL_GLCORE33
+#include "sokol_gfx.h"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 #include "IActivity.h"
+
+extern GLFWwindow* win;
 
 GameEngine::GameEngine()
 {
 }
 
 GameEngine::~GameEngine()
+{
+}
+
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+	auto& buttons = Mouse.buttons;
+	if (action == GLFW_PRESS)
+		buttons[button].event = SCMouseButton::PRESSED;
+	if (action == GLFW_RELEASE)
+		buttons[button].event = SCMouseButton::RELEASED;
+}
+
+
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 }
 
@@ -33,12 +48,14 @@ void GameEngine::Init()
 	VGA.Init();
 	Renderer.Init(2);
 	Mouse.Init(); //Load the Mouse Cursor
+
+	glfwSetMouseButtonCallback(win, MouseButtonCallback);
+	glfwSetKeyCallback(win, KeyCallback);
 }
 
 bool GameEngine::AnyInput()
 {
-#if USE_RAYLIB
-#else
+#if 0
 	//Mouse
 	SDL_Event mouseEvents[5];
 	int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEBUTTONUP,SDL_MOUSEBUTTONUP);
@@ -68,21 +85,8 @@ bool GameEngine::AnyInput()
 
 bool GameEngine::IsKeyPressed(uint32_t keyCode)
 {
-#if USE_RAYLIB
-	/*
-	PollInputEvents();
-	int key{};
-	bool r{ false };
-	do {
-		key = GetKeyPressed();
-		if (key != 0) {
-			if (keyCode == key)
-				r = true;
-		}
-	} while (key != 0);
-	*/
-	return ::IsKeyPressed(KEY_ENTER);
-#else
+	return glfwGetKey(win, keyCode) == GLFW_PRESS;
+#if 0
 	SDL_Event keybEvents[5];
 	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN);
 	for(int i= 0 ; i < numKeybEvents ; i++){
@@ -90,24 +94,19 @@ bool GameEngine::IsKeyPressed(uint32_t keyCode)
 		if (event->key.keysym.sym == keyCode)
 			return true;
 	}
-#endif
 	return false;
+#endif
 }
 
 bool GameEngine::PumpEvents(void)
 {
-#if USE_RAYLIB
-	Vector2 mpos = GetMousePosition();
+#if 1
+	double mx, my;
+	glfwGetCursorPos(win, &mx, &my);
 	Mouse.SetPosition({
-		int(mpos.x * 320.0f / Screen.width),
-		int(mpos.y * 200.0f / Screen.height)
+		int32_t(mx * 320.0 / Screen.width),
+		int32_t(my * 200.0 / Screen.height)
 	});
-	for (int i = 0; i < 3; ++i) {
-		if (IsMouseButtonPressed(i))
-			Mouse.buttons[i].event = SCMouseButton::PRESSED;
-		else if (IsMouseButtonReleased(i))
-			Mouse.buttons[i].event = SCMouseButton::RELEASED;
-	}
 #else
 	SDL_PumpEvents();
 
@@ -197,11 +196,7 @@ void GameEngine::Run()
 		IActivity* currentActivity = activities.top();
 		if (currentActivity->IsRunning()) {
 			currentActivity->Focus();
-#if USE_RAYLIB
-			currentActivity->RunFrame({ GetTime() });
-#else
-			currentActivity->RunFrame({ SDL_GetTicks() });
-#endif
+			currentActivity->RunFrame({ glfwGetTime() });
 			currentActivity->UnFocus();
 		} else{
 			activities.pop();
@@ -211,8 +206,7 @@ void GameEngine::Run()
 		//Swap GL buffer
 		Screen.Refresh();
 
-#if USE_RAYLIB
-#else
+#if 0
 		//Flush all events since they should all have been interpreted.
 		SDL_FlushEvents(SDL_FIRSTEVENT,SDL_LASTEVENT);
 #endif
@@ -225,11 +219,7 @@ void GameEngine::Run()
 
 void GameEngine::AddActivity(IActivity* activity)
 {
-#if USE_RAYLIB
-	activity->Start(GetTime());
-#else
-	activity->Start(SDL_GetTicks());
-#endif
+	activity->Start(glfwGetTime());
 	this->activities.push(activity);
 }
 
