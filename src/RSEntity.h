@@ -94,7 +94,10 @@ public:
 	std::vector<Lod> lods;
 	std::vector<Triangle> triangles;
 
-	enum Property { TRANSPARENT = 0x02};
+	enum Property {
+		TRANSPARENT = 0x02,
+		COLORKEY = 0x06,
+	};
 
 	const BoudingBox& GetBoudingBpx() const { return bb; }
 

@@ -78,7 +78,7 @@ public:
 private:
 	VGAPalette palette;
 	RSCamera camera;
-	RSVector3 light;
+	RSVector3 lightDir;
 	bool initialized{ false };
 	bool running;
 	bool paused;

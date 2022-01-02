@@ -41,29 +41,27 @@ void RSImage::UpdateContent(uint8_t* src){
     
 }
 
-void RSImage::SyncTexture(){
-    
-    //Check that we have a texture with an id on the GPU
+void RSImage::SyncTexture()
+{
+	//Check that we have a texture with an id on the GPU
 	if ((texture.locFlag & RSTexture::VRAM) != RSTexture::VRAM){
-        //Create texture in the GPU
-        Renderer.CreateTextureInGPU(&texture);
+		//Create texture in the GPU
+		Renderer.CreateTextureInGPU(&texture);
 		texture.locFlag |= RSTexture::VRAM;
-    }
-    
-    //Check if we are synchornized with GPU
-    if (this->dirty){
-        texture.UpdateContent(this);
-        Renderer.UploadTextureContentToGPU(&texture);
-        dirty = false;
-    }
-    
-    
+	}
+
+	//Check if we are synchornized with GPU
+	if (this->dirty){
+		texture.UpdateContent(this);
+		Renderer.UploadTextureContentToGPU(&texture);
+		dirty = false;
+	}
 }
 
-
-uint8_t* RSImage::GetData(){
-    dirty = true;
-    return data;
+uint8_t* RSImage::GetData()
+{
+	dirty = true;
+	return data;
 }
 
 void RSImage::ClearContent()

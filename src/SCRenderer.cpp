@@ -21,25 +21,38 @@
 
 extern GLFWwindow* win;
 
+int ComputeMipCount(int w, int h)
+{
+	const int m1 = 32;
+	const int m0 = std::min(__builtin_clz(w), __builtin_clz(h));
+	return m1 - m0;
+}
+
 template <typename T>
 sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps, const std::vector<T>& data = {})
 {
+	const int mipcount = mipmaps ? ComputeMipCount(w, h) : 1;
+
 	sg_image_desc idesc{};
 	idesc.width = w;
 	idesc.height = h;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
+	idesc.num_mipmaps = mipcount;
 	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
 	return sg_make_image(&idesc);
 }
 
 sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps)
 {
+	const int mipcount = mipmaps ? ComputeMipCount(w, h) : 1;
+
 	sg_image_desc idesc{};
 	idesc.width = w;
 	idesc.height = h;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
+	idesc.num_mipmaps = mipcount;
 	return sg_make_image(&idesc);
 }
 
@@ -57,7 +70,8 @@ sg_buffer MakeBuffer(sg_buffer_type bt, sg_usage usage, const std::vector<T>& da
 struct ModelRenderData
 {
 	sg_shader shd{};
-	sg_pipeline pip{};
+	sg_pipeline pip_opaque{};
+	sg_pipeline pip_blend{};
 
 	struct MeshItem
 	{
@@ -65,6 +79,7 @@ struct ModelRenderData
 		sg_buffer vbuf{};
 		sg_buffer ibuf{};
 		int pcount{};
+		bool blend{ false };
 	};
 	using Mesh = std::vector<MeshItem>;
 
@@ -82,7 +97,18 @@ struct ModelRenderData
 			pdesc.index_type = SG_INDEXTYPE_UINT16;
 			pdesc.depth.write_enabled = true;
 			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
-			pip = sg_make_pipeline(&pdesc);
+			pdesc.cull_mode = SG_CULLMODE_BACK;
+			pip_opaque = sg_make_pipeline(&pdesc);
+			pdesc.colors[0].blend = {
+				true,
+				SG_BLENDFACTOR_SRC_ALPHA,
+				SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+				SG_BLENDOP_ADD,
+				SG_BLENDFACTOR_ZERO,
+				SG_BLENDFACTOR_ONE,
+				SG_BLENDOP_ADD,
+			};
+			pip_blend = sg_make_pipeline(&pdesc);
 		}
 	}
 };
@@ -232,7 +258,7 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	camera.SetPersective(50.0f, width / (float)height, 10.0f, 12000.0f);
 
-	light = { 300, 300, 300 };
+	lightDir = HMM_NormalizeVec3({ 1, 1, 1 });
 
 	std::vector<uint32_t> pixels = { 0xffffffffu };
 	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, pixels);
@@ -263,6 +289,7 @@ void SCRenderer::CreateTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
+
 	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, true);
 	texture->id = img.id;
 }
@@ -271,8 +298,22 @@ void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
+
+	const int mips = ComputeMipCount(texture->width, texture->height);
+
 	sg_image_data data;
+	std::vector<std::vector<uint32_t>> mipmapData;
+	mipmapData.resize(mips);
+
 	data.subimage[0][0] = { texture->data, texture->width * texture->height * 4 };
+	for (int i = 1; i < mips; ++i)
+	{
+		const size_t nw = std::max<size_t>(1, texture->width >> i);
+		const size_t nh = std::max<size_t>(1, texture->height >> i);
+		mipmapData[i - 1].resize(nw * nh, 0xffffffffu);
+		data.subimage[0][i] = { &mipmapData[0], nw * nh * 4 };
+	}
+
 	sg_update_image({ texture->id }, data);
 }
 
@@ -309,12 +350,14 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		hmm_vec2 uv;
 		uint32_t id;
 		uint8_t col;
-		uint8_t tex;
+		uint8_t prop;
+		uint8_t usetex;
 		bool operator< (const VKey& other) const
 		{
 			if (id != other.id) return id < other.id;
 			if (col != other.col) return col < other.col;
-			if (tex != other.tex) return tex < other.tex;
+			if (prop != other.prop) return prop < other.prop;
+			if (usetex != other.usetex) return usetex < other.usetex;
 			if (uv.X != other.uv.X) return uv.X < other.uv.X;
 			if (uv.Y != other.uv.Y) return uv.Y < other.uv.Y;
 			if (n.X != other.n.X) return n.X < other.n.X;
@@ -331,22 +374,41 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		size_t total = 0;
 	};
 
-	auto resolveVertex = [&] (MeshData& currentData, uint32_t index, uint8_t colIdx, uint8_t texSet, RSVector3 n, hmm_vec2 uv) -> uint16_t {
+	const auto computeNormals = [] (MeshData& data) {
+
+	};
+
+	const auto colFromProp = [&] (uint8_t prop, uint8_t useTex, const Texel& tx) -> std::array<uint8_t, 4> {
+		if (useTex)
+			return { 255, 255, 255, 255 };
+		if (prop == 2)
+			return { 255, 255, 255, 32 };
+		return { tx.r, tx.g, tx.b, tx.a };
+	};
+
+	const auto clock0FromProp = [&] (uint8_t prop) {
+		return true;
+	};
+
+	const auto clock1FromProp = [&] (uint8_t prop) {
+		return (prop & 3) != 0;
+	};
+
+	auto resolveVertex = [&] (MeshData& currentData, uint32_t index, uint8_t colIdx, uint8_t useTex, uint8_t prop, RSVector3 n, hmm_vec2 uv) -> uint16_t {
 		++currentData.total;
-		uint16_t& res = currentData.lookup[{ n, uv, index, colIdx, texSet }];
+		uint16_t& res = currentData.lookup[{ n, uv, index, colIdx, prop, useTex }];
 		if (res == 0) {
 			res = currentData.vertice.size() + 1;
 			const Texel* tx = r.GetPalette().GetRGBColor(colIdx);
-			//data.vertice.push_back({ object->vertices[index], /* { 0, 1, 0 }, */ { 0.5f, 0.5f }, { tx->r, tx->g, tx->b, tx->a } });
-			currentData.vertice.push_back({ object->vertices[index], n, uv, { tx->r, tx->g, tx->b, tx->a } });
-			if (texSet == 0)
-				currentData.vertice.back().col = { 255, 255, 255, 255 };
+			currentData.vertice.push_back({ object->vertices[index], n, uv, colFromProp(prop, useTex, *tx) });
 		}
 		assert(currentData.vertice[res - 1].uv == uv);
 		return res - 1;
 	};
 
 	mdata.emplace_back();
+
+	int propCount0[256]{};
 
 	if (lodLevel == 0){
 		std::map<uint32_t, MeshData> textureData;
@@ -358,26 +420,44 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 			const RSTexture* texture = image->GetTexture();
 			auto& d = textureData[texture->id];
 			const Triangle& tri = object->triangles[textInfo.triangleID];
+			++propCount0[tri.property];
 			const RSVector3 normal = r.GetNormal(object, &tri);
-			uint16_t vid[3];
+
+			const bool clock0 = clock0FromProp(tri.property);
+			const bool clock1 = clock1FromProp(tri.property);
+
+			hmm_vec2 uvs[3];
 			for(int j = 0; j < 3; j++){
-				RSVector3 vertice = object->vertices[tri.ids[j]];
 				const float u = textInfo.uvs[j].u / (float)texture->width;
 				const float v = textInfo.uvs[j].v / (float)texture->height;
-				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, normal, { u, v });
+				uvs[j] = { u, v };
 			}
-			d.indice.push_back(vid[0]);
-			d.indice.push_back(vid[1]);
-			d.indice.push_back(vid[2]);
-			d.indice.push_back(vid[0]);
-			d.indice.push_back(vid[2]);
-			d.indice.push_back(vid[1]);
+
+			if (clock0) {
+				uint16_t vid[3];
+				for(int j = 0; j < 3; j++)
+					vid[j] = resolveVertex(d, tri.ids[j], tri.color, 1, tri.property, normal, uvs[j]);
+				d.indice.push_back(vid[0]);
+				d.indice.push_back(vid[1]);
+				d.indice.push_back(vid[2]);
+			}
+
+			if (clock1) {
+				uint16_t vid[3];
+				for(int j = 0; j < 3; j++)
+					vid[j] = resolveVertex(d, tri.ids[j], tri.color, 1, tri.property, -normal, uvs[j]);
+				d.indice.push_back(vid[0]);
+				d.indice.push_back(vid[2]);
+				d.indice.push_back(vid[1]);
+			}
 		}
-		for (const auto& kv : textureData) {
+
+		for (auto& kv : textureData) {
 			if (!kv.second.indice.empty()) {
 				const bool opt = kv.second.total != kv.second.vertice.size();
 				printf("opt: %s...\n", opt ? "yes" : "no");
 				auto& msh = mdata.emplace_back();
+				computeNormals(kv.second);
 				msh.texture = { kv.first };
 				msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, kv.second.vertice);
 				msh.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, kv.second.indice);
@@ -386,26 +466,61 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		}
 	}
 
+	int propCount1[256]{};
+
 	MeshData opaque;
 	MeshData blend;
 	for (int i = 0 ; i < lod.numTriangles ; i++) {
 		uint16_t triangleID = lod.triangleIDs[i];
 		const Triangle& tri = object->triangles[triangleID];
 		MeshData& d = tri.property == RSEntity::TRANSPARENT ? blend : opaque;
+		//const uint8_t bmode = (tri.property & RSEntity::TRANSPARENT) ? 1 : 255;
+		//const uint8_t mode = tri.property == 6 ? 2 : bmode;
+		++propCount1[tri.property];
+
+		const bool clock0 = clock0FromProp(tri.property);
+		const bool clock1 = clock1FromProp(tri.property);
+
 		const RSVector3 normal = r.GetNormal(object, &tri);
-		const uint16_t v0 = resolveVertex(d, tri.ids[0], tri.color, 255, normal, { 0.5f, 0.5f });
-		const uint16_t v1 = resolveVertex(d, tri.ids[1], tri.color, 255, normal, { 0.5f, 0.5f });
-		const uint16_t v2 = resolveVertex(d, tri.ids[2], tri.color, 255, normal, { 0.5f, 0.5f });
-		d.indice.push_back(v0);
-		d.indice.push_back(v1);
-		d.indice.push_back(v2);
-		d.indice.push_back(v0);
-		d.indice.push_back(v2);
-		d.indice.push_back(v1);
+
+		if (clock0) {
+			uint16_t vid[3];
+			for(int j = 0; j < 3; j++)
+				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, tri.property, normal, { 0.5f, 0.5f });
+			d.indice.push_back(vid[0]);
+			d.indice.push_back(vid[1]);
+			d.indice.push_back(vid[2]);
+		}
+
+		if (clock1) {
+			uint16_t vid[3];
+			for(int j = 0; j < 3; j++)
+				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, tri.property, -normal, { 0.5f, 0.5f });
+			d.indice.push_back(vid[0]);
+			d.indice.push_back(vid[2]);
+			d.indice.push_back(vid[1]);
+		}
+	}
+
+	printf("prop0\n");
+	for (int i = 0; i < 256; ++i) {
+		int c = propCount0[i];
+		if (c != 0)
+			printf("\t- %d / count: %d\n", i, c);
+	}
+
+	printf("prop1\n");
+	for (int i = 0; i < 256; ++i) {
+		int c = propCount1[i];
+		if (c != 0)
+			printf("\t- %d / count: %d\n", i, c);
 	}
 
 	auto& mshOpaque = mdata[0];
 	if (!opaque.indice.empty()) {
+		const bool opt = opaque.total != opaque.vertice.size();
+		printf("opt: %s...\n", opt ? "yes" : "no");
+		computeNormals(opaque);
 		mshOpaque.texture = white;
 		mshOpaque.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, opaque.vertice);
 		mshOpaque.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, opaque.indice);
@@ -414,10 +529,14 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 
 	auto& mshBlend = mdata.emplace_back();
 	if (!blend.indice.empty()) {
+		const bool opt = blend.total != blend.vertice.size();
+		printf("opt: %s...\n", opt ? "yes" : "no");
+		computeNormals(blend);
 		mshBlend.texture = white;
 		mshBlend.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, blend.vertice);
 		mshBlend.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, blend.indice);
 		mshBlend.pcount = blend.indice.size();
+		mshBlend.blend = true;
 	}
 }
 
@@ -449,18 +568,25 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 	world.Elements[3][1] = pos.Y;
 	world.Elements[3][2] = pos.Z;
 	const RSMatrix& view = camera.getView();
-	const RSMatrix& proj = camera.proj;
+	const RSMatrix& proj = camera.getProj();
 	model_vs_params_t params;
 	memcpy(params.proj, &proj, 64);
 	memcpy(params.view, &view, 64);
 	memcpy(params.world, &world, 64);
-	memcpy(params.camPos, &camera.position, 12);
-	memcpy(params.lightDir, &light, 12);
+	memcpy(params.camPos, &camera.getPosition(), 12);
+	memcpy(params.lightDir, &lightDir, 12);
 
-	sg_apply_pipeline(modelRender->pip);
+	sg_apply_pipeline(modelRender->pip_opaque);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+	sg_apply_pipeline(modelRender->pip_blend);
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+
 	for (const auto& msh : meshes) {
 		if (msh.pcount != 0) {
+			if (msh.blend)
+				sg_apply_pipeline(modelRender->pip_blend);
+			else
+				sg_apply_pipeline(modelRender->pip_opaque);
 			sg_bindings bind{};
 			bind.vertex_buffers[0] = msh.vbuf;
 			bind.index_buffer = msh.ibuf;
@@ -472,7 +598,7 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 }
 
 void SCRenderer::SetLight(const RSVector3& l){
-	this->light = l;
+	this->lightDir = l;
 }
 
 void SCRenderer::Prepare(RSEntity* object)
@@ -702,7 +828,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 
 	RSMatrix world = HMM_Mat4d(1.0f);
 	const RSMatrix& view = camera.getView();
-	const RSMatrix& proj = camera.proj;
+	const RSMatrix& proj = camera.getProj();
 	ground_vs_params_t params;
 	memcpy(params.proj, &proj, 64);
 	memcpy(params.view, &view, 64);

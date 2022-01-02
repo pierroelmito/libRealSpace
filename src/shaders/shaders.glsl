@@ -43,10 +43,6 @@ out vec2 uv;
 void main() {
 	color = vcolor;
 	n = (world * vec4(normal.xyz, 0)).xyz;
-	vec4 vpos = world * vec4(position.xyz, 1);
-	vec3 eyeDir = camPos - (vpos.xyz / vpos.w);
-	if (dot(n, eyeDir) < 0)
-		n *= -1;
 	l = lightDir;
 	uv = texcoord.xy;
 	gl_Position = (proj * view * world) * position;
@@ -65,7 +61,7 @@ void main() {
 	if (tc.a < 0.5)
 		discard;
 	float ndotl = 0.5 * (1 + dot(n, l));
-	frag_color = vec4(ndotl, ndotl, ndotl, 1) * tc * vec4(color.rgb, 1);
+	frag_color = vec4(ndotl.xxx, 1) * tc * color;
 	//frag_color.xyz = 0.001 * frag_color.xyz + 0.5 * (n.xzy + 1);
 }
 @end

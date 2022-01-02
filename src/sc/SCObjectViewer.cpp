@@ -324,17 +324,19 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 
 	const RSShowCase& showCase = showCases[currentObject];
 
-	const uint32_t totalTime = TimeToMSec * (p.currentTime - startTime);
+	const double totalTime = TimeToMSec * (p.currentTime - startTime);
+	const double camTime = totalTime / 2000.0;
+	const double lightTime = totalTime / 8000.0;
+
 	RSVector3 newPosition;
-	newPosition.X = showCase.cameraDist / 150 * cos(totalTime / 2000.0f);
+	newPosition.X = showCase.cameraDist / 150 * cos(camTime);
 	newPosition.Y = showCase.cameraDist / 350;
-	newPosition.Z = showCase.cameraDist / 150 * sin(totalTime / 2000.0f);
+	newPosition.Z = showCase.cameraDist / 150 * sin(camTime);
 	auto& cam = Renderer.GetCamera();
 	cam.SetPosition(newPosition);
 	cam.LookAt({ 0, 0, 0 });
 
-	const float t = -totalTime/20000.0f;
-	const RSVector3 light = HMM_NormalizeVec3({ 4 * cos(t), 4, 4 * sin(t) });
+	const RSVector3 light = HMM_NormalizeVec3({ 4.0f * cosf(lightTime), 1.0f, 4.0f * sinf(lightTime) });
 
 	Renderer.SetLight(light);
 	Renderer.Draw3D({ false }, [&] () {

@@ -512,12 +512,12 @@ void RSArea::AddJets()
 
 	RSMatrix f16m = HMM_Rotate(angle, { 1, 0, 0 });
 	RSQuaternion rot = HMM_Mat4ToQuaternion(f16m);
-	RSVector3 pos = {4066,95,2980};
+	RSVector3 pos = {4066, 95, 2980};
 	AddJet(&tre, TRE_DATA_OBJECTS "F-16DES.IFF", &rot, &pos);
 
 	f16m = HMM_Rotate(-angle, { 1, 0, 0 });
 	rot = HMM_Mat4ToQuaternion(f16m);
-	pos = {4010,100,2990};
+	pos = {4010, 100, 2990};
 	AddJet(&tre, TRE_DATA_OBJECTS "F-22.IFF", &rot, &pos);
 
 	//pos = {3886,300,2886};

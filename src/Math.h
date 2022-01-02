@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include <cmath>
+#include <cstdint>
+
 #include "HandmadeMath.h"
 
 struct Point2D

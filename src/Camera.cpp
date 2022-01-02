@@ -25,7 +25,7 @@ void RSCamera::LookAt(const RSVector3& lookAt)
 	dirtyView = true;
 }
 
-RSMatrix& RSCamera::getView()
+const RSMatrix& RSCamera::getView()
 {
 	if (dirtyView)
 		view = HMM_LookAt(position, lookAt, { 0, 1, 0 });
