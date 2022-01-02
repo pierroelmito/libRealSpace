@@ -98,7 +98,10 @@ struct ModelRenderData
 			pdesc.depth.write_enabled = true;
 			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
 			pdesc.cull_mode = SG_CULLMODE_BACK;
+
 			pip_opaque = sg_make_pipeline(&pdesc);
+
+			pdesc.depth.write_enabled = false;
 			pdesc.colors[0].blend = {
 				true,
 				SG_BLENDFACTOR_SRC_ALPHA,
@@ -108,6 +111,7 @@ struct ModelRenderData
 				SG_BLENDFACTOR_ONE,
 				SG_BLENDOP_ADD,
 			};
+
 			pip_blend = sg_make_pipeline(&pdesc);
 		}
 	}
@@ -133,11 +137,55 @@ struct GroundRenderData
 		{
 			sg_pipeline_desc pdesc{};
 			pdesc.shader = shd;
+			pdesc.depth.write_enabled = true;
+			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
 			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
 			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
 			pdesc.layout.attrs[2].format = SG_VERTEXFORMAT_UBYTE4N;
+			pdesc.cull_mode = SG_CULLMODE_BACK;
 			pip = sg_make_pipeline(&pdesc);
 		}
+	}
+};
+
+struct FullscreenSky
+{
+	sg_buffer vbuf{};
+	sg_shader shd{};
+	sg_pipeline pip{};
+	sg_bindings bind{};
+
+	FullscreenSky()
+	{
+		shd = sg_make_shader(sky_shader_desc(sg_query_backend()));
+
+		{
+			const float N = -1.0f;
+			const float P = -N;
+			const float Z = 1.0f;
+			const float vertices[] = {
+				N, P, Z,
+				P, P, Z,
+				N, N, Z,
+				P, P, Z,
+				P, N, Z,
+				N, N, Z,
+			};
+			sg_buffer_desc bdesc{};
+			bdesc.data = SG_RANGE(vertices);
+			vbuf = sg_make_buffer(&bdesc);
+		}
+
+		{
+			sg_pipeline_desc pdesc{};
+			pdesc.shader = shd;
+			pdesc.depth.write_enabled = false;
+			pdesc.depth.compare = SG_COMPAREFUNC_EQUAL;
+			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
+			pip = sg_make_pipeline(&pdesc);
+		}
+
+		bind.vertex_buffers[0] = vbuf;
 	}
 };
 
@@ -156,13 +204,14 @@ struct FullscreenBitmapData
 		{
 			const float N = -1.0f;
 			const float P = -N;
+			const float Z = 0.5f;
 			const float vertices[] = {
-				N, P, 0.5f,
-				P, P, 0.5f,
-				N, N, 0.5f,
-				P, P, 0.5f,
-				P, N, 0.5f,
-				N, N, 0.5f,
+				N, P, Z,
+				P, P, Z,
+				N, N, Z,
+				P, P, Z,
+				P, N, Z,
+				N, N, Z,
 			};
 			sg_buffer_desc bdesc{};
 			bdesc.data = SG_RANGE(vertices);
@@ -185,6 +234,7 @@ struct FullscreenBitmapData
 
 sg_image white{};
 std::optional<FullscreenBitmapData> FbdRender;
+std::optional<FullscreenSky> FullscreenSky;
 std::optional<ModelRenderData> modelRender;
 std::optional<GroundRenderData> groundRender;
 
@@ -256,7 +306,7 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	this->palette = *palette.GetColorPalette();
 
-	camera.SetPersective(50.0f, width / (float)height, 10.0f, 12000.0f);
+	camera.SetPersective(50.0f, width / (float)height, 10.0f, 80000.0f);
 
 	lightDir = HMM_NormalizeVec3({ 1, 1, 1 });
 
@@ -324,11 +374,25 @@ void SCRenderer::DeleteTextureInGPU(RSTexture* texture)
 	sg_destroy_image({ texture->id });
 }
 
-RSVector3 SCRenderer::GetNormal(const RSEntity* object, const Triangle* triangle) const
+void SCRenderer::RenderSky()
 {
-	//Calculate the normal for this triangle
-	const RSVector3 edge1 = object->vertices[triangle->ids[0]] - object->vertices[triangle->ids[1]];
-	const RSVector3 edge2 = object->vertices[triangle->ids[2]] - object->vertices[triangle->ids[1]];
+	if (!FullscreenSky)
+		FullscreenSky.emplace();
+
+	sg_apply_pipeline(FullscreenSky->pip);
+	sg_apply_bindings(&FullscreenSky->bind);
+	sg_draw(0, 6, 1);
+}
+
+RSVector3 SCRenderer::GetNormal(const RSEntity* object, const Triangle* triangle)
+{
+	return GetNormal(object->vertices[triangle->ids[0]], object->vertices[triangle->ids[1]], object->vertices[triangle->ids[2]]);
+}
+
+RSVector3 SCRenderer::GetNormal(const RSVector3& v0, const RSVector3& v1, const RSVector3& v2)
+{
+	const RSVector3 edge1 = v0 - v1;
+	const RSVector3 edge2 = v2 - v1;
 	return HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
 }
 
@@ -346,23 +410,21 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 
 	struct VKey
 	{
-		RSVector3 n;
 		hmm_vec2 uv;
 		uint32_t id;
 		uint8_t col;
 		uint8_t prop;
 		uint8_t usetex;
+		uint8_t flipN;
 		bool operator< (const VKey& other) const
 		{
 			if (id != other.id) return id < other.id;
 			if (col != other.col) return col < other.col;
 			if (prop != other.prop) return prop < other.prop;
 			if (usetex != other.usetex) return usetex < other.usetex;
+			if (flipN != other.flipN) return flipN < other.flipN;
 			if (uv.X != other.uv.X) return uv.X < other.uv.X;
 			if (uv.Y != other.uv.Y) return uv.Y < other.uv.Y;
-			if (n.X != other.n.X) return n.X < other.n.X;
-			if (n.Y != other.n.Y) return n.Y < other.n.Y;
-			if (n.Z != other.n.Z) return n.Z < other.n.Z;
 			return false;
 		}
 	};
@@ -375,32 +437,53 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 	};
 
 	const auto computeNormals = [] (MeshData& data) {
-
+		std::vector<float> count(data.vertice.size(), 0.0f);
+		for (int i = 0; i < data.indice.size(); i += 3) {
+			const uint16_t v0 = data.indice[i + 0];
+			const uint16_t v1 = data.indice[i + 1];
+			const uint16_t v2 = data.indice[i + 2];
+			const RSVector3 n = SCRenderer::GetNormal(data.vertice[v0].pos, data.vertice[v1].pos, data.vertice[v2].pos);
+			data.vertice[v0].normal += n;
+			data.vertice[v1].normal += n;
+			data.vertice[v2].normal += n;
+			count[v0] += 1.0f;
+			count[v1] += 1.0f;
+			count[v2] += 1.0f;
+		}
+		for (int i = 0; i < data.vertice.size(); ++i) {
+			data.vertice[i].normal = HMM_NormalizeVec3(data.vertice[i].normal / count[i]);
+		}
 	};
 
 	const auto colFromProp = [&] (uint8_t prop, uint8_t useTex, const Texel& tx) -> std::array<uint8_t, 4> {
+		//if (prop == 6)
+		//	return { 255, 0, 255, 255 };
 		if (useTex)
 			return { 255, 255, 255, 255 };
 		if (prop == 2)
-			return { 255, 255, 255, 32 };
+			return { 255, 255, 255, 64 };
 		return { tx.r, tx.g, tx.b, tx.a };
 	};
 
 	const auto clock0FromProp = [&] (uint8_t prop) {
-		return true;
+		if ((prop & 2) != 0)
+			return true;
+		return true; // really???
 	};
 
 	const auto clock1FromProp = [&] (uint8_t prop) {
-		return (prop & 3) != 0;
+		if ((prop & 2) != 0)
+			return true;
+		return (prop & 1) != 0;
 	};
 
-	auto resolveVertex = [&] (MeshData& currentData, uint32_t index, uint8_t colIdx, uint8_t useTex, uint8_t prop, RSVector3 n, hmm_vec2 uv) -> uint16_t {
+	auto resolveVertex = [&] (MeshData& currentData, uint32_t index, uint8_t colIdx, uint8_t useTex, uint8_t prop, uint8_t flipN, hmm_vec2 uv) -> uint16_t {
 		++currentData.total;
-		uint16_t& res = currentData.lookup[{ n, uv, index, colIdx, prop, useTex }];
+		uint16_t& res = currentData.lookup[{ uv, index, colIdx, prop, useTex, flipN }];
 		if (res == 0) {
 			res = currentData.vertice.size() + 1;
 			const Texel* tx = r.GetPalette().GetRGBColor(colIdx);
-			currentData.vertice.push_back({ object->vertices[index], n, uv, colFromProp(prop, useTex, *tx) });
+			currentData.vertice.push_back({ object->vertices[index], { 0.0f, 0.0f, 0.0f }, uv, colFromProp(prop, useTex, *tx) });
 		}
 		assert(currentData.vertice[res - 1].uv == uv);
 		return res - 1;
@@ -416,12 +499,12 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 			//Seems we have a textureID that we don't have :( !
 			if (textInfo.textureID >= object->images.size())
 				continue;
+
 			RSImage* image = object->images[textInfo.textureID];
 			const RSTexture* texture = image->GetTexture();
 			auto& d = textureData[texture->id];
 			const Triangle& tri = object->triangles[textInfo.triangleID];
 			++propCount0[tri.property];
-			const RSVector3 normal = r.GetNormal(object, &tri);
 
 			const bool clock0 = clock0FromProp(tri.property);
 			const bool clock1 = clock1FromProp(tri.property);
@@ -436,7 +519,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 			if (clock0) {
 				uint16_t vid[3];
 				for(int j = 0; j < 3; j++)
-					vid[j] = resolveVertex(d, tri.ids[j], tri.color, 1, tri.property, normal, uvs[j]);
+					vid[j] = resolveVertex(d, tri.ids[j], tri.color, 1, tri.property, 0, uvs[j]);
 				d.indice.push_back(vid[0]);
 				d.indice.push_back(vid[1]);
 				d.indice.push_back(vid[2]);
@@ -445,7 +528,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 			if (clock1) {
 				uint16_t vid[3];
 				for(int j = 0; j < 3; j++)
-					vid[j] = resolveVertex(d, tri.ids[j], tri.color, 1, tri.property, -normal, uvs[j]);
+					vid[j] = resolveVertex(d, tri.ids[j], tri.color, 1, tri.property, 1, uvs[j]);
 				d.indice.push_back(vid[0]);
 				d.indice.push_back(vid[2]);
 				d.indice.push_back(vid[1]);
@@ -474,19 +557,15 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		uint16_t triangleID = lod.triangleIDs[i];
 		const Triangle& tri = object->triangles[triangleID];
 		MeshData& d = tri.property == RSEntity::TRANSPARENT ? blend : opaque;
-		//const uint8_t bmode = (tri.property & RSEntity::TRANSPARENT) ? 1 : 255;
-		//const uint8_t mode = tri.property == 6 ? 2 : bmode;
 		++propCount1[tri.property];
 
 		const bool clock0 = clock0FromProp(tri.property);
 		const bool clock1 = clock1FromProp(tri.property);
 
-		const RSVector3 normal = r.GetNormal(object, &tri);
-
 		if (clock0) {
 			uint16_t vid[3];
 			for(int j = 0; j < 3; j++)
-				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, tri.property, normal, { 0.5f, 0.5f });
+				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, tri.property, 0, { 0.5f, 0.5f });
 			d.indice.push_back(vid[0]);
 			d.indice.push_back(vid[1]);
 			d.indice.push_back(vid[2]);
@@ -495,25 +574,11 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		if (clock1) {
 			uint16_t vid[3];
 			for(int j = 0; j < 3; j++)
-				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, tri.property, -normal, { 0.5f, 0.5f });
+				vid[j] = resolveVertex(d, tri.ids[j], tri.color, 0, tri.property, 1, { 0.5f, 0.5f });
 			d.indice.push_back(vid[0]);
 			d.indice.push_back(vid[2]);
 			d.indice.push_back(vid[1]);
 		}
-	}
-
-	printf("prop0\n");
-	for (int i = 0; i < 256; ++i) {
-		int c = propCount0[i];
-		if (c != 0)
-			printf("\t- %d / count: %d\n", i, c);
-	}
-
-	printf("prop1\n");
-	for (int i = 0; i < 256; ++i) {
-		int c = propCount1[i];
-		if (c != 0)
-			printf("\t- %d / count: %d\n", i, c);
 	}
 
 	auto& mshOpaque = mdata[0];
@@ -537,6 +602,20 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		mshBlend.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, blend.indice);
 		mshBlend.pcount = blend.indice.size();
 		mshBlend.blend = true;
+	}
+
+	printf("prop0\n");
+	for (int i = 0; i < 256; ++i) {
+		int c = propCount0[i];
+		if (c != 0)
+			printf("\t- %d / count: %d\n", i, c);
+	}
+
+	printf("prop1\n");
+	for (int i = 0; i < 256; ++i) {
+		int c = propCount1[i];
+		if (c != 0)
+			printf("\t- %d / count: %d\n", i, c);
 	}
 }
 
@@ -905,25 +984,27 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	//for(int i=97 ; i < 98 ; i++)
 	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
 		const std::vector<MapObject>& objects = area.objects[id];
-		const uint32_t BLOCK_WIDTH = 512;
 		for (const MapObject& object : objects)
 		{
-			int32_t offset[3];
-			offset[0] = id % 18 * BLOCK_WIDTH;
-			offset[1] = area.elevation[id];
-			offset[2] = (int32_t)id / 18 * BLOCK_WIDTH;
+			const float bx = float(id % 18);
+			const float by = float(id / 18);
 
-			int32_t localDelta[3];
-			localDelta[0] = object.position[0] / 65355.0f*BLOCK_WIDTH;
-			localDelta[1] = object.position[1]; // / HEIGHT_DIVIDER
-			localDelta[2] = object.position[2] / 65355.0f*BLOCK_WIDTH;
+			float offset[3];
+			offset[0] = bx * BLOCK_WIDTH;
+			offset[1] = 0; //area.elevation[id];
+			offset[2] = by * BLOCK_WIDTH;
 
-			size_t toDraw[3];
+			float localDelta[3];
+			localDelta[0] = object.position[0] / 65355.0f * BLOCK_WIDTH;
+			localDelta[1] = object.position[1] / (float)HEIGHT_DIVIDER;
+			localDelta[2] = object.position[2] / 65355.0f * BLOCK_WIDTH;
+
+			float toDraw[3];
 			toDraw[0] = localDelta[0] + offset[0];
 			toDraw[1] = localDelta[1] + offset[1];
 			toDraw[2] = localDelta[2] + offset[2];
 
-			const RSVector3 worldPos{ (float)toDraw[0], (float)toDraw[1], (float)toDraw[2] };
+			const RSVector3 worldPos{ toDraw[0], toDraw[1], toDraw[2] };
 			DrawModel(object.entity, LOD_LEVEL_MAX, worldPos);
 		}
 	}
@@ -979,8 +1060,6 @@ void SCRenderer::RenderObjects(const RSArea& area,size_t blockID)
 	glPointSize(3);
 	glDisable(GL_DEPTH_TEST);
 	glBegin(GL_POINTS);
-
-	const uint32_t BLOCK_WIDTH = 512;
 
 	for (size_t i =8 ; i < 9; i++) {
 		MapObject object = objects->at(i);

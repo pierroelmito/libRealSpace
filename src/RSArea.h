@@ -16,7 +16,10 @@ class PakEntry;
 class PakArchive;
 
 //DIRTY HACK !!! DELETE ME ASAP
-#define  HEIGHT_DIVIDER 17
+//#define HEIGHT_DIVIDER 17
+//#define BLOCK_WIDTH 512
+#define HEIGHT_DIVIDER 8
+#define BLOCK_WIDTH 2048
 
 struct MapObject
 {

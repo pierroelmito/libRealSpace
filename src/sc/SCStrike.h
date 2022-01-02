@@ -21,6 +21,10 @@ public:
 	void RunFrame(const FrameParams& p) override;
 
 protected:
+	RSVector3 camPos;
+	float angleV;
+	float angleH;
+
 	RSArea area;
 };
 

@@ -231,6 +231,14 @@ void RSArea::ParseObjects()
 				mapObject.destroyedName[k] = reader.ReadByte();
 			mapObject.destroyedName[8] = 0;
 
+#if 0
+			const int32_t p0 = reader.ReadUInt32LE();
+			const int32_t p1 = reader.ReadUInt32LE();
+			const int32_t p2 = reader.ReadUInt32LE();
+			mapObject.position[0] =  p0;
+			mapObject.position[1] =  p2;
+			mapObject.position[2] =  p1;
+#else
 			int32_t coo[12];
 			coo[0] = reader.ReadByte();
 			coo[1] = reader.ReadByte();
@@ -251,6 +259,10 @@ void RSArea::ParseObjects()
 			coo[11] = reader.ReadByte();
 			mapObject.position[1] = (coo[11] << 8) | coo[10];
 
+			for(int k=0 ; k < 12 ; k++)
+				printf("%2X ",coo[k]);
+#endif
+
 			uint8_t unknowns[0x31-12];
 			for(int k=0 ; k <0x31-12; k++)
 				unknowns[k] = reader.ReadByte();
@@ -260,8 +272,6 @@ void RSArea::ParseObjects()
 					   unknown11,
 					   unknown12,
 					   unknown13,mapObject.destroyedName);
-			for(int k=0 ; k < 12 ; k++)
-				printf("%2X ",coo[k]);
 			for(int k=0 ; k <0x31-12 ; k++)
 				printf("%2X ",unknowns[k]);
 			printf("\n");
@@ -321,13 +331,15 @@ void RSArea::ParseTrigo()
 
 #endif
 
-#define LAND_TYPE_SEA      0
-#define LAND_TYPE_DESERT   1
-#define LAND_TYPE_GROUND   2
-#define LAND_TYPE_SAVANNAH 3
-#define LAND_TYPE_TAIGA    4
-#define LAND_TYPE_TUNDRA   5
-#define LAND_TYPE_SNOW     6
+enum LAND_TYPE {
+	LAND_TYPE_SEA,
+	LAND_TYPE_DESERT,
+	LAND_TYPE_GROUND,
+	LAND_TYPE_SAVANNAH,
+	LAND_TYPE_TAIGA,
+	LAND_TYPE_TUNDRA,
+	LAND_TYPE_SNOW
+};
 
 #define BYTETOBINARYPATTERN "%d%d%d%d%d%d%d%d"
 #define BYTETOBINARY(byte)  \
@@ -361,9 +373,7 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 		for(size_t vertexID=0 ; vertexID < blockDim*blockDim ; vertexID++) {
 			MapVertex* vertex = &block->vertice[vertexID];
 
-			int16_t height ;
-			height = vertStream.ReadShort();
-			height /= HEIGHT_DIVIDER;
+			const int16_t height = vertStream.ReadShort();
 
 			vertex->flag = vertStream.ReadByte();
 			vertex->type = vertStream.ReadByte();
@@ -433,10 +443,12 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 					- text
 			*/
 
-			const uint32_t BLOCK_WIDTH = 512;
-			vertex->v.X = i % 18 * BLOCK_WIDTH + (vertexID % blockDim ) / (float)(blockDim) * BLOCK_WIDTH ;
-			vertex->v.Y = height; //-vertex->text * 10;//height ;
-			vertex->v.Z = i / 18 * BLOCK_WIDTH + (vertexID / blockDim ) / (float)(blockDim) *BLOCK_WIDTH ;
+			const float rx = (vertexID % blockDim) / (float)(blockDim);
+			const float ry = (vertexID / blockDim) / (float)(blockDim);
+
+			vertex->v.X = i % 18 * BLOCK_WIDTH + rx  * BLOCK_WIDTH ;
+			vertex->v.Y = (float)height / (float)HEIGHT_DIVIDER; //-vertex->text * 10;//height ;
+			vertex->v.Z = i / 18 * BLOCK_WIDTH + ry * BLOCK_WIDTH ;
 
 			vertex->color[0] = t->r/255.0f;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[1] = t->g/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
@@ -509,16 +521,15 @@ void RSArea::AddJets()
 	tre.InitFromFile("OBJECTS.TRE");
 
 	const float angle = 15.0f;
+	const float mul = 4.0f;
 
-	RSMatrix f16m = HMM_Rotate(angle, { 1, 0, 0 });
-	RSQuaternion rot = HMM_Mat4ToQuaternion(f16m);
-	RSVector3 pos = {4066, 95, 2980};
-	AddJet(&tre, TRE_DATA_OBJECTS "F-16DES.IFF", &rot, &pos);
+	RSQuaternion rot0 = HMM_Mat4ToQuaternion(HMM_Rotate(angle, { 1, 0, 0 }));
+	RSVector3 pos0 = { mul * 4066, mul * 95, mul * 2980};
+	AddJet(&tre, TRE_DATA_OBJECTS "F-16DES.IFF", &rot0, &pos0);
 
-	f16m = HMM_Rotate(-angle, { 1, 0, 0 });
-	rot = HMM_Mat4ToQuaternion(f16m);
-	pos = {4010, 100, 2990};
-	AddJet(&tre, TRE_DATA_OBJECTS "F-22.IFF", &rot, &pos);
+	RSQuaternion rot1 = HMM_Mat4ToQuaternion(HMM_Rotate(-angle, { 1, 0, 0 }));
+	RSVector3 pos1 = { mul * 4010, mul * 100, mul * 2990};
+	AddJet(&tre, TRE_DATA_OBJECTS "F-22.IFF", &rot1, &pos1);
 
 	//pos = {3886,300,2886};
 	//AddJet(&tre,TRE_DATA_GAMEFLOW "MIG29.IFF",&rot,&pos);

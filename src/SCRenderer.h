@@ -61,6 +61,7 @@ public:
 	void RenderBlock(const AddVertex& vfunc, const RSArea& area,int LOD, int blockID,bool renderTexture);
 	void RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock);
 	void RenderJets(const RSArea& area);
+	void RenderSky();
 
 	struct Render3DParams {
 		bool clearColors{ true };
@@ -73,7 +74,8 @@ public:
 	bool IsPaused() const { return paused; }
 	void Pause(){ paused = true; }
 	void Prepare(RSEntity* object);
-	RSVector3 GetNormal(const RSEntity* object, const Triangle* triangle) const;
+	static RSVector3 GetNormal(const RSEntity* object, const Triangle* triangle);
+	static RSVector3 GetNormal(const RSVector3& v0, const RSVector3& v1, const RSVector3& v2);
 
 private:
 	VGAPalette palette;
