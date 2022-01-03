@@ -133,7 +133,7 @@ void SCMainMenu::LoadPalette(void)
 	this->palette = VGA.GetPalette();
 	//Load the default palette
 
-	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(OPTPALS_PAK_PATH);
+	TreEntry* palettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "OPTPALS.PAK");
 	PakArchive palettesPak;
 	palettesPak.InitFromRAM("OPTSHPS.PAK",*palettesEntry);
 	//palettesPak.List(stdout);
@@ -144,8 +144,7 @@ void SCMainMenu::LoadPalette(void)
 	this->palette.ReadPatch(&paletteReader);
 
 	//Third palette patch (for silver board and buttons)
-	const PakEntry& palettePatchEntry = mainMenupak.GetEntry(MAINMENU_PAK_BOARD_PALETTE);
-	paletteReader.Set(palettePatchEntry.data);
+	paletteReader.Set(mainMenupak.GetEntry(MAINMENU_PAK_BOARD_PALETTE).data);
 	this->palette.ReadPatch(&paletteReader);
 }
 

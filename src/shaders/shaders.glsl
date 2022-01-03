@@ -36,19 +36,29 @@ void main() {
 // fullscreen sky
 
 @vs sky_vs
+uniform sky_vs_params {
+	mat4 view;
+	mat4 proj;
+};
 layout(location=0) in vec4 position;
-out vec2 uv;
+out vec3 eyedir;
 void main() {
-	uv = 0.5 * (vec2(1, -1) * position.xy + 1);
+	vec3 x = vec3(view[0][0], view[1][0], view[2][0]);
+	vec3 y = vec3(view[0][1], view[1][1], view[2][1]);
+	vec3 z = vec3(view[0][2], view[1][2], view[2][2]);
+	eyedir = z + ((-position.x / proj[0][0]) * x) + ((-position.y / proj[1][1]) * y);
 	gl_Position = position;
 }
 @end
 
 @fs sky_fs
-in vec2 uv;
+in vec3 eyedir;
 out vec4 frag_color;
 void main() {
-	frag_color = vec4(0.5, 0.5, 0.9, 1);
+	vec3 e = normalize(eyedir);
+	//frag_color = vec4(fract(10 * (0.5 * (1 + e))), 1);
+	//frag_color = vec4(mix(vec3(0, 0, 1), vec3(0, 1, 1), fract(10 * e.y)), 1);
+	frag_color = vec4(mix(vec3(0, 1, 1), vec3(0, 0, 1), -e.y), 1);
 }
 @end
 
@@ -75,7 +85,7 @@ out vec2 uv;
 out float depth;
 void main() {
 	color = vcolor;
-	n = (world * vec4(normal.xyz, 0)).xyz;
+	n = normalize((world * vec4(normal.xyz, 0)).xyz);
 	l = lightDir;
 	uv = texcoord.xy;
 	vec4 tmp = (view * world) * position;
@@ -96,7 +106,7 @@ in float depth;
 out vec4 frag_color;
 void main() {
 	vec4 tc = texture(bitmap, uv);
-	if (tc.a < 0.5)
+	if (tc.a * color.a == 0.0)
 		discard;
 	float ndotl = 0.5 * (1 + dot(n, l));
 	frag_color = computeFog(vec4(ndotl.xxx, 1) * tc * color, depth);
@@ -140,8 +150,19 @@ out vec4 frag_color;
 
 void main() {
 	vec4 tc = texture(bitmap, uv);
-	if (tc.a < 0.5)
+	if (tc.a == 0.0)
 		discard;
+	//int idx = int(color.a * tc.a * 255.0);
+	int idx = int(color.a * 255.0);
+	if (idx == 0x7) {
+		frag_color = computeFog(tc * vec4(1, 0, 0, 1), depth); // ground!!
+	} else if (idx == 0x5) {
+		frag_color = computeFog(tc * vec4(0, 1, 0, 1), depth); // grass!!
+	} else if (idx == 0xA) {
+		frag_color = computeFog(tc * vec4(0, 0, 1, 1), depth); // water!!
+	} else {
+		frag_color = computeFog(tc * vec4(color.rgb, 1), depth);
+	}
 	frag_color = computeFog(tc * vec4(color.rgb, 1), depth);
 }
 @end

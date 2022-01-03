@@ -34,7 +34,7 @@ public:
 
 	void Prepare();
 	void Init(int32_t zoom);
-	void DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos = { 0, 0, 0 }, const RSQuaternion& orientation = { 0, 0, 0, 1 });
+	void DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos = { 0, 0, 0 }, float scale = 1.0f, const RSQuaternion& orientation = { 0, 0, 0, 1 });
 	void CreateTextureInGPU(RSTexture* texture);
 	void UploadTextureContentToGPU(RSTexture* texture);
 	void DeleteTextureInGPU(RSTexture* texture);

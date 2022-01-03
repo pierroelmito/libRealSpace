@@ -8,6 +8,8 @@
 
 #include "precomp.h"
 
+#include <cassert>
+
 #include "AssetManager.h"
 
 RSArea::RSArea()
@@ -231,50 +233,72 @@ void RSArea::ParseObjects()
 				mapObject.destroyedName[k] = reader.ReadByte();
 			mapObject.destroyedName[8] = 0;
 
-#if 0
-			const int32_t p0 = reader.ReadUInt32LE();
-			const int32_t p1 = reader.ReadUInt32LE();
-			const int32_t p2 = reader.ReadUInt32LE();
-			mapObject.position[0] =  p0;
-			mapObject.position[1] =  p2;
-			mapObject.position[2] =  p1;
-#else
-			int32_t coo[12];
-			coo[0] = reader.ReadByte();
-			coo[1] = reader.ReadByte();
-			coo[2] = reader.ReadByte();
-			coo[3] = reader.ReadByte();
-			mapObject.position[0] =  (coo[3] << 8) | coo[2];
-			//coo[3] = (uint32_t)reader.ReadByte();
+			// decoding is incorrect...
+			const auto Read32bitPos = [&reader] (const char* lbl) {
+				int32_t v[4]{};
+				v[0] = reader.ReadByte();
+				v[1] = reader.ReadByte();
+				v[2] = reader.ReadByte();
+				v[3] = reader.ReadByte();
+				uint32_t r = (v[3] << 8) | v[2];
+				printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
+				return r;
+			};
 
-			coo[4] = reader.ReadByte();
-			coo[5] = reader.ReadByte();
-			coo[6] = reader.ReadByte();
-			coo[7] = reader.ReadByte();
-			mapObject.position[2] = (coo[7] << 8) | coo[6];
+			// work for 0, 1, -1 but is probably wrong for other values :-/
+			const auto Read32bitTransform = [&reader] (const char* lbl) {
+				int32_t v[4]{};
+				v[0] = reader.ReadByte();
+				v[1] = reader.ReadByte();
+				v[2] = reader.ReadByte();
+				v[3] = reader.ReadByte();
+				assert(v[0] == 0);
+				int32_t r = (v[3] << 16) | (v[2] << 8) | (v[1]);
+				if ((r & (1 << 23)) != 0) {
+					r = -((~(r | 0xff000000)) + 1);
+				}
+				printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
+				return r;
+			};
 
-			coo[8] = reader.ReadByte();
-			coo[9] = reader.ReadByte();
-			coo[10] = reader.ReadByte();
-			coo[11] = reader.ReadByte();
-			mapObject.position[1] = (coo[11] << 8) | coo[10];
+			// read translate
+			mapObject.position[0] = Read32bitPos("x");
+			mapObject.position[2] = Read32bitPos("z");
+			mapObject.position[1] = Read32bitPos("y");
 
-			for(int k=0 ; k < 12 ; k++)
-				printf("%2X ",coo[k]);
-#endif
-
-			uint8_t unknowns[0x31-12];
-			for(int k=0 ; k <0x31-12; k++)
+			// ??
+			const int count = 1;
+			uint8_t unknowns[count];
+			for(int k=0 ; k <count; k++) {
 				unknowns[k] = reader.ReadByte();
-			printf("object set [%3lu] obj [%2d] - '%-8s' %2X %2X %2X %2X %2X '%-8s'",i,j,mapObject.name,
+				assert(unknowns[k] == 0);
+			}
+
+			// looks like a 3x3 transform matrix
+			int32_t transform[9]{};
+			for (int k = 0; k < 9; ++k) {
+				char buffer[3] = "tX";
+				buffer[1] = '0' + k;
+				transform[k] = Read32bitTransform(buffer);
+			}
+
+			printf("object set [%3lu] obj [%2d] - '%-8s' %02X %02X %02X %02X %02X '%-8s'",i,j,mapObject.name,
 					   unknown09,
 					   unknown10,
 					   unknown11,
 					   unknown12,
 					   unknown13,mapObject.destroyedName);
-			for(int k=0 ; k <0x31-12 ; k++)
-				printf("%2X ",unknowns[k]);
+
+			for(int k=0 ; k <count; k++) {
+				if (k % 4 == 0)
+					printf(" ");
+				if (k % 12 == 0)
+					printf("\n");
+				printf("%02X ",unknowns[k]);
+			}
+
 			printf("\n");
+
 			objects[i].push_back(mapObject);
 		}
 	}
@@ -453,7 +477,7 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			vertex->color[0] = t->r/255.0f;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[1] = t->g/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[2] = t->b/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
-			vertex->color[3] = 255;
+			vertex->color[3] = paletteColor / 255.0f;
 		}
 	}
 }
@@ -521,7 +545,7 @@ void RSArea::AddJets()
 	tre.InitFromFile("OBJECTS.TRE");
 
 	const float angle = 15.0f;
-	const float mul = 4.0f;
+	const float mul = 1.0f;
 
 	RSQuaternion rot0 = HMM_Mat4ToQuaternion(HMM_Rotate(angle, { 1, 0, 0 }));
 	RSVector3 pos0 = { mul * 4066, mul * 95, mul * 2980};
@@ -598,26 +622,19 @@ void RSArea::InitFromPAKFileName(const char* pakFilename)
 	TreArchive treArchive;
 	treArchive.InitFromFile(trePath);
 
-	//Find the texture PAKS.
-	TreEntry* treEntry = NULL;
-	RSMapTextureSet* set;
-
-	const char* txmPakName = TRE_DATA "TXM\\TXMPACK.PAK";
-	treEntry = treArchive.GetEntryByName(txmPakName);
-	PakArchive txmPakArchive;
-	txmPakArchive.InitFromRAM(txmPakName,*treEntry);
-	set = new RSMapTextureSet();
-	set->InitFromPAK(&txmPakArchive);
-	textures.push_back(set);
-
-	//ACCPACK.PAK seems to contain runway textures
-	const char* accPakName = TRE_DATA "TXM\\ACCPACK.PAK";
-	treEntry = treArchive.GetEntryByName(accPakName);
-	PakArchive accPakArchive;
-	accPakArchive.InitFromRAM(accPakName,*treEntry);
-	set = new RSMapTextureSet();
-	set->InitFromPAK(&accPakArchive);
-	textures.push_back(set);
+	const char* pakNames[2] = {
+		TRE_DATA_TXM "TXMPACK.PAK",
+		TRE_DATA_TXM "ACCPACK.PAK",
+	};
+	for (int i = 0; i < 2; ++i) {
+		const char* txmPakName = TRE_DATA_TXM "TXMPACK.PAK";
+		TreEntry* treEntry = treArchive.GetEntryByName(txmPakName);
+		PakArchive txmPakArchive;
+		txmPakArchive.InitFromRAM(txmPakName,*treEntry);
+		RSMapTextureSet* set = new RSMapTextureSet();
+		set->InitFromPAK(&txmPakArchive);
+		textures.push_back(set);
+	}
 
 	//Parse the meta datas.
 	ParseElevations();

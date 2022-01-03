@@ -28,6 +28,11 @@ int ComputeMipCount(int w, int h)
 	return m1 - m0;
 }
 
+sg_filter GetFilter(bool mipmaps)
+{
+	return mipmaps ? SG_FILTER_NEAREST_MIPMAP_NEAREST : SG_FILTER_NEAREST;
+}
+
 template <typename T>
 sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps, const std::vector<T>& data = {})
 {
@@ -38,6 +43,8 @@ sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipma
 	idesc.height = h;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
+	idesc.mag_filter = GetFilter(mipmaps);
+	idesc.min_filter = GetFilter(mipmaps);
 	idesc.num_mipmaps = mipcount;
 	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
 	return sg_make_image(&idesc);
@@ -52,6 +59,8 @@ sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipma
 	idesc.height = h;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
+	idesc.mag_filter = GetFilter(mipmaps);
+	idesc.min_filter = GetFilter(mipmaps);
 	idesc.num_mipmaps = mipcount;
 	return sg_make_image(&idesc);
 }
@@ -306,7 +315,7 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	this->palette = *palette.GetColorPalette();
 
-	camera.SetPersective(50.0f, width / (float)height, 10.0f, 80000.0f);
+	camera.SetPersective(50.0f, width / (float)height, 1.0f, 20000.0f);
 
 	lightDir = HMM_NormalizeVec3({ 1, 1, 1 });
 
@@ -340,7 +349,7 @@ void SCRenderer::CreateTextureInGPU(RSTexture* texture)
 	if (!initialized)
 		return;
 
-	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, true);
+	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, false);
 	texture->id = img.id;
 }
 
@@ -356,6 +365,7 @@ void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 	mipmapData.resize(mips);
 
 	data.subimage[0][0] = { texture->data, texture->width * texture->height * 4 };
+	/*
 	for (int i = 1; i < mips; ++i)
 	{
 		const size_t nw = std::max<size_t>(1, texture->width >> i);
@@ -363,6 +373,7 @@ void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 		mipmapData[i - 1].resize(nw * nh, 0xffffffffu);
 		data.subimage[0][i] = { &mipmapData[0], nw * nh * 4 };
 	}
+	*/
 
 	sg_update_image({ texture->id }, data);
 }
@@ -379,7 +390,14 @@ void SCRenderer::RenderSky()
 	if (!FullscreenSky)
 		FullscreenSky.emplace();
 
+	RSMatrix view = camera.getView();
+	RSMatrix proj = camera.getProj();
+
 	sg_apply_pipeline(FullscreenSky->pip);
+	sky_vs_params_t params;
+	memcpy(&params.view, &view, 64);
+	memcpy(&params.proj, &proj, 64);
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
 	sg_apply_bindings(&FullscreenSky->bind);
 	sg_draw(0, 6, 1);
 }
@@ -456,12 +474,14 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 	};
 
 	const auto colFromProp = [&] (uint8_t prop, uint8_t useTex, const Texel& tx) -> std::array<uint8_t, 4> {
-		//if (prop == 6)
-		//	return { 255, 0, 255, 255 };
+		if (!useTex) {
+			if (prop == 6 || prop == 9)
+				return { 255, 0, 255, 0 };
+		}
 		if (useTex)
 			return { 255, 255, 255, 255 };
 		if (prop == 2)
-			return { 255, 255, 255, 64 };
+			return { tx.r, tx.g, tx.b, 64 };
 		return { tx.r, tx.g, tx.b, tx.a };
 	};
 
@@ -538,7 +558,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		for (auto& kv : textureData) {
 			if (!kv.second.indice.empty()) {
 				const bool opt = kv.second.total != kv.second.vertice.size();
-				printf("opt: %s...\n", opt ? "yes" : "no");
+				//printf("opt: %s...\n", opt ? "yes" : "no");
 				auto& msh = mdata.emplace_back();
 				computeNormals(kv.second);
 				msh.texture = { kv.first };
@@ -584,7 +604,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 	auto& mshOpaque = mdata[0];
 	if (!opaque.indice.empty()) {
 		const bool opt = opaque.total != opaque.vertice.size();
-		printf("opt: %s...\n", opt ? "yes" : "no");
+		//printf("opt: %s...\n", opt ? "yes" : "no");
 		computeNormals(opaque);
 		mshOpaque.texture = white;
 		mshOpaque.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, opaque.vertice);
@@ -595,7 +615,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 	auto& mshBlend = mdata.emplace_back();
 	if (!blend.indice.empty()) {
 		const bool opt = blend.total != blend.vertice.size();
-		printf("opt: %s...\n", opt ? "yes" : "no");
+		//printf("opt: %s...\n", opt ? "yes" : "no");
 		computeNormals(blend);
 		mshBlend.texture = white;
 		mshBlend.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, blend.vertice);
@@ -604,6 +624,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		mshBlend.blend = true;
 	}
 
+	/*
 	printf("prop0\n");
 	for (int i = 0; i < 256; ++i) {
 		int c = propCount0[i];
@@ -617,9 +638,10 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 		if (c != 0)
 			printf("\t- %d / count: %d\n", i, c);
 	}
+	*/
 }
 
-void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos, const RSQuaternion& orientation)
+void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos, float scale, const RSQuaternion& orientation)
 {
 	if (!initialized)
 		return;
@@ -642,7 +664,7 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 		PrepareModel(*this, o, lodLevel, tmp);
 	});
 
-	RSMatrix world = HMM_QuaternionToMat4(orientation);
+	RSMatrix world = HMM_QuaternionToMat4(orientation) * HMM_Scale({ scale, scale, scale });
 	world.Elements[3][0] = pos.X;
 	world.Elements[3][1] = pos.Y;
 	world.Elements[3][2] = pos.Z;
@@ -856,7 +878,7 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 void SCRenderer::RenderJets(const RSArea& area)
 {
 	for(RSEntity* entity : area.GetJets())
-		DrawModel(entity, LOD_LEVEL_MAX, entity->position, entity->orientation);
+		DrawModel(entity, LOD_LEVEL_MAX, entity->position, OBJECT_SCALE, entity->orientation);
 }
 
 void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock)
@@ -1005,7 +1027,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			toDraw[2] = localDelta[2] + offset[2];
 
 			const RSVector3 worldPos{ toDraw[0], toDraw[1], toDraw[2] };
-			DrawModel(object.entity, LOD_LEVEL_MAX, worldPos);
+			DrawModel(object.entity, LOD_LEVEL_MAX, worldPos, OBJECT_SCALE);
 		}
 	}
 

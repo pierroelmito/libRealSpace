@@ -22,10 +22,11 @@ RSImage::~RSImage(){
         free(data);
 }
 
-void RSImage::Create(const char name[8],uint32_t width,uint32_t height){
-
+void RSImage::Create(const char name[8],uint32_t width,uint32_t height, uint32_t flags)
+{
     strcpy(this->name,name);
-    this->width = width;
+	this->flags = flags;
+	this->width = width;
     this->height = height;
     this->data = (uint8_t*)malloc(this->width*this->height);
 	this->palette = &Renderer.GetPalette();

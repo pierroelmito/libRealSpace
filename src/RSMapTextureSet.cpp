@@ -21,11 +21,13 @@ RSMapTextureSet::~RSMapTextureSet(){
 }
 
 
-void RSMapTextureSet::InitFromPAK(PakArchive* archive){
-    
-    strcpy(name,archive->GetName());
-    
-    Parse(archive);
+void RSMapTextureSet::InitFromPAK(PakArchive* archive)
+{
+	strcpy(name,archive->GetName());
+	Parse(archive);
+	printf("%d images in set\n", int(images.size()));
+	for (RSImage* img : images)
+		printf("- %d x %d\n", int(img->width), int(img->height));
 }
 
 size_t RSMapTextureSet::GetNumImages(void){
@@ -61,7 +63,7 @@ void RSMapTextureSet::Parse(PakArchive* archive){
             //That does look like a map texture !
             RSImage* image = new RSImage();
             
-            image->Create("MAP_TEXTURE",width,height);
+			image->Create("MAP_TEXTURE",width,height, IMAGE_FLAG_COPY_PALINDEX_TO_ALPHA);
             image->UpdateContent(stream.GetPosition());
             images.push_back(image);
             //printf("RSMapTextureSet img [%3zu] is %lux%lu.\n",i,image->width,image->height);

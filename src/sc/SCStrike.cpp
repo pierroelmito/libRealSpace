@@ -22,7 +22,7 @@ void SCStrike::Init(void )
 {
 	area.InitFromPAKFileName("ARENA.PAK");
 
-	camPos = { 4 * 4100, 4 * 100, 4 * 3000 };
+	camPos = { 4100, 100, 3000 };
 	angleV = 0.0f;
 	angleH = 0.0f;
 }

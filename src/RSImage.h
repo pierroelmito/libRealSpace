@@ -14,13 +14,18 @@
 class RSPalette;
 class VGAPalette;
 
+enum IMAGE_FLAG
+{
+	IMAGE_FLAG_COPY_PALINDEX_TO_ALPHA = 1,
+};
+
 class RSImage{
     
 public:
     RSImage();
     ~RSImage();
     
-    void Create(const char name[8],uint32_t width,uint32_t height);
+	void Create(const char name[8],uint32_t width,uint32_t height, uint32_t flags);
     
     void UpdateContent(uint8_t* data);
     
@@ -33,6 +38,7 @@ public:
     
 	uint8_t* GetData();
     
+	uint32_t flags;
     size_t width;
     size_t height;
     char name[512];
