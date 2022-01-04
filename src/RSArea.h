@@ -26,8 +26,9 @@ struct MapObject
 {
 	char name[9]{};
 	char destroyedName[9]{};
-	uint32_t position[3]{};
+	int32_t position[3]{};
 	RSEntity* entity{ nullptr };
+	float transform[3][3]{};
 };
 
 struct AreaBlock

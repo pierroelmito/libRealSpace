@@ -67,11 +67,11 @@ void SCStrike::RunFrame(const FrameParams& p)
 	cam.LookAt(camPos + camDir);
 #endif
 
-	const RSVector3 light = HMM_NormalizeVec3({ 1, 4, 1 });
+	const RSVector3 light = HMM_NormalizeVec3({ 2, 3, 2 });
 
 	Renderer.SetLight(light);
 	Renderer.Draw3D({}, [&] () {
-		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, 400);
+		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, 400, p.currentTime);
 		Renderer.RenderSky();
 	});
 }

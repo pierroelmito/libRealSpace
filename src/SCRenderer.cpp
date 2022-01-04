@@ -16,6 +16,8 @@
 #include "sokol_gfx.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#define TINYDDSLOADER_IMPLEMENTATION
+#include "tinyddsloader.h"
 
 #include "shaders/shaders.h"
 
@@ -28,9 +30,63 @@ int ComputeMipCount(int w, int h)
 	return m1 - m0;
 }
 
-sg_filter GetFilter(bool mipmaps)
+sg_filter GetMinFilter(bool linear, bool mipmaps)
 {
+	if (linear)
+		return mipmaps ? SG_FILTER_LINEAR_MIPMAP_LINEAR : SG_FILTER_LINEAR;
 	return mipmaps ? SG_FILTER_NEAREST_MIPMAP_NEAREST : SG_FILTER_NEAREST;
+}
+
+sg_filter GetMagFilter(bool linear)
+{
+	if (linear)
+		return SG_FILTER_LINEAR;
+	return SG_FILTER_NEAREST;
+}
+
+sg_pixel_format GetFormatFromDDS(tinyddsloader::DDSFile::DXGIFormat fmt)
+{
+	if (fmt == tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm)
+		return SG_PIXELFORMAT_BGRA8;
+	if (fmt == tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm)
+		return SG_PIXELFORMAT_BC1_RGBA;
+	return SG_PIXELFORMAT_NONE;
+}
+
+std::optional<sg_image> LoadDDS(const char* path)
+{
+	tinyddsloader::DDSFile dds;
+	tinyddsloader::Result result = dds.Load(path);
+	if (result != tinyddsloader::Result::Success)
+		return {};
+
+	sg_pixel_format fmt = GetFormatFromDDS(dds.GetFormat());
+	if (fmt == SG_PIXELFORMAT_NONE)
+		return {};
+
+	const auto mips = dds.GetMipCount();
+
+	sg_image_desc idesc{};
+
+	idesc.type = SG_IMAGETYPE_2D;
+	idesc.render_target = false;
+	idesc.width = dds.GetWidth();
+	idesc.height = dds.GetHeight();
+	idesc.pixel_format = fmt;
+	idesc.usage = SG_USAGE_IMMUTABLE;
+	idesc.mag_filter = GetMagFilter(true);
+	idesc.min_filter = GetMinFilter(true, mips > 1);
+	idesc.max_anisotropy = 4;
+	idesc.num_mipmaps = mips;
+	idesc.wrap_u = SG_WRAP_REPEAT;
+	idesc.wrap_v = SG_WRAP_REPEAT;
+
+	for (int i = 0; i < mips; ++i) {
+		const tinyddsloader::DDSFile::ImageData* data = dds.GetImageData(i);
+		idesc.data.subimage[0][i] = { data->m_mem, data->m_memSlicePitch };
+	}
+
+	return sg_make_image(&idesc);
 }
 
 template <typename T>
@@ -39,14 +95,16 @@ sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipma
 	const int mipcount = mipmaps ? ComputeMipCount(w, h) : 1;
 
 	sg_image_desc idesc{};
+
 	idesc.width = w;
 	idesc.height = h;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
-	idesc.mag_filter = GetFilter(mipmaps);
-	idesc.min_filter = GetFilter(mipmaps);
+	idesc.mag_filter = GetMagFilter(false);
+	idesc.min_filter = GetMinFilter(false, mipmaps);
 	idesc.num_mipmaps = mipcount;
 	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
+
 	return sg_make_image(&idesc);
 }
 
@@ -55,13 +113,15 @@ sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipma
 	const int mipcount = mipmaps ? ComputeMipCount(w, h) : 1;
 
 	sg_image_desc idesc{};
+
 	idesc.width = w;
 	idesc.height = h;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
-	idesc.mag_filter = GetFilter(mipmaps);
-	idesc.min_filter = GetFilter(mipmaps);
+	idesc.mag_filter = GetMagFilter(false);
+	idesc.min_filter = GetMinFilter(false, mipmaps);
 	idesc.num_mipmaps = mipcount;
+
 	return sg_make_image(&idesc);
 }
 
@@ -99,10 +159,10 @@ struct ModelRenderData
 		{
 			sg_pipeline_desc pdesc{};
 			pdesc.shader = shd;
-			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
-			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT3;
-			pdesc.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT2;
-			pdesc.layout.attrs[3].format = SG_VERTEXFORMAT_UBYTE4N;
+			pdesc.layout.attrs[ATTR_model_vs_position].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.layout.attrs[ATTR_model_vs_normal].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.layout.attrs[ATTR_model_vs_texcoord].format = SG_VERTEXFORMAT_FLOAT2;
+			pdesc.layout.attrs[ATTR_model_vs_vcolor].format = SG_VERTEXFORMAT_UBYTE4N;
 			pdesc.index_type = SG_INDEXTYPE_UINT16;
 			pdesc.depth.write_enabled = true;
 			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
@@ -148,9 +208,9 @@ struct GroundRenderData
 			pdesc.shader = shd;
 			pdesc.depth.write_enabled = true;
 			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
-			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
-			pdesc.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
-			pdesc.layout.attrs[2].format = SG_VERTEXFORMAT_UBYTE4N;
+			pdesc.layout.attrs[ATTR_ground_vs_position].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.layout.attrs[ATTR_ground_vs_texcoord].format = SG_VERTEXFORMAT_FLOAT2;
+			pdesc.layout.attrs[ATTR_ground_vs_vcolor].format = SG_VERTEXFORMAT_UBYTE4N;
 			pdesc.cull_mode = SG_CULLMODE_BACK;
 			pip = sg_make_pipeline(&pdesc);
 		}
@@ -237,11 +297,13 @@ struct FullscreenBitmapData
 		}
 
 		bind.vertex_buffers[0] = vbuf;
-		bind.fs_images[0] = img;
+		bind.fs_images[SLOT_fs_bitmap] = img;
 	}
 };
 
+sg_image noise{};
 sg_image white{};
+
 std::optional<FullscreenBitmapData> FbdRender;
 std::optional<FullscreenSky> FullscreenSky;
 std::optional<ModelRenderData> modelRender;
@@ -321,6 +383,8 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	std::vector<uint32_t> pixels = { 0xffffffffu };
 	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, pixels);
+	noise = LoadDDS("../assets/noise.dds").value_or(white);
+	//noise = white;
 
 	initialized = true;
 }
@@ -397,6 +461,7 @@ void SCRenderer::RenderSky()
 	sky_vs_params_t params;
 	memcpy(&params.view, &view, 64);
 	memcpy(&params.proj, &proj, 64);
+	memcpy(&params.plightdir, &lightDir, 12);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
 	sg_apply_bindings(&FullscreenSky->bind);
 	sg_draw(0, 6, 1);
@@ -655,6 +720,28 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 		return;
 	}
 
+	RSMatrix world = HMM_QuaternionToMat4(orientation) * HMM_Scale({ scale, scale, scale });
+	world.Elements[3][0] = pos.X;
+	world.Elements[3][1] = pos.Y;
+	world.Elements[3][2] = pos.Z;
+
+	return DrawModel(object, lodLevel, world);
+}
+
+void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix world)
+{
+	if (!initialized)
+		return;
+
+	if (object == nullptr)
+		return;
+
+	if (lodLevel >= object->lods.size()) {
+		const auto maxl = std::min(0UL, object->lods.size() - 1);
+		printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n", maxl);
+		return;
+	}
+
 	const RSVector3 lighDirection = HMM_NormalizeVec3({ 10, 30, 10 });
 
 	if (!modelRender)
@@ -664,10 +751,6 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 		PrepareModel(*this, o, lodLevel, tmp);
 	});
 
-	RSMatrix world = HMM_QuaternionToMat4(orientation) * HMM_Scale({ scale, scale, scale });
-	world.Elements[3][0] = pos.X;
-	world.Elements[3][1] = pos.Y;
-	world.Elements[3][2] = pos.Z;
 	const RSMatrix& view = camera.getView();
 	const RSMatrix& proj = camera.getProj();
 	model_vs_params_t params;
@@ -691,7 +774,7 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 			sg_bindings bind{};
 			bind.vertex_buffers[0] = msh.vbuf;
 			bind.index_buffer = msh.ibuf;
-			bind.fs_images[0] = msh.texture;
+			bind.fs_images[SLOT_model_bitmap] = msh.texture;
 			sg_apply_bindings(bind);
 			sg_draw(0, msh.pcount, 1);
 		}
@@ -881,7 +964,7 @@ void SCRenderer::RenderJets(const RSArea& area)
 		DrawModel(entity, LOD_LEVEL_MAX, entity->position, OBJECT_SCALE, entity->orientation);
 }
 
-void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock)
+void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock, double gtime)
 {
 	running = true;
 
@@ -934,6 +1017,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	memcpy(params.proj, &proj, 64);
 	memcpy(params.view, &view, 64);
 	memcpy(params.world, &world, 64);
+	params.gtime = gtime;
 	sg_apply_pipeline(groundRender->pip);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
 
@@ -996,7 +1080,8 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 		for (const auto& msh : meshes) {
 			sg_bindings bind{};
 			bind.vertex_buffers[0] = msh.vbuf;
-			bind.fs_images[0] = msh.texture;
+			bind.fs_images[SLOT_ground_bitmap] = msh.texture;
+			bind.fs_images[SLOT_water] = noise;
 			sg_apply_bindings(bind);
 			sg_draw(0, msh.pcount, 1);
 		}
@@ -1027,7 +1112,22 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			toDraw[2] = localDelta[2] + offset[2];
 
 			const RSVector3 worldPos{ toDraw[0], toDraw[1], toDraw[2] };
-			DrawModel(object.entity, LOD_LEVEL_MAX, worldPos, OBJECT_SCALE);
+
+			RSMatrix mworld = HMM_Mat4d(1);
+			mworld.Elements[0][0] = OBJECT_SCALE * object.transform[0][0];
+			mworld.Elements[0][1] = OBJECT_SCALE * object.transform[0][1];
+			mworld.Elements[0][2] = OBJECT_SCALE * object.transform[0][2];
+			mworld.Elements[1][0] = OBJECT_SCALE * object.transform[1][0];
+			mworld.Elements[1][1] = OBJECT_SCALE * object.transform[1][1];
+			mworld.Elements[1][2] = OBJECT_SCALE * object.transform[1][2];
+			mworld.Elements[2][0] = OBJECT_SCALE * object.transform[2][0];
+			mworld.Elements[2][1] = OBJECT_SCALE * object.transform[2][1];
+			mworld.Elements[2][2] = OBJECT_SCALE * object.transform[2][2];
+			mworld.Elements[3][0] = worldPos.X;
+			mworld.Elements[3][1] = worldPos.Y;
+			mworld.Elements[3][2] = worldPos.Z;
+
+			DrawModel(object.entity, LOD_LEVEL_MAX, mworld);
 		}
 	}
 

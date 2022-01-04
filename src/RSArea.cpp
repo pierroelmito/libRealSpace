@@ -235,13 +235,17 @@ void RSArea::ParseObjects()
 
 			// decoding is incorrect...
 			const auto Read32bitPos = [&reader] (const char* lbl) {
+#if 1
 				int32_t v[4]{};
 				v[0] = reader.ReadByte();
 				v[1] = reader.ReadByte();
 				v[2] = reader.ReadByte();
 				v[3] = reader.ReadByte();
-				uint32_t r = (v[3] << 8) | v[2];
+				int32_t r = (v[3] << 8) | v[2];
 				printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
+#else
+				int32_t r = reader.ReadInt32LE();
+#endif
 				return r;
 			};
 
@@ -257,8 +261,8 @@ void RSArea::ParseObjects()
 				if ((r & (1 << 23)) != 0) {
 					r = -((~(r | 0xff000000)) + 1);
 				}
-				printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
-				return r;
+				//printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
+				return float(r);
 			};
 
 			// read translate
@@ -275,12 +279,32 @@ void RSArea::ParseObjects()
 			}
 
 			// looks like a 3x3 transform matrix
-			int32_t transform[9]{};
-			for (int k = 0; k < 9; ++k) {
-				char buffer[3] = "tX";
-				buffer[1] = '0' + k;
-				transform[k] = Read32bitTransform(buffer);
+			float transform[3][3]{};
+			for (int k = 0; k < 3; ++k) {
+				for (int l = 0; l < 3; ++l) {
+					char buffer[4] = "tXY";
+					buffer[1] = '0' + k;
+					buffer[2] = '0' + l;
+					transform[k][l] = Read32bitTransform(buffer);
+				}
 			}
+#if 1
+			mapObject.transform[0][0] = transform[0][0];
+			mapObject.transform[0][1] = transform[0][2];
+			mapObject.transform[0][2] = transform[0][1];
+			mapObject.transform[1][0] = transform[2][0];
+			mapObject.transform[1][1] = transform[2][2];
+			mapObject.transform[1][2] = transform[2][1];
+			mapObject.transform[2][0] = transform[1][0];
+			mapObject.transform[2][1] = transform[1][2];
+			mapObject.transform[2][2] = transform[1][1];
+#else
+			for (int k = 0; k < 3; ++k) {
+				for (int l = 0; l < 3; ++l) {
+					mapObject.transform[k][l] = transform[k][l];
+				}
+			}
+#endif
 
 			printf("object set [%3lu] obj [%2d] - '%-8s' %02X %02X %02X %02X %02X '%-8s'",i,j,mapObject.name,
 					   unknown09,

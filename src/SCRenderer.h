@@ -35,6 +35,7 @@ public:
 	void Prepare();
 	void Init(int32_t zoom);
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos = { 0, 0, 0 }, float scale = 1.0f, const RSQuaternion& orientation = { 0, 0, 0, 1 });
+	void DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix world);
 	void CreateTextureInGPU(RSTexture* texture);
 	void UploadTextureContentToGPU(RSTexture* texture);
 	void DeleteTextureInGPU(RSTexture* texture);
@@ -59,7 +60,7 @@ public:
 	void RenderColoredTriangle (const AddVertex& vfunc, const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
 	void RenderQuad(const AddVertex& vfunc, const RSArea& area, const MapVertex* currentVertex, const MapVertex* rightVertex, const MapVertex* bottomRightVertex, const MapVertex* bottomVertex, bool renderTexture);
 	void RenderBlock(const AddVertex& vfunc, const RSArea& area,int LOD, int blockID,bool renderTexture);
-	void RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock);
+	void RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock, double gtime);
 	void RenderJets(const RSArea& area);
 	void RenderSky();
 
