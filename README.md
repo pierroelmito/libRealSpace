@@ -40,3 +40,6 @@ Eye Candies :
 ![Alt text](/pics/F-22.png)
 ![Alt text](/pics/face.png)
 
+New graphic pipeline:
+![Alt text](/pics/object_viewer_00.png)
+
