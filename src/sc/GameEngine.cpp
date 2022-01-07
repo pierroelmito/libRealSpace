@@ -14,6 +14,7 @@
 #include <GLFW/glfw3.h>
 
 #include "IActivity.h"
+#include "UserProperties.h"
 
 extern GLFWwindow* win;
 
@@ -37,6 +38,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	if (mods == GLFW_MOD_CONTROL && key == GLFW_KEY_R && action == GLFW_PRESS)
+		UserProperties::Get().Reload();
 }
 
 void GameEngine::Init()

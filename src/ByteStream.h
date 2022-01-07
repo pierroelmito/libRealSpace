@@ -89,6 +89,16 @@ public:
 		return toLittleEndian;
 	}
 
+	inline uint32_t ReadInt32BE(void)
+	{
+		uint32_t toLittleEndian = 0;
+		toLittleEndian |= *(cursor++)   << 24 ;
+		toLittleEndian |= *(cursor++)   << 16 ;
+		toLittleEndian |= *(cursor++)   <<  8 ;
+		toLittleEndian |= *(cursor++)   <<  0 ;
+		return *reinterpret_cast<int32_t*>(&toLittleEndian);
+	}
+
 private:
 	uint8_t* cursor{ nullptr };
 };

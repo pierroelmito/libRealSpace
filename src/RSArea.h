@@ -26,9 +26,20 @@ struct MapObject
 {
 	char name[9]{};
 	char destroyedName[9]{};
-	int32_t position[3]{};
+	float position[3]{};
 	RSEntity* entity{ nullptr };
 	float transform[3][3]{};
+};
+
+struct MapVertex
+{
+	RSVector3 v;
+	RSVector3 n;
+	uint8_t flag;
+	uint8_t type;
+	uint8_t lowerImageID;
+	uint8_t upperImageID;
+	float color[4];
 };
 
 struct AreaBlock

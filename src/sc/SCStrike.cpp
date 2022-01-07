@@ -61,7 +61,7 @@ void SCStrike::RunFrame(const FrameParams& p)
 	};
 	const RSVector3 strafe = HMM_Cross(camDir, { 0, 1, 0 });
 
-	camPos += -0.8f * mQuick * ((mUp + mDown) * camDir - (mLeft + mRight) * strafe);
+	camPos += -0.1f * mQuick * ((mUp + mDown) * camDir - (mLeft + mRight) * strafe);
 
 	cam.SetPosition(camPos);
 	cam.LookAt(camPos + camDir);

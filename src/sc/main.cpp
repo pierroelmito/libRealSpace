@@ -10,6 +10,7 @@
 
 #include "SCMainMenu.h"
 #include "RSFontManager.h"
+#include "UserProperties.h"
 
 //Here are all the mean subsystems interacting together
 GameEngine Game;
@@ -23,16 +24,13 @@ RSFontManager FontManager;
 
 int main(int argc, char* argv[])
 {
-	if (argc != 1) {
-		TreArchive treArchive;
-		treArchive.InitFromFile(argv[1]);
-		treArchive.List(stdout);
-	} else {
-		Assets.SetBase("./");
-		Game.Init();
-		//Add MainMenu activity on the game stack.
-		Game.MakeActivity<SCMainMenu>();
-		Game.Run();
-	}
+	UserProperties::Get().ReadFromFile("../assets/properties.def");
+
+	Assets.SetBase("./");
+	Game.Init();
+	//Add MainMenu activity on the game stack.
+	Game.MakeActivity<SCMainMenu>();
+	Game.Run();
+
 	return EXIT_SUCCESS;
 }

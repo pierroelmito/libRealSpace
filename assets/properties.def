@@ -1,0 +1,11 @@
+
+#float BlockObjOfsX 1.0
+#float BlockObjFactorX -1.0
+#float BlockObjOfsZ 1.0
+#float BlockObjFactorZ -1.0
+#float BlockObjScale 0.05
+#int BlockObjX 1
+#int BlockObjZ 0
+
+float FogThickness 0.0002
+

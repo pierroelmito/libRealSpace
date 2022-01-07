@@ -328,13 +328,15 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	const double camTime = totalTime / 2000.0;
 	const double lightTime = totalTime / 8000.0;
 
+	const BoudingBox bbox = showCases[currentObject].entity->GetBoudingBpx();
+
 	RSVector3 newPosition;
 	newPosition.X = showCase.cameraDist / 150 * cos(camTime);
 	newPosition.Y = showCase.cameraDist / 350;
 	newPosition.Z = showCase.cameraDist / 150 * sin(camTime);
 	auto& cam = Renderer.GetCamera();
 	cam.SetPosition(newPosition);
-	cam.LookAt({ 0, 0, 0 });
+	cam.LookAt({ 0, 0.2f * (bbox.min.Y + bbox.max.Y), 0 });
 
 	const RSVector3 light = HMM_NormalizeVec3({ 4.0f * cosf(lightTime), 1.0f, 4.0f * sinf(lightTime) });
 

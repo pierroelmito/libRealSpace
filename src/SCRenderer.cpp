@@ -21,6 +21,8 @@
 
 #include "shaders/shaders.h"
 
+#include "UserProperties.h"
+
 extern GLFWwindow* win;
 
 int ComputeMipCount(int w, int h)
@@ -134,6 +136,13 @@ sg_buffer MakeBuffer(sg_buffer_type bt, sg_usage usage, const std::vector<T>& da
 	vdesc.data = { &data[0], data.size() * sizeof(T) };
 	vdesc.size = vdesc.data.size;
 	return sg_make_buffer(vdesc);
+}
+
+fog_params_t GetFogParams()
+{
+	fog_params_t fog;
+	fog.thickNess = UserProperties::Get().Floats.Get("FogThickness", 0.0002);
+	return fog;
 }
 
 struct ModelRenderData
@@ -458,11 +467,22 @@ void SCRenderer::RenderSky()
 	RSMatrix proj = camera.getProj();
 
 	sg_apply_pipeline(FullscreenSky->pip);
-	sky_vs_params_t params;
-	memcpy(&params.view, &view, 64);
-	memcpy(&params.proj, &proj, 64);
-	memcpy(&params.plightdir, &lightDir, 12);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+
+	sky_vs_params_t vsParams;
+	memcpy(&vsParams.view, &view, 64);
+	memcpy(&vsParams.proj, &proj, 64);
+	memcpy(&vsParams.plightdir, &lightDir, 12);
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_sky_vs_params, { &vsParams, sizeof(vsParams) });
+
+	RSVector3 colUp{ 0, 0, 1 };
+	RSVector3 colBot{ 0, 1, 1 };
+	RSVector3 colLight{ 1, 1, 1 };
+	sky_fs_params_t fsParams;
+	memcpy(&fsParams.colUp, &colUp, 12);
+	memcpy(&fsParams.colBot, &colBot, 12);
+	memcpy(&fsParams.colLight, &colLight, 12);
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_sky_fs_params, { &fsParams, sizeof(fsParams) });
+
 	sg_apply_bindings(&FullscreenSky->bind);
 	sg_draw(0, 6, 1);
 }
@@ -760,10 +780,14 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 	memcpy(params.camPos, &camera.getPosition(), 12);
 	memcpy(params.lightDir, &lightDir, 12);
 
+	const fog_params_t fog = GetFogParams();
+
 	sg_apply_pipeline(modelRender->pip_opaque);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_params, { &params, sizeof(params) });
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
 	sg_apply_pipeline(modelRender->pip_blend);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_params, { &params, sizeof(params) });
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
 
 	for (const auto& msh : meshes) {
 		if (msh.pcount != 0) {
@@ -1014,12 +1038,17 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 	const RSMatrix& view = camera.getView();
 	const RSMatrix& proj = camera.getProj();
 	ground_vs_params_t params;
+
 	memcpy(params.proj, &proj, 64);
 	memcpy(params.view, &view, 64);
 	memcpy(params.world, &world, 64);
 	params.gtime = gtime;
+
+	const fog_params_t fog = GetFogParams();
+
 	sg_apply_pipeline(groundRender->pip);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, { &params, sizeof(params) });
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params, { &params, sizeof(params) });
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
 
 	for(int i = 0; i < BLOCKS_PER_MAP; i++) {
 		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
@@ -1087,42 +1116,56 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 		}
 	}
 
+	const float ofs0 = UserProperties::Get().Floats.Get("BlockObjOfsX", 1.0f);
+	const float ofs1 = UserProperties::Get().Floats.Get("BlockObjOfsZ", 1.0f);
+	const float factorX = UserProperties::Get().Floats.Get("BlockObjFactorX", -1.0f);
+	const float factorZ = UserProperties::Get().Floats.Get("BlockObjFactorZ", -1.0f);
+	const float objScale = UserProperties::Get().Floats.Get("BlockObjScale", OBJECT_SCALE);
+	const int axisX = UserProperties::Get().Ints.Get("BlockObjX", 1);
+	const int axisZ = UserProperties::Get().Ints.Get("BlockObjZ", 0);
+
 	//Render objects on the map
 	//for(int i=97 ; i < 98 ; i++)
 	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
 		const std::vector<MapObject>& objects = area.objects[id];
+
+		const float bx = float(id % 18) + ofs0;
+		const float by = float(id / 18) + ofs1;
+
+		const float offset[3] = {
+			bx * BLOCK_WIDTH,
+			//area.elevation[id] / (2 * (float)HEIGHT_DIVIDER),
+			2.0f * area.elevation[id] / (float)(1 << 8),
+			by * BLOCK_WIDTH,
+		};
+
 		for (const MapObject& object : objects)
 		{
-			const float bx = float(id % 18);
-			const float by = float(id / 18);
+			//const float factorXZ = BLOCK_WIDTH;
+			const float localDelta[3] = {
+				object.position[axisX] * factorX,
+				0.5f * object.position[2] / (float)HEIGHT_DIVIDER,
+				object.position[axisZ] * factorZ,
+			};
 
-			float offset[3];
-			offset[0] = bx * BLOCK_WIDTH;
-			offset[1] = 0; //area.elevation[id];
-			offset[2] = by * BLOCK_WIDTH;
-
-			float localDelta[3];
-			localDelta[0] = object.position[0] / 65355.0f * BLOCK_WIDTH;
-			localDelta[1] = object.position[1] / (float)HEIGHT_DIVIDER;
-			localDelta[2] = object.position[2] / 65355.0f * BLOCK_WIDTH;
-
-			float toDraw[3];
-			toDraw[0] = localDelta[0] + offset[0];
-			toDraw[1] = localDelta[1] + offset[1];
-			toDraw[2] = localDelta[2] + offset[2];
+			const float toDraw[3] = {
+				localDelta[0] + offset[0],
+				localDelta[1] + offset[1],
+				localDelta[2] + offset[2],
+			};
 
 			const RSVector3 worldPos{ toDraw[0], toDraw[1], toDraw[2] };
 
 			RSMatrix mworld = HMM_Mat4d(1);
-			mworld.Elements[0][0] = OBJECT_SCALE * object.transform[0][0];
-			mworld.Elements[0][1] = OBJECT_SCALE * object.transform[0][1];
-			mworld.Elements[0][2] = OBJECT_SCALE * object.transform[0][2];
-			mworld.Elements[1][0] = OBJECT_SCALE * object.transform[1][0];
-			mworld.Elements[1][1] = OBJECT_SCALE * object.transform[1][1];
-			mworld.Elements[1][2] = OBJECT_SCALE * object.transform[1][2];
-			mworld.Elements[2][0] = OBJECT_SCALE * object.transform[2][0];
-			mworld.Elements[2][1] = OBJECT_SCALE * object.transform[2][1];
-			mworld.Elements[2][2] = OBJECT_SCALE * object.transform[2][2];
+			mworld.Elements[0][0] = objScale * object.transform[0][0];
+			mworld.Elements[0][1] = objScale * object.transform[0][1];
+			mworld.Elements[0][2] = objScale * object.transform[0][2];
+			mworld.Elements[1][0] = objScale * object.transform[1][0];
+			mworld.Elements[1][1] = objScale * object.transform[1][1];
+			mworld.Elements[1][2] = objScale * object.transform[1][2];
+			mworld.Elements[2][0] = objScale * object.transform[2][0];
+			mworld.Elements[2][1] = objScale * object.transform[2][1];
+			mworld.Elements[2][2] = objScale * object.transform[2][2];
 			mworld.Elements[3][0] = worldPos.X;
 			mworld.Elements[3][1] = worldPos.Y;
 			mworld.Elements[3][2] = worldPos.Z;

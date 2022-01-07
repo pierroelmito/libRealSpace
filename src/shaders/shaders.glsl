@@ -2,10 +2,13 @@
 // common
 
 @block fog
+uniform fog_params {
+	float thickNess;
+};
 vec4 computeFog(vec4 v, float depth)
 {
 	vec3 fogColor = vec3(1, 1, 1);
-	float intensity = exp(0.0002 * depth);
+	float intensity = exp(thickNess * depth);
 	return vec4(mix(fogColor, v.rgb, intensity * intensity), v.a);
 }
 @end
@@ -55,17 +58,20 @@ void main() {
 @end
 
 @fs sky_fs
+uniform sky_fs_params {
+	vec3 colUp;
+	vec3 colBot;
+	vec3 colLight;
+};
 in vec3 eyedir;
 in vec3 lightdir;
 out vec4 frag_color;
 void main() {
 	vec3 e = normalize(eyedir);
-	vec3 colUp = vec3(0, 0, 0);
-	vec3 colBot = vec3(0, 0, 1);
-	vec3 colLight = vec3(0, 1, 1);
 	float edotl = 0.5 * (1 + dot(-lightdir, e));
 	edotl = edotl * edotl * edotl * edotl * edotl * edotl;
-	float h = 0.5 * (1 - e.y);
+	//float h = 0.5 * (1 - e.y);
+	float h = abs(e.y);
 	vec3 hcolor = mix(colBot, colUp, h);
 	frag_color = vec4(mix(hcolor, colLight, edotl), 1);
 }
@@ -194,7 +200,7 @@ void main() {
 		frag_color = computeFog(tc * vec4(color.rgb + 0.5 * gc.rgb, 1), depth);
 	} else if (idx == 0xA) {
 		// water!!
-		float ws = 0.9 * computeWater(worldpos, 0.1 * uv.z, 1.0) + 0.6 * computeWater(worldpos, 0.04 * uv.z, 5.0);
+		float ws = 0.9 * computeWater(worldpos, 0.3 * uv.z, 1.0) + 0.6 * computeWater(worldpos, 0.1 * uv.z, 5.0);
 		vec3 wcolor1 = color.rgb * 1.2f;
 		vec3 wcolor0 = color.rgb * 0.8f;
 		frag_color = computeFog(tc * vec4(mix(wcolor0, wcolor1, 10 * ws), 1), depth);

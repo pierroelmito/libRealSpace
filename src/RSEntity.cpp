@@ -210,7 +210,7 @@ void RSEntity::CalcBoundingBox(void)
 	this->bb.max.Z = FLT_MIN;
 
 	for(size_t i =0; i < this->vertices.size() ; i++) {
-		RSVector3 vertex = vertices[i];
+		const RSVector3& vertex = vertices[i];
 
 		if (bb.min.X > vertex.X)
 			bb.min.X = vertex.X;

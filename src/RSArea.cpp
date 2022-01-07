@@ -176,24 +176,20 @@ void RSArea::ParseMetadata()
 void RSArea::ParseObjects()
 {
 	printf("Parsing file[5] (Objects)\n");
+
 	/*
-		 The OBJ file seems to have a pattern:
-
+	 The OBJ file seems to have a pattern:
 	 It is a PAK archive
-
 	 For each entry in the PAK
-
 		short: num records
-		   X records of length 0x46
-
-			   Record format :
-			   7 bytes for name
-			   1 bytes unknown (sometimes 0x00 sometimes 0xC3
-			   4 bytes unknown
-			   12 bytes for coordinates ?
-
-
+			X records of length 0x46
+			Record format :
+				7 bytes for name
+				1 bytes unknown (sometimes 0x00 sometimes 0xC3
+				4 bytes unknown
+				12 bytes for coordinates ?
 	*/
+
 	const PakEntry& objectsFilesLocation = archive->GetEntry(5);
 
 	PakArchive objectFiles;
@@ -215,7 +211,7 @@ void RSArea::ParseObjects()
 		//    continue;
 
 		for(int j = 0 ; j < numObjs; j++) {
-			ByteStream reader(entry.data+OBJ_ENTRY_NUM_OBJECTS_FIELD+OBJ_ENTRY_SIZE*j);
+			ByteStream reader(entry.data + OBJ_ENTRY_NUM_OBJECTS_FIELD + OBJ_ENTRY_SIZE * j);
 
 			MapObject mapObject;
 
@@ -223,11 +219,11 @@ void RSArea::ParseObjects()
 				mapObject.name[k] = reader.ReadByte();
 			mapObject.name[8] = 0;
 
-			uint8_t unknown09 = reader.ReadByte();
-			uint8_t unknown10 = reader.ReadByte();
-			uint8_t unknown11 = reader.ReadByte();
-			uint8_t unknown12 = reader.ReadByte();
-			uint8_t unknown13 = reader.ReadByte();
+			const uint8_t unknown09 = reader.ReadByte();
+			const uint8_t unknown10 = reader.ReadByte();
+			const uint8_t unknown11 = reader.ReadByte();
+			const uint8_t unknown12 = reader.ReadByte();
+			const uint8_t unknown13 = reader.ReadByte();
 
 			for(int k=0 ; k <8 ; k++)
 				mapObject.destroyedName[k] = reader.ReadByte();
@@ -241,12 +237,14 @@ void RSArea::ParseObjects()
 				v[1] = reader.ReadByte();
 				v[2] = reader.ReadByte();
 				v[3] = reader.ReadByte();
-				int32_t r = (v[3] << 8) | v[2];
+				int32_t r = (v[2] << 8) | (v[3] << 0);
 				printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
+				return float(r) / float(1 << 8);
 #else
-				int32_t r = reader.ReadInt32LE();
+				int32_t r = reader.ReadInt32BE();
+				float f = r / float(1 << 16);
+				return f;
 #endif
-				return r;
 			};
 
 			// work for 0, 1, -1 but is probably wrong for other values :-/
@@ -266,11 +264,14 @@ void RSArea::ParseObjects()
 			};
 
 			// read translate
-			mapObject.position[0] = Read32bitPos("x");
-			mapObject.position[2] = Read32bitPos("z");
-			mapObject.position[1] = Read32bitPos("y");
+			const auto p0 = Read32bitPos("p0");
+			const auto p1 = Read32bitPos("p1");
+			const auto p2 = Read32bitPos("p2");
+			mapObject.position[0] = p1;
+			mapObject.position[1] = p2;
+			mapObject.position[2] = p0;
 
-			// ??
+			// zero separator??
 			const int count = 1;
 			uint8_t unknowns[count];
 			for(int k=0 ; k <count; k++) {
@@ -288,7 +289,9 @@ void RSArea::ParseObjects()
 					transform[k][l] = Read32bitTransform(buffer);
 				}
 			}
+
 #if 1
+			// swap axis
 			mapObject.transform[0][0] = transform[0][0];
 			mapObject.transform[0][1] = transform[0][2];
 			mapObject.transform[0][2] = transform[0][1];
@@ -306,22 +309,18 @@ void RSArea::ParseObjects()
 			}
 #endif
 
-			printf("object set [%3lu] obj [%2d] - '%-8s' %02X %02X %02X %02X %02X '%-8s'",i,j,mapObject.name,
-					   unknown09,
-					   unknown10,
-					   unknown11,
-					   unknown12,
-					   unknown13,mapObject.destroyedName);
-
-			for(int k=0 ; k <count; k++) {
-				if (k % 4 == 0)
-					printf(" ");
-				if (k % 12 == 0)
-					printf("\n");
-				printf("%02X ",unknowns[k]);
-			}
-
-			printf("\n");
+			printf(
+				"object set [%3lu] obj [%2d] - '%-8s' %02X %02X %02X %02X %02X '%-8s'\n",
+				i,
+				j,
+				mapObject.name,
+				unknown09,
+				unknown10,
+				unknown11,
+				unknown12,
+				unknown13,
+				mapObject.destroyedName
+			);
 
 			objects[i].push_back(mapObject);
 		}
@@ -498,6 +497,9 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			vertex->v.Y = (float)height / (float)HEIGHT_DIVIDER; //-vertex->text * 10;//height ;
 			vertex->v.Z = i / 18 * BLOCK_WIDTH + ry * BLOCK_WIDTH ;
 
+			// need to compute normals
+			vertex->n = { 0, -1, 0 };
+
 			vertex->color[0] = t->r/255.0f;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[1] = t->g/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[2] = t->b/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
@@ -511,7 +513,7 @@ void RSArea::ParseElevations()
 	const PakEntry& entry = archive->GetEntry(6);
 	ByteStream stream(entry.data);
 	for (size_t i = 0 ; i < BLOCKS_PER_MAP; i++) {
-		elevation[i]=stream.ReadUShort() ;
+		elevation[i] = stream.ReadUShort() ;
 	}
 }
 
@@ -568,15 +570,15 @@ void RSArea::AddJets()
 	TreArchive tre;
 	tre.InitFromFile("OBJECTS.TRE");
 
-	const float angle = 15.0f;
+	const float angle = 25.0f;
 	const float mul = 1.0f;
 
 	RSQuaternion rot0 = HMM_Mat4ToQuaternion(HMM_Rotate(angle, { 1, 0, 0 }));
-	RSVector3 pos0 = { mul * 4066, mul * 95, mul * 2980};
+	RSVector3 pos0 = { mul * 4016, mul * 95, mul * 2980};
 	AddJet(&tre, TRE_DATA_OBJECTS "F-16DES.IFF", &rot0, &pos0);
 
 	RSQuaternion rot1 = HMM_Mat4ToQuaternion(HMM_Rotate(-angle, { 1, 0, 0 }));
-	RSVector3 pos1 = { mul * 4010, mul * 100, mul * 2990};
+	RSVector3 pos1 = { mul * 4010, mul * 95, mul * 2980};
 	AddJet(&tre, TRE_DATA_OBJECTS "F-22.IFF", &rot1, &pos1);
 
 	//pos = {3886,300,2886};

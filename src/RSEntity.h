@@ -28,16 +28,6 @@ enum LOD_LEVEL {
 	LOD_LEVEL_MIN,
 };
 
-struct MapVertex
-{
-	RSVector3 v;
-	uint8_t flag;
-	uint8_t type;
-	uint8_t lowerImageID;
-	uint8_t upperImageID;
-	float color[4];
-};
-
 struct BoudingBox
 {
 	RSVector3 min;
