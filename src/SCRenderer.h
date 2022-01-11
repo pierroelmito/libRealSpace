@@ -36,8 +36,8 @@ public:
 	void Init(int32_t zoom);
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos = { 0, 0, 0 }, float scale = 1.0f, const RSQuaternion& orientation = { 0, 0, 0, 1 });
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix world);
-	void CreateTextureInGPU(RSTexture* texture);
-	void UploadTextureContentToGPU(RSTexture* texture);
+	bool CreateTextureInGPU(RSTexture* texture);
+	bool UploadTextureContentToGPU(RSTexture* texture);
 	void DeleteTextureInGPU(RSTexture* texture);
 
 	static void UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height);
@@ -53,7 +53,7 @@ public:
 	void DisplayModel(RSEntity* object,size_t lodLevel);
 #endif
 
-	using AddVertex = std::function<void(uint32_t, const RSVector3&, const float*, const float*)>;
+	using AddVertex = std::function<void(uint32_t, const RSVector3&, const RSVector3&, const float*, const float*)>;
 
 	bool IsTextured(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
 	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area,const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2,int triangleType);

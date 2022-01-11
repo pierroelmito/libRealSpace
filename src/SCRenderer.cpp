@@ -115,39 +115,45 @@ std::optional<sg_image> LoadDDS(const char* path)
 	return sg_make_image(&idesc);
 }
 
-template <typename T>
-sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps, bool linear, const std::vector<T>& data = {})
+enum ImageFlags
 {
+	IFMipMaps = 1,
+	IFLinear = 2,
+	IFRenderTarget = 4,
+};
+
+sg_image_desc MakeImageDesc(int w, int h, sg_pixel_format fmt, sg_usage usage, uint32_t flags)
+{
+	const bool mipmaps = (flags & IFMipMaps) != 0;
+	const bool linear = (flags & IFLinear) != 0;
+	const bool rt = (flags & IFRenderTarget) != 0;
 	const int mipcount = mipmaps ? ComputeMipCount(w, h) : 1;
 
 	sg_image_desc idesc{};
 
 	idesc.width = w;
 	idesc.height = h;
+	idesc.render_target = rt;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
 	idesc.mag_filter = GetMagFilter(linear);
 	idesc.min_filter = GetMinFilter(linear, mipmaps);
 	idesc.num_mipmaps = mipcount;
-	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
 
+	return idesc;
+}
+
+template <typename T>
+sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, uint32_t flags, const std::vector<T>& data)
+{
+	sg_image_desc idesc = MakeImageDesc(w, h, fmt, usage, flags);
+	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
 	return sg_make_image(&idesc);
 }
 
-sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps)
+sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, uint32_t flags)
 {
-	const int mipcount = mipmaps ? ComputeMipCount(w, h) : 1;
-
-	sg_image_desc idesc{};
-
-	idesc.width = w;
-	idesc.height = h;
-	idesc.pixel_format = fmt;
-	idesc.usage = usage;
-	idesc.mag_filter = GetMagFilter(false);
-	idesc.min_filter = GetMinFilter(false, mipmaps);
-	idesc.num_mipmaps = mipcount;
-
+	sg_image_desc idesc = MakeImageDesc(w, h, fmt, usage, flags);
 	return sg_make_image(&idesc);
 }
 
@@ -179,7 +185,7 @@ sg_image MakeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(co
 		}
 	}
 
-	return MakeImage(w, h, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, true, data);
+	return MakeImage(w, h, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, IFLinear, data);
 }
 
 fog_params_t GetFogParams()
@@ -263,6 +269,7 @@ struct GroundRenderData
 			pdesc.depth.write_enabled = true;
 			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
 			pdesc.layout.attrs[ATTR_ground_vs_position].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.layout.attrs[ATTR_ground_vs_normal].format = SG_VERTEXFORMAT_FLOAT3;
 			pdesc.layout.attrs[ATTR_ground_vs_texcoord].format = SG_VERTEXFORMAT_FLOAT2;
 			pdesc.layout.attrs[ATTR_ground_vs_vcolor].format = SG_VERTEXFORMAT_UBYTE4N;
 			pdesc.cull_mode = SG_CULLMODE_BACK;
@@ -341,7 +348,7 @@ struct FullscreenBitmapData
 			vbuf = sg_make_buffer(&bdesc);
 		}
 
-		img = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, false);
+		img = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, 0);
 
 		{
 			sg_pipeline_desc pdesc{};
@@ -512,7 +519,7 @@ void SCRenderer::Init(int32_t zoomFactor)
 	lightDir = HMM_NormalizeVec3({ 1, 1, 1 });
 
 	std::vector<uint32_t> pixels = { 0xffffffffu };
-	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, true, pixels);
+	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, 0, pixels);
 	noise = LoadDDS("../assets/noise.dds").value_or(white);
 
 	std::array<hmm_vec2, 7> seeds;
@@ -555,28 +562,30 @@ void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
 	sg_end_pass();
 }
 
-void SCRenderer::CreateTextureInGPU(RSTexture* texture)
+bool SCRenderer::CreateTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
-		return;
+		return false;
 
-	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, false);
+	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, 0);
 	texture->id = img.id;
+
+	return true;
 }
 
-void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
+bool SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 {
 	if (!initialized)
-		return;
-
-	const int mips = ComputeMipCount(texture->width, texture->height);
+		return false;
 
 	sg_image_data data;
 	std::vector<std::vector<uint32_t>> mipmapData;
-	mipmapData.resize(mips);
 
 	data.subimage[0][0] = { texture->data, texture->width * texture->height * 4 };
+
 	/*
+	mipmapData.resize(mips);
+	const int mips = ComputeMipCount(texture->width, texture->height);
 	for (int i = 1; i < mips; ++i)
 	{
 		const size_t nw = std::max<size_t>(1, texture->width >> i);
@@ -587,12 +596,15 @@ void SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 	*/
 
 	sg_update_image({ texture->id }, data);
+
+	return true;
 }
 
 void SCRenderer::DeleteTextureInGPU(RSTexture* texture)
 {
 	if (!initialized)
 		return;
+
 	sg_destroy_image({ texture->id });
 }
 
@@ -1010,9 +1022,9 @@ void SCRenderer::RenderTexturedTriangle(
 	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
 
 	const uint32_t texId = image->GetTexture()->GetTextureID();
-	vfunc(texId, tri0->v, white, ttc[triangleType][0]);
-	vfunc(texId, tri1->v, white, ttc[triangleType][1]);
-	vfunc(texId, tri2->v, white, ttc[triangleType][2]);
+	vfunc(texId, tri0->v, tri0->n, white, ttc[triangleType][0]);
+	vfunc(texId, tri1->v, tri1->n, white, ttc[triangleType][1]);
+	vfunc(texId, tri2->v, tri2->n, white, ttc[triangleType][2]);
 }
 
 void SCRenderer::RenderColoredTriangle(
@@ -1034,13 +1046,13 @@ void SCRenderer::RenderColoredTriangle(
 				tri = tri0;
 			else
 				tri = tri2;
-		vfunc(PASS_VCOLOR, tri0->v, tri->color, noUv);
-		vfunc(PASS_VCOLOR, tri1->v, tri->color, noUv);
-		vfunc(PASS_VCOLOR, tri2->v, tri->color, noUv);
+		vfunc(PASS_VCOLOR, tri0->v, tri0->n, tri->color, noUv);
+		vfunc(PASS_VCOLOR, tri1->v, tri1->n, tri->color, noUv);
+		vfunc(PASS_VCOLOR, tri2->v, tri2->n, tri->color, noUv);
 	} else{
-		vfunc(PASS_VCOLOR, tri0->v, tri0->color, noUv);
-		vfunc(PASS_VCOLOR, tri1->v, tri1->color, noUv);
-		vfunc(PASS_VCOLOR, tri2->v, tri2->color, noUv);
+		vfunc(PASS_VCOLOR, tri0->v, tri0->n, tri0->color, noUv);
+		vfunc(PASS_VCOLOR, tri1->v, tri1->n, tri1->color, noUv);
+		vfunc(PASS_VCOLOR, tri2->v, tri2->n, tri2->color, noUv);
 	}
 }
 
@@ -1185,9 +1197,8 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 
 	const fog_params_t fog = GetFogParams();
 
-	sg_apply_pipeline(GroundRender->pip);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params, { &params, sizeof(params) });
-	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
+	static std::vector<GroundRenderData::MeshItem> groundMeshes;
+	groundMeshes.resize(0);
 
 	for(int i = 0; i < BLOCKS_PER_MAP; i++) {
 		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
@@ -1204,12 +1215,13 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			struct AreaVertex
 			{
 				RSVector3 pos;
+				RSVector3 normal;
 				hmm_vec2 uv;
 				std::array<uint8_t, 4> col;
 			};
 			using BlockCache = std::map<uint32_t, std::vector<AreaVertex>>;
 			BlockCache tmp;
-			AddVertex vadd = [&] (uint32_t texId, const RSVector3& pos, const float* col, const float* uv) {
+			AddVertex vadd = [&] (uint32_t texId, const RSVector3& pos, const RSVector3& n, const float* col, const float* uv) {
 				//uint32_t& idx = pointToIndex[pos];
 				//if (idx == 0)
 				//	idx = pointToIndex.size();
@@ -1221,7 +1233,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 				const bool useVertex = true;
 				auto toByte = [] (float v) { return uint8_t(v * 255.99f); };
 				if (useVertex)
-					vert.push_back({ pos, { uv[0], uv[1] }, { toByte(r), toByte(g), toByte(b), toByte(col[3]) } });
+					vert.push_back({ pos, n, { uv[0], uv[1] }, { toByte(r), toByte(g), toByte(b), toByte(col[3]) } });
 			};
 			RenderBlock(vadd, area, LOD, i, false);
 			RenderBlock(vadd, area, LOD, i, true);
@@ -1245,11 +1257,25 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 			}
 		});
 
-		for (const auto& msh : meshes) {
-			sg_bindings bind{};
+		for (const auto& msh : meshes)
+			groundMeshes.push_back(msh);
+	}
+
+	std::sort(groundMeshes.begin(), groundMeshes.end(), [] (const GroundRenderData::MeshItem& a, const GroundRenderData::MeshItem& b) {
+		if (a.texture.id != b.texture.id)
+			return a.texture.id < b.texture.id;
+		return false;
+	});
+
+	{
+		sg_apply_pipeline(GroundRender->pip);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params, { &params, sizeof(params) });
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
+		sg_bindings bind{};
+		bind.fs_images[SLOT_water] = noise;
+		for (const auto& msh : groundMeshes) {
 			bind.vertex_buffers[0] = msh.vbuf;
 			bind.fs_images[SLOT_ground_bitmap] = msh.texture;
-			bind.fs_images[SLOT_water] = noise;
 			sg_apply_bindings(bind);
 			sg_draw(0, msh.pcount, 1);
 		}

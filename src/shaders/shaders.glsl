@@ -153,14 +153,17 @@ uniform ground_vs_params {
 	float gtime;
 };
 layout(location=0) in vec4 position;
-layout(location=1) in vec4 texcoord;
-layout(location=2) in vec4 vcolor;
+layout(location=1) in vec4 normal;
+layout(location=2) in vec4 texcoord;
+layout(location=3) in vec4 vcolor;
 out vec4 color;
 out vec3 worldpos;
+out vec3 n;
 out vec3 uv;
 out float depth;
 void main() {
 	color = vcolor;
+	n = normalize((world * vec4(normal.xyz, 0)).xyz);
 	uv = vec3(texcoord.xy, gtime);
 	vec4 tmp = (view * world) * position;
 	depth = tmp.z / tmp.w;
@@ -176,6 +179,7 @@ uniform sampler2D ground_bitmap;
 uniform sampler2D water;
 in vec4 color;
 in vec3 worldpos;
+in vec3 n;
 in vec3 uv;
 in float depth;
 out vec4 frag_color;
@@ -195,6 +199,9 @@ void main() {
 	vec4 tc = texture(ground_bitmap, uv.xy);
 	if (tc.a == 0.0)
 		discard;
+	vec3 normal = normalize(n);
+	float ndotl = dot(normalize(vec3(3, 5, 3)), -normal);
+	float diffuse = max(ndotl, 0.5);
 	//int idx = int(color.a * tc.a * 255.0);
 	int idx = int(color.a * 255.0);
 	if (idx == 0x7) {
@@ -219,6 +226,7 @@ void main() {
 	} else {
 		frag_color = computeFog(tc * vec4(color.rgb, 1), depth);
 	}
+	frag_color.xyz = diffuse * frag_color.xyz;
 }
 @end
 

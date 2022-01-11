@@ -45,7 +45,7 @@ void RSImage::UpdateContent(uint8_t* src){
 void RSImage::SyncTexture()
 {
 	//Check that we have a texture with an id on the GPU
-	if ((texture.locFlag & RSTexture::VRAM) != RSTexture::VRAM){
+	if ((texture.locFlag & RSTexture::VRAM) == 0){
 		//Create texture in the GPU
 		Renderer.CreateTextureInGPU(&texture);
 		texture.locFlag |= RSTexture::VRAM;

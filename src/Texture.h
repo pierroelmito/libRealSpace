@@ -84,7 +84,8 @@ public:
 	uint8_t locFlag;
 
 	//GPU stuff
-	uint32_t id{ 0 };
+	static constexpr uint32_t InvalidID = ~0u;
+	uint32_t id{ InvalidID };
 	uint32_t GetTextureID(void) { return id; }
 
 	void UpdateContent(RSImage* image);

@@ -404,10 +404,38 @@ enum LAND_TYPE {
 //A block features either 25, 100 or 400 vertex
 void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 {
+	const auto typeToPal = [] (uint8_t t) -> uint8_t {
+		// Hardcoding the values since I have no idea where those
+		// are coming from. Maybe it was hard-coded in STRIKE.EXE ?
+		switch (t) {
+			case LAND_TYPE_SEA:
+				return 0xA;
+			case LAND_TYPE_DESERT:
+				return 0x3;
+			case LAND_TYPE_GROUND:
+				return 0x7;
+			case LAND_TYPE_SAVANNAH:
+				return 0x5;
+			case LAND_TYPE_TAIGA:
+				return 0x9;
+			case LAND_TYPE_TUNDRA:
+				return 0x1;
+			case LAND_TYPE_SNOW:
+				return 0xC;
+			default:
+				printf("No color for type %d\n", t);
+		}
+		return 0;
+	};
+
 	PakArchive blocksPAL;
 	blocksPAL.InitFromRAM("BLOCKS", *entry);
 
-	for (size_t i=0; i < blocksPAL.GetNumEntries(); i++) { // Iterate over the BLOCKS_PER_MAP block entries.
+	const int bcount = BLOCK_PER_MAP_SIDE;
+	for (size_t i = 0; i < blocksPAL.GetNumEntries(); i++) { // Iterate over the BLOCKS_PER_MAP block entries.
+		const int bx = i % bcount;
+		const int by = i / bcount;
+
 		//SRC Asset Block
 		const PakEntry& blockEntry = blocksPAL.GetEntry(i);
 
@@ -417,7 +445,10 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 		block->sideSize = static_cast<int32_t>(blockDim);
 
 		ByteStream vertStream(blockEntry.data);
-		for(size_t vertexID=0 ; vertexID < blockDim*blockDim ; vertexID++) {
+		for(size_t vertexID = 0; vertexID < blockDim*blockDim; vertexID++) {
+			const int vx = vertexID % blockDim;
+			const int vy = vertexID / blockDim;
+
 			MapVertex* vertex = &block->vertice[vertexID];
 
 			const int16_t height = vertStream.ReadShort();
@@ -425,45 +456,16 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			vertex->flag = vertStream.ReadByte();
 			vertex->type = vertStream.ReadByte();
 
-			uint8_t paletteColor =0;
+			const uint8_t paletteColor = typeToPal(vertex->type);
 
-			// Hardcoding the values since I have no idea where those
-			// are coming from. Maybe it was hard-coded in STRIKE.EXE ?
-			switch (vertex->type) {
-				case LAND_TYPE_SEA:
-					paletteColor = 0xA;
-				break;
-				case LAND_TYPE_DESERT:
-					paletteColor = 0x3;
-				break;
-				case LAND_TYPE_GROUND:
-					paletteColor = 0x7;
-					break;
-				case LAND_TYPE_SAVANNAH:
-					paletteColor = 0x5;
-					break;
-				case LAND_TYPE_TAIGA:
-					paletteColor = 0x9;
-					break;
-				case LAND_TYPE_TUNDRA:
-					 paletteColor = 0x1;
-					break;
-				case LAND_TYPE_SNOW:
-					paletteColor = 0xC;
-					break;
-				default:
-					printf("No color for type %d\n",vertex->type);
-			}
-
-			uint8_t shade =  (vertex->flag & 0x0F)  ;
+			uint8_t shade = (vertex->flag & 0x0F);
 			shade = shade >> 1;
-
 			/*
 			if (shade & 1)
 				shade = 0;
 			*/
 
-			int16_t unknown = (vertex->flag & 0xF0)  ;
+			int16_t unknown = (vertex->flag & 0xF0);
 			unknown = unknown >> 8;
 
 			vertex->upperImageID    = vertStream.ReadByte();
@@ -479,7 +481,7 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			}
 			*/
 
-			Texel* t = Renderer.GetPalette().GetRGBColor(paletteColor*16+shade);
+			Texel* t = Renderer.GetPalette().GetRGBColor(paletteColor * 16 + shade);
 
 			//Texel* t = renderer.GetDefaultPalette()->GetRGBColor(vertex->text);
 			/*
@@ -490,12 +492,14 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 					- text
 			*/
 
-			const float rx = (vertexID % blockDim) / (float)(blockDim);
-			const float ry = (vertexID / blockDim) / (float)(blockDim);
+			const float offset = 0.0f;
+			const float rx = offset + (1.0f - 2.0f * offset) * float(vx) / (float)(blockDim);
+			const float ry = offset + (1.0f - 2.0f * offset) * float(vy) / (float)(blockDim);
+			const float bsz = BLOCK_WIDTH;
 
-			vertex->v.X = i % 18 * BLOCK_WIDTH + rx  * BLOCK_WIDTH ;
+			vertex->v.X = (bx + rx)* bsz;
 			vertex->v.Y = (float)height / (float)HEIGHT_DIVIDER; //-vertex->text * 10;//height ;
-			vertex->v.Z = i / 18 * BLOCK_WIDTH + ry * BLOCK_WIDTH ;
+			vertex->v.Z = (by + ry) * bsz;
 
 			// need to compute normals
 			vertex->n = { 0, -1, 0 };
@@ -504,6 +508,32 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			vertex->color[1] = t->g/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[2] = t->b/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[3] = paletteColor / 255.0f;
+		}
+	}
+
+	// compute normal
+	for (size_t i = 0; i < blocksPAL.GetNumEntries(); i++) {
+		const int bx = i % bcount;
+		const int by = i / bcount;
+
+		AreaBlock* const block00 = &blocks[lod][i];
+		AreaBlock* const block10 = bx < bcount - 1 ? &blocks[lod][i + 1] : block00;
+		AreaBlock* const block01 = by < bcount - 1 ? &blocks[lod][i + bcount] : block00;
+		AreaBlock* const block11 = bx < bcount - 1 && by < bcount - 1 ? &blocks[lod][i + bcount + 1] : block00;
+
+		for(size_t vertexID = 0; vertexID < blockDim * blockDim; vertexID++) {
+			const int vx = vertexID % blockDim;
+			const int vy = vertexID / blockDim;
+
+			MapVertex* const vertex00 = &block00->vertice[vertexID];
+			MapVertex* const vertex10 = vx < blockDim - 1 ? &block00->vertice[vertexID + 1] : &block10->vertice[vy * blockDim];
+			MapVertex* const vertex01 = vy < blockDim - 1 ? &block00->vertice[vertexID + blockDim] : &block01->vertice[vx];
+			MapVertex* const vertex11 = vx < blockDim - 1 && vy < blockDim - 1 ? &block00->vertice[vertexID + blockDim + 1] : &block11->vertice[0];
+
+			const RSVector3 v0 = vertex11->v - vertex00->v;
+			const RSVector3 v1 = vertex01->v - vertex10->v;
+
+			vertex00->n = HMM_Normalize(HMM_Cross(v0, v1));
 		}
 	}
 }

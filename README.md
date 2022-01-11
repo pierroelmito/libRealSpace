@@ -48,4 +48,5 @@ New graphic pipeline :
 
 ![Alt text](/pics/object_viewer_00.png)
 ![Alt text](/pics/sea_and_sky_00.png)
+![Alt text](/pics/chase_00.png)
 

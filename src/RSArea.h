@@ -18,7 +18,7 @@ class PakArchive;
 //DIRTY HACK !!! DELETE ME ASAP
 //#define HEIGHT_DIVIDER 17
 //#define BLOCK_WIDTH 512
-#define HEIGHT_DIVIDER 32
+#define HEIGHT_DIVIDER 64
 #define BLOCK_WIDTH 512
 #define OBJECT_SCALE 0.05f
 

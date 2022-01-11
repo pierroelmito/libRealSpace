@@ -63,7 +63,7 @@ void RSMapTextureSet::Parse(PakArchive* archive){
             //That does look like a map texture !
             RSImage* image = new RSImage();
             
-			image->Create("MAP_TEXTURE",width,height, IMAGE_FLAG_COPY_PALINDEX_TO_ALPHA);
+			image->Create("MAP_TEXTURE",width,height, 0 /*IMAGE_FLAG_COPY_PALINDEX_TO_ALPHA*/);
             image->UpdateContent(stream.GetPosition());
             images.push_back(image);
             //printf("RSMapTextureSet img [%3zu] is %lux%lu.\n",i,image->width,image->height);
