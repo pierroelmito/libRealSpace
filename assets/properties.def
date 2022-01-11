@@ -7,5 +7,5 @@
 #int BlockObjX 1
 #int BlockObjZ 0
 
-float FogThickness 0.0002
+float FogThickness 0.0001
 

@@ -1,13 +1,17 @@
 
+@ctype vec4 hmm_vec4
+@ctype vec3 hmm_vec3
+@ctype vec2 hmm_vec2
+
 // common
 
 @block fog
 uniform fog_params {
+	vec3 fogColor;
 	float thickNess;
 };
 vec4 computeFog(vec4 v, float depth)
 {
-	vec3 fogColor = vec3(1, 1, 1);
 	float intensity = exp(thickNess * depth);
 	return vec4(mix(fogColor, v.rgb, intensity * intensity), v.a);
 }
@@ -58,6 +62,7 @@ void main() {
 @end
 
 @fs sky_fs
+uniform sampler2D skydome;
 uniform sky_fs_params {
 	vec3 colUp;
 	vec3 colBot;
@@ -67,13 +72,20 @@ in vec3 eyedir;
 in vec3 lightdir;
 out vec4 frag_color;
 void main() {
-	vec3 e = normalize(eyedir);
+	vec3 e = normalize(eyedir + vec3(0, -0.02, 0));
+	float ey = 1 + e.y;
+	vec2 tmp = (e.xz / (1 - e.y * e.y)) * ey;
+	//vec2 tmp = e.xz;
+	vec4 dome = texture(skydome, 0.5 * (0.99f * tmp + 1));
 	float edotl = 0.5 * (1 + dot(-lightdir, e));
 	edotl = edotl * edotl * edotl * edotl * edotl * edotl;
+	edotl = 0.5 * (edotl + dome.a);
 	//float h = 0.5 * (1 - e.y);
 	float h = abs(e.y);
 	vec3 hcolor = mix(colBot, colUp, h);
 	frag_color = vec4(mix(hcolor, colLight, edotl), 1);
+	frag_color.xyz = mix(frag_color.xyz, colLight, dome.a);
+	//frag_color.xyz = 0.001f * frag_color.xyz + dome.aaa;
 }
 @end
 

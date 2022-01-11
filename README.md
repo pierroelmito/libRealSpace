@@ -31,7 +31,10 @@ The long term goal is to be able to play Strike Commander with a Virtual Reality
 Dependencies :
 ==============
 
-SDL 2
+GLFW
+Sokol GFX
+HandmadeMath
+TinyDDSLoader
 
 Eye Candies :
 =============
@@ -40,6 +43,9 @@ Eye Candies :
 ![Alt text](/pics/F-22.png)
 ![Alt text](/pics/face.png)
 
-New graphic pipeline:
+New graphic pipeline :
+======================
+
 ![Alt text](/pics/object_viewer_00.png)
+![Alt text](/pics/sea_and_sky_00.png)
 

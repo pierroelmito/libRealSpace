@@ -25,6 +25,29 @@
 
 extern GLFWwindow* win;
 
+RSVector3 DecodeColor(const std::string& col)
+{
+	if (col.size() != 6)
+		return { 1, 0, 1 };
+	const auto charToColor = [] (char c) {
+		if (c >= '0' && c <= '9')
+			return c - '0';
+		if (c >= 'a' && c <= 'f')
+			return 10 + c - 'a';
+		if (c >= 'A' && c <= 'F')
+			return 10 + c - 'A';
+		return 0;
+	};
+	union {
+		uint32_t v;
+		uint8_t a[4];
+	};
+	v = 0;
+	for (char c : col)
+		v = (v << 4) | charToColor(c);
+	return { a[2] / 255.0f, a[1] / 255.0f, a[0] / 255.0f };
+}
+
 int ComputeMipCount(int w, int h)
 {
 	const int m1 = 32;
@@ -52,6 +75,7 @@ sg_pixel_format GetFormatFromDDS(tinyddsloader::DDSFile::DXGIFormat fmt)
 		return SG_PIXELFORMAT_BGRA8;
 	if (fmt == tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm)
 		return SG_PIXELFORMAT_BC1_RGBA;
+	assert(false);
 	return SG_PIXELFORMAT_NONE;
 }
 
@@ -83,7 +107,7 @@ std::optional<sg_image> LoadDDS(const char* path)
 	idesc.wrap_u = SG_WRAP_REPEAT;
 	idesc.wrap_v = SG_WRAP_REPEAT;
 
-	for (int i = 0; i < mips; ++i) {
+	for (auto i = 0u; i < mips; ++i) {
 		const tinyddsloader::DDSFile::ImageData* data = dds.GetImageData(i);
 		idesc.data.subimage[0][i] = { data->m_mem, data->m_memSlicePitch };
 	}
@@ -92,7 +116,7 @@ std::optional<sg_image> LoadDDS(const char* path)
 }
 
 template <typename T>
-sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps, const std::vector<T>& data = {})
+sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipmaps, bool linear, const std::vector<T>& data = {})
 {
 	const int mipcount = mipmaps ? ComputeMipCount(w, h) : 1;
 
@@ -102,8 +126,8 @@ sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, bool mipma
 	idesc.height = h;
 	idesc.pixel_format = fmt;
 	idesc.usage = usage;
-	idesc.mag_filter = GetMagFilter(false);
-	idesc.min_filter = GetMinFilter(false, mipmaps);
+	idesc.mag_filter = GetMagFilter(linear);
+	idesc.min_filter = GetMinFilter(linear, mipmaps);
 	idesc.num_mipmaps = mipcount;
 	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
 
@@ -138,9 +162,30 @@ sg_buffer MakeBuffer(sg_buffer_type bt, sg_usage usage, const std::vector<T>& da
 	return sg_make_buffer(vdesc);
 }
 
+sg_image MakeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(const RSVector3& dir)>& fn)
+{
+	std::vector<uint32_t> data;
+	data.resize(w * h);
+
+	for (int y = 0; y < h; ++y) {
+		float ry = (y + 0.5f - 0.5f * h) / (0.5f * h);
+		for (int x = 0; x < w; ++x) {
+			float rx = (x + 0.5f - 0.5f * w) / (0.5f * w);
+			float d = rx * rx + ry * ry;
+			if (d <= 1.001f) {
+				std::array<uint8_t, 4> c = fn({ rx, ry, 1 - sqrtf(d) });
+				memcpy(&data[y * w + x], &c[0], 4);
+			}
+		}
+	}
+
+	return MakeImage(w, h, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, true, data);
+}
+
 fog_params_t GetFogParams()
 {
 	fog_params_t fog;
+	fog.fogColor = DecodeColor("1b669b");
 	fog.thickNess = UserProperties::Get().Floats.Get("FogThickness", 0.0002);
 	return fog;
 }
@@ -312,11 +357,12 @@ struct FullscreenBitmapData
 
 sg_image noise{};
 sg_image white{};
+sg_image skydome{};
 
 std::optional<FullscreenBitmapData> FbdRender;
 std::optional<FullscreenSky> FullscreenSky;
-std::optional<ModelRenderData> modelRender;
-std::optional<GroundRenderData> groundRender;
+std::optional<ModelRenderData> ModelRender;
+std::optional<GroundRenderData> GroundRender;
 
 template <class K, class V>
 class ObjectCacheManager
@@ -371,6 +417,81 @@ SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 	sg_end_pass();
 }
 
+float Ratio(float a, float b, float x)
+{
+	if (x < a)
+		return 0.0f;
+	if (x > b)
+		return 1.0f;
+	return (x - a) / (b - a);
+}
+
+float SmoothStep(float x)
+{
+	return x * x * (3 - 2 * x);
+}
+
+template <size_t N, typename S, typename... PARAMS>
+std::array<uint8_t, 4> ComputeSkyDome(const RSVector3& v, const std::array<hmm_vec2, N>& seeds, const S& sampler, const PARAMS&... params)
+{
+	float tc = 0.0f;
+	float tw = 0.0f;
+	for (int i = 0; i < N; ++i) {
+		const float m = powf(1.65f, i);
+		const float cw = 1.0f / powf(1.5f, i);
+		const float div = 20.0f * (0.1f + v.Z);
+		const float fx = HMM_DotVec2({ v.X, v.Y }, seeds[i]) / div;
+		const float fy = HMM_DotVec2({ v.X, v.Y }, { seeds[i].Y, -seeds[i].X }) / div;
+		const float cc = sampler(m * fx, m * fy, params...);
+		assert(cc >= 0.0f && cc <= 1.0f);
+		tw += cw;
+		tc += cw * cc;
+	}
+	const float fc = SmoothStep(Ratio(0.48f, 0.99f, tc / tw));
+	assert(fc >= 0.0f && fc <= 1.0f);
+	const uint8_t c = uint8_t(fc * 255.9f);
+	return { 255, 255, 255, c };
+}
+
+std::pair<int, float> GetBilinear(float v, int sz)
+{
+	const int ix = v > 0.0f ? (int(sz * v) % sz) & (sz - 1) : (sz - 1) - (int(sz * -v) % sz) & (sz - 1);
+	const float av = abs(v);
+	const float sr = av * sz - truncf(av * sz);
+	if (v < 0.0f)
+		return { ix, 1.0f - sr };
+	return { ix, sr };
+}
+
+template <size_t N>
+float CloudAt(float x, float y, const std::array<hmm_vec2, N * N>& gradients)
+{
+	const auto [ ix0, rx ] = GetBilinear(x, N);
+	const auto [ iy0, ry ] = GetBilinear(y, N);
+	const float rx1 = rx;
+	const float ry1 = ry;
+	const float rx0 = 1.0f - rx;
+	const float ry0 = 1.0f - ry;
+	const float srx0 = SmoothStep(rx0);
+	const float srx1 = SmoothStep(rx1);
+	const float sry0 = SmoothStep(ry0);
+	const float sry1 = SmoothStep(ry1);
+	const int ix1 = (ix0 + 1) % N;
+	const int iy1 = (iy0 + 1) % N;
+	const float x0y0 = HMM_DotVec2(gradients[iy0 * N + ix0], { srx0, sry0 });
+	const float x1y0 = HMM_DotVec2(gradients[iy0 * N + ix1], { srx1, sry0 });
+	const float x0y1 = HMM_DotVec2(gradients[iy1 * N + ix0], { srx0, sry1 });
+	const float x1y1 = HMM_DotVec2(gradients[iy1 * N + ix1], { srx1, sry1 });
+	const float ir =
+		srx0 * sry0 * x0y0 +
+		srx1 * sry0 * x1y0 +
+		srx0 * sry1 * x0y1 +
+		srx1 * sry1 * x1y1;
+	const float r = 0.5f * (1.0f + ir);
+	assert(r >= 0.0f && r <= 1.0f);
+	return r;
+}
+
 void SCRenderer::Init(int32_t zoomFactor)
 {
 	int32_t width  = 320 * zoomFactor;
@@ -391,9 +512,26 @@ void SCRenderer::Init(int32_t zoomFactor)
 	lightDir = HMM_NormalizeVec3({ 1, 1, 1 });
 
 	std::vector<uint32_t> pixels = { 0xffffffffu };
-	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, pixels);
+	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, false, true, pixels);
 	noise = LoadDDS("../assets/noise.dds").value_or(white);
-	//noise = white;
+
+	std::array<hmm_vec2, 7> seeds;
+	for (hmm_vec2& v : seeds) {
+		const float a = HMM_PI32 * 2.0f * float(rand() % 1024) / 1023.0f;
+		v = HMM_NormalizeVec2({ cosf(a), sinf(a) });
+	}
+
+	const size_t sz = 32;
+	const float cf = 1.0f / sqrtf(2.0f);
+	std::array<hmm_vec2, sz * sz> gradients{};
+	for (hmm_vec2& g : gradients) {
+		const float a = HMM_PI32 * 2.0f * float(rand() % 1024) / 1023.0f;
+		g = cf * HMM_NormalizeVec2({ cosf(a), sinf(a) });
+	}
+
+	skydome = MakeSkyDome(1024, 1024, [&] (const RSVector3& d) {
+		return ComputeSkyDome(d, seeds, CloudAt<sz>, gradients);
+	});
 
 	initialized = true;
 }
@@ -474,15 +612,16 @@ void SCRenderer::RenderSky()
 	memcpy(&vsParams.plightdir, &lightDir, 12);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_sky_vs_params, { &vsParams, sizeof(vsParams) });
 
-	RSVector3 colUp{ 0, 0, 1 };
-	RSVector3 colBot{ 0, 1, 1 };
-	RSVector3 colLight{ 1, 1, 1 };
+	RSVector3 colUp = DecodeColor("1a216e");
+	RSVector3 colBot = DecodeColor("1b669b");
+	RSVector3 colLight = DecodeColor("dfedd3");
 	sky_fs_params_t fsParams;
 	memcpy(&fsParams.colUp, &colUp, 12);
 	memcpy(&fsParams.colBot, &colBot, 12);
 	memcpy(&fsParams.colLight, &colLight, 12);
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_sky_fs_params, { &fsParams, sizeof(fsParams) });
 
+	FullscreenSky->bind.fs_images[SLOT_skydome] = skydome;
 	sg_apply_bindings(&FullscreenSky->bind);
 	sg_draw(0, 6, 1);
 }
@@ -764,8 +903,8 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 
 	const RSVector3 lighDirection = HMM_NormalizeVec3({ 10, 30, 10 });
 
-	if (!modelRender)
-		modelRender.emplace();
+	if (!ModelRender)
+		ModelRender.emplace();
 
 	ModelData& meshes = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelData& tmp) {
 		PrepareModel(*this, o, lodLevel, tmp);
@@ -777,24 +916,24 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 	memcpy(params.proj, &proj, 64);
 	memcpy(params.view, &view, 64);
 	memcpy(params.world, &world, 64);
-	memcpy(params.camPos, &camera.getPosition(), 12);
-	memcpy(params.lightDir, &lightDir, 12);
+	params.camPos = camera.getPosition();
+	params.lightDir = lightDir;
 
 	const fog_params_t fog = GetFogParams();
 
-	sg_apply_pipeline(modelRender->pip_opaque);
+	sg_apply_pipeline(ModelRender->pip_opaque);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_params, { &params, sizeof(params) });
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
-	sg_apply_pipeline(modelRender->pip_blend);
+	sg_apply_pipeline(ModelRender->pip_blend);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_params, { &params, sizeof(params) });
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
 
 	for (const auto& msh : meshes) {
 		if (msh.pcount != 0) {
 			if (msh.blend)
-				sg_apply_pipeline(modelRender->pip_blend);
+				sg_apply_pipeline(ModelRender->pip_blend);
 			else
-				sg_apply_pipeline(modelRender->pip_opaque);
+				sg_apply_pipeline(ModelRender->pip_opaque);
 			sg_bindings bind{};
 			bind.vertex_buffers[0] = msh.vbuf;
 			bind.index_buffer = msh.ibuf;
@@ -1031,8 +1170,8 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 
 	//counter += 0.02;
 
-	if (!groundRender)
-		groundRender.emplace();
+	if (!GroundRender)
+		GroundRender.emplace();
 
 	RSMatrix world = HMM_Mat4d(1.0f);
 	const RSMatrix& view = camera.getView();
@@ -1046,7 +1185,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 
 	const fog_params_t fog = GetFogParams();
 
-	sg_apply_pipeline(groundRender->pip);
+	sg_apply_pipeline(GroundRender->pip);
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params, { &params, sizeof(params) });
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
 
