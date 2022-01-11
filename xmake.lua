@@ -7,8 +7,12 @@ target("sc")
 	end)
 	set_kind("binary")
 	add_includedirs("src", "src/sc", "src/ext")
-	add_cxxflags("-Wall")
+	add_cxxflags("--std=c++17", "-Wall")
 	add_files("src/**.cpp")
 	add_defines("USE_SHADER_PIPELINE=1")
-	add_links("GL", "glfw")
+	if is_plat("mingw") then
+		add_links("opengl32", "glfw3")
+	else
+		add_links("GL", "glfw")
+	end
 
