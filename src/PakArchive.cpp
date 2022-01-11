@@ -76,7 +76,7 @@ bool PakArchive::InitFromFile(const char* filepath)
 	strcat(fullPath, GetBase());
 	strcat(fullPath, filepath);
 
-	FILE* file = fopen(fullPath, "r");
+	FILE* file = fopen(fullPath, "rb");
 
 	if (!file){
 		printf("Unable to open PAK archive: '%s'.\n",filepath);

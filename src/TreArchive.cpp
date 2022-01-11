@@ -8,7 +8,6 @@
 
 #include "precomp.h"
 
-
 TreArchive::TreArchive()
 {
 	this->path[0] = '\0';
@@ -34,7 +33,7 @@ bool TreArchive::InitFromFile(const char* filepath)
 	strcat(fullPath, GetBase());
 	strcat(fullPath, filepath);
 
-	FILE* file = fopen(fullPath, "r");
+	FILE* file = fopen(fullPath, "rb");
 
 	if (!file){
 		printf("Unable to open TRE archive: '%s'.\n",filepath);
