@@ -139,6 +139,9 @@ sg_image_desc MakeImageDesc(int w, int h, sg_pixel_format fmt, sg_usage usage, u
 	idesc.mag_filter = GetMagFilter(linear);
 	idesc.min_filter = GetMinFilter(linear, mipmaps);
 	idesc.num_mipmaps = mipcount;
+	idesc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
+	idesc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
+	idesc.max_anisotropy = 4;
 
 	return idesc;
 }
@@ -174,12 +177,12 @@ sg_image MakeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(co
 	data.resize(w * h);
 
 	for (int y = 0; y < h; ++y) {
-		float ry = (y + 0.5f - 0.5f * h) / (0.5f * h);
+		const float ry = (y + 0.5f - 0.5f * h) / (0.5f * h);
 		for (int x = 0; x < w; ++x) {
-			float rx = (x + 0.5f - 0.5f * w) / (0.5f * w);
-			float d = rx * rx + ry * ry;
+			const float rx = (x + 0.5f - 0.5f * w) / (0.5f * w);
+			const float d = rx * rx + ry * ry;
 			if (d <= 1.001f) {
-				std::array<uint8_t, 4> c = fn({ rx, ry, 1 - sqrtf(d) });
+				const std::array<uint8_t, 4> c = fn({ rx, ry, 1 - sqrtf(d) });
 				memcpy(&data[y * w + x], &c[0], 4);
 			}
 		}
@@ -188,9 +191,10 @@ sg_image MakeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(co
 	return MakeImage(w, h, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, IFLinear, data);
 }
 
-fog_params_t GetFogParams()
+template <class T>
+T GetFogParams()
 {
-	fog_params_t fog;
+	T fog;
 	fog.fogColor = DecodeColor("1b669b");
 	fog.thickNess = UserProperties::Get().Floats.Get("FogThickness", 0.0002);
 	return fog;
@@ -201,6 +205,7 @@ struct ModelRenderData
 	sg_shader shd{};
 	sg_pipeline pip_opaque{};
 	sg_pipeline pip_blend{};
+	bool dirtyGlobals{ false };
 
 	struct MeshItem
 	{
@@ -365,6 +370,7 @@ struct FullscreenBitmapData
 sg_image noise{};
 sg_image white{};
 sg_image skydome{};
+std::optional<sg_image> renderTarget{};
 
 std::optional<FullscreenBitmapData> FbdRender;
 std::optional<FullscreenSky> FullscreenSky;
@@ -391,11 +397,8 @@ protected:
 	std::vector<V> allData;
 };
 
-using ModelData = ModelRenderData::Mesh;
-using GroundData = GroundRenderData::Mesh;
-
-ObjectCacheManager<RSEntity, ModelData> cacheEntityToModel;
-ObjectCacheManager<AreaBlock, GroundData> cacheBlockToModel;
+ObjectCacheManager<RSEntity, ModelRenderData::Mesh> cacheEntityToModel;
+ObjectCacheManager<AreaBlock, GroundRenderData::Mesh> cacheBlockToModel;
 
 // DIRTY...
 const uint32_t PASS_VCOLOR = 0x12345678;
@@ -412,6 +415,10 @@ SCRenderer::~SCRenderer(){
 void
 SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 {
+	if (!ModelRender)
+		ModelRender.emplace();
+	ModelRender->dirtyGlobals = true;
+
 	sg_pass_action pass_action = {0};
 	if (!params.clearColors)
 		pass_action.colors[0].action = SG_ACTION_DONTCARE;
@@ -489,11 +496,7 @@ float CloudAt(float x, float y, const std::array<hmm_vec2, N * N>& gradients)
 	const float x1y0 = HMM_DotVec2(gradients[iy0 * N + ix1], { srx1, sry0 });
 	const float x0y1 = HMM_DotVec2(gradients[iy1 * N + ix0], { srx0, sry1 });
 	const float x1y1 = HMM_DotVec2(gradients[iy1 * N + ix1], { srx1, sry1 });
-	const float ir =
-		srx0 * sry0 * x0y0 +
-		srx1 * sry0 * x1y0 +
-		srx0 * sry1 * x0y1 +
-		srx1 * sry1 * x1y1;
+	const float ir = srx0 * sry0 * x0y0 + srx1 * sry0 * x1y0 + srx0 * sry1 * x0y1 + srx1 * sry1 * x1y1;
 	const float r = 0.5f * (1.0f + ir);
 	assert(r >= 0.0f && r <= 1.0f);
 	return r;
@@ -514,7 +517,7 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	this->palette = *palette.GetColorPalette();
 
-	camera.SetPersective(50.0f, width / (float)height, 1.0f, 20000.0f);
+	camera.SetPersective(50.0f, width / (float)height, 0.1f, 20000.0f);
 
 	lightDir = HMM_NormalizeVec3({ 1, 1, 1 });
 
@@ -567,7 +570,7 @@ bool SCRenderer::CreateTextureInGPU(RSTexture* texture)
 	if (!initialized)
 		return false;
 
-	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, 0);
+	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, IFLinear);
 	texture->id = img.id;
 
 	return true;
@@ -613,24 +616,23 @@ void SCRenderer::RenderSky()
 	if (!FullscreenSky)
 		FullscreenSky.emplace();
 
-	RSMatrix view = camera.getView();
-	RSMatrix proj = camera.getProj();
-
 	sg_apply_pipeline(FullscreenSky->pip);
 
 	sky_vs_params_t vsParams;
-	memcpy(&vsParams.view, &view, 64);
-	memcpy(&vsParams.proj, &proj, 64);
-	memcpy(&vsParams.plightdir, &lightDir, 12);
+	vsParams.view = camera.getView();
+	vsParams.proj = camera.getProj();
+	vsParams.plightdir = lightDir;
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_sky_vs_params, { &vsParams, sizeof(vsParams) });
 
 	RSVector3 colUp = DecodeColor("1a216e");
 	RSVector3 colBot = DecodeColor("1b669b");
 	RSVector3 colLight = DecodeColor("dfedd3");
+
 	sky_fs_params_t fsParams;
-	memcpy(&fsParams.colUp, &colUp, 12);
-	memcpy(&fsParams.colBot, &colBot, 12);
-	memcpy(&fsParams.colLight, &colLight, 12);
+	fsParams.colUp = colUp;
+	fsParams.colBot = colBot;
+	fsParams.colLight = colLight;
+
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_sky_fs_params, { &fsParams, sizeof(fsParams) });
 
 	FullscreenSky->bind.fs_images[SLOT_skydome] = skydome;
@@ -650,7 +652,7 @@ RSVector3 SCRenderer::GetNormal(const RSVector3& v0, const RSVector3& v1, const 
 	return HMM_NormalizeVec3(HMM_Cross(edge1, edge2));
 }
 
-void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelData& mdata)
+void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelRenderData::Mesh& mdata)
 {
 	const Lod& lod = object->lods[lodLevel];
 
@@ -877,7 +879,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelD
 	*/
 }
 
-void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVector3& pos, float scale, const RSQuaternion& orientation)
+void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix& world)
 {
 	if (!initialized)
 		return;
@@ -891,54 +893,40 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSVect
 		return;
 	}
 
-	RSMatrix world = HMM_QuaternionToMat4(orientation) * HMM_Scale({ scale, scale, scale });
-	world.Elements[3][0] = pos.X;
-	world.Elements[3][1] = pos.Y;
-	world.Elements[3][2] = pos.Z;
-
-	return DrawModel(object, lodLevel, world);
-}
-
-void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix world)
-{
-	if (!initialized)
-		return;
-
-	if (object == nullptr)
-		return;
-
-	if (lodLevel >= object->lods.size()) {
-		const auto maxl = std::min(0UL, object->lods.size() - 1);
-		printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n", maxl);
-		return;
-	}
-
-	const RSVector3 lighDirection = HMM_NormalizeVec3({ 10, 30, 10 });
+	ModelRenderData::Mesh& meshes = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelRenderData::Mesh& tmp) {
+		PrepareModel(*this, o, lodLevel, tmp);
+	});
 
 	if (!ModelRender)
 		ModelRender.emplace();
 
-	ModelData& meshes = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelData& tmp) {
-		PrepareModel(*this, o, lodLevel, tmp);
-	});
+	if (ModelRender->dirtyGlobals) {
+		ModelRender->dirtyGlobals = false;
 
-	const RSMatrix& view = camera.getView();
-	const RSMatrix& proj = camera.getProj();
-	model_vs_params_t params;
-	memcpy(params.proj, &proj, 64);
-	memcpy(params.view, &view, 64);
-	memcpy(params.world, &world, 64);
-	params.camPos = camera.getPosition();
-	params.lightDir = lightDir;
+		model_vs_global_params_t gparams;
+		gparams.proj = camera.getProj();
+		gparams.view = camera.getView();
+		gparams.pcampos = camera.getPosition();
+		gparams.lightDir = lightDir;
 
-	const fog_params_t fog = GetFogParams();
+		const auto fog = GetFogParams<model_fog_params_t>();
 
-	sg_apply_pipeline(ModelRender->pip_opaque);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_params, { &params, sizeof(params) });
-	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
-	sg_apply_pipeline(ModelRender->pip_blend);
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_params, { &params, sizeof(params) });
-	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
+		sg_apply_pipeline(ModelRender->pip_opaque);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_model_fog_params, { &fog, sizeof(fog) });
+
+		sg_apply_pipeline(ModelRender->pip_blend);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_model_fog_params, { &fog, sizeof(fog) });
+	}
+
+	{
+		const model_vs_instance_params_t iparams{ world };
+		sg_apply_pipeline(ModelRender->pip_opaque);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
+		sg_apply_pipeline(ModelRender->pip_blend);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
+	}
 
 	for (const auto& msh : meshes) {
 		if (msh.pcount != 0) {
@@ -967,12 +955,12 @@ void SCRenderer::Prepare(RSEntity* object)
 	object->prepared = true;
 }
 
-#define TEX_ZERO (0/64.0f)
-#define TEX_ONE (64/64.0f)
+#define TEX_ZERO 0.0f
+#define TEX_ONE 1.0f
 
 // What is this offset ? It is used to get rid of the red delimitations
 // in the 64x64 textures.
-#define OFFSET (1/64.0f)
+#define OFFSET (1.1f / 64.0f)
 
 const float textTrianCoo64[2][3][2] = {
 	{{TEX_ZERO,TEX_ZERO+OFFSET},    {TEX_ONE-2*OFFSET,TEX_ONE-OFFSET},    {TEX_ZERO,TEX_ONE-OFFSET} }, // LOWER_TRIANGE
@@ -1135,74 +1123,25 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 
 void SCRenderer::RenderJets(const RSArea& area)
 {
-	for(RSEntity* entity : area.GetJets())
-		DrawModel(entity, LOD_LEVEL_MAX, entity->position, OBJECT_SCALE, entity->orientation);
+	for(RSEntity* entity : area.GetJets()) {
+		RSMatrix world = HMM_QuaternionToMat4(entity->orientation) * HMM_Scale({ OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE });
+		world.Elements[3][0] = entity->position.X;
+		world.Elements[3][1] = entity->position.Y;
+		world.Elements[3][2] = entity->position.Z;
+		DrawModel(entity, LOD_LEVEL_MAX, world);
+	}
 }
 
-void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBlock, double gtime)
+void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 {
 	running = true;
-
-#if 0
-	// Camera
-	const RSVector3 lookAt{ 3856, 0, 2856};
-	RSVector3 newPosition{ 4100, 100, 3000 };
-	uint32_t currentTime = SDL_GetTicks();
-	newPosition.X =  lookAt.X + 300 * cos(currentTime/2000.0f);
-	newPosition.Z =  lookAt.Z + 300 * sin(currentTime/2000.0f);
-	camera.SetPosition(newPosition);
-	camera.LookAt(lookAt);
-	SetProj(camera.proj);
-	SetView(camera.getView());
-
-	//Island
-	/*
-	newPosition[0]=  2500;//lookAt[0] + 5256*cos(counter/2);
-	newPosition[1]= 350;
-	newPosition[2]=  600;//lookAt[2];// + 5256*sin(counter/2);
-	vec3_t lookAt = {2456,0,256};
-	*/
-
-	//City Top
-
-	//City view on mountains
-	/*
-	counter = 23;
-	vec3_t lookAt = {3856,30,2856};
-	newPosition[0]=  lookAt[0] + 256*cos(counter/2);
-	newPosition[1]= 60;
-	newPosition[2]=  lookAt[2] + 256*sin(counter/2);
-	*/
-
-	//Canyon
-	///*
-
-	//*/
-#endif
-
-	//counter += 0.02;
-
-	if (!GroundRender)
-		GroundRender.emplace();
-
-	RSMatrix world = HMM_Mat4d(1.0f);
-	const RSMatrix& view = camera.getView();
-	const RSMatrix& proj = camera.getProj();
-	ground_vs_params_t params;
-
-	memcpy(params.proj, &proj, 64);
-	memcpy(params.view, &view, 64);
-	memcpy(params.world, &world, 64);
-	params.gtime = gtime;
-
-	const fog_params_t fog = GetFogParams();
 
 	static std::vector<GroundRenderData::MeshItem> groundMeshes;
 	groundMeshes.resize(0);
 
 	for(int i = 0; i < BLOCKS_PER_MAP; i++) {
 		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
-		const GroundData& meshes = cacheBlockToModel.GetData(&block, [&] (const AreaBlock* block, GroundData& meshes) {
+		const GroundRenderData::Mesh& meshes = cacheBlockToModel.GetData(&block, [&] (const AreaBlock* block, GroundRenderData::Mesh& meshes) {
 			//struct PointComparator
 			//{
 			//	bool operator() (const RSVector3& a, const RSVector3& b) const {
@@ -1267,10 +1206,25 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, int verticesPerBl
 		return false;
 	});
 
+	if (!groundMeshes.empty())
 	{
+		if (!GroundRender)
+			GroundRender.emplace();
+
+		ground_vs_params_t params;
+		params.view = camera.getView();
+		params.proj = camera.getProj();
+		params.world = HMM_Mat4d(1.0f);
+		params.pcampos = camera.getPosition();
+		params.plightdir = lightDir;
+		params.gtime = float(gtime);
+
+		const auto fog = GetFogParams<ground_fog_params_t>();
+
 		sg_apply_pipeline(GroundRender->pip);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params, { &params, sizeof(params) });
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_ground_fog_params, { &fog, sizeof(fog) });
+
 		sg_bindings bind{};
 		bind.fs_images[SLOT_water] = noise;
 		for (const auto& msh : groundMeshes) {

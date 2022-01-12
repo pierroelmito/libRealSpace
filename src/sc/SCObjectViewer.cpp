@@ -338,10 +338,12 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	cam.SetPosition(newPosition);
 	cam.LookAt({ 0, 0.2f * (bbox.min.Y + bbox.max.Y), 0 });
 
-	const RSVector3 light = HMM_NormalizeVec3({ 4.0f * cosf(lightTime), 1.0f, 4.0f * sinf(lightTime) });
+	const RSVector3 light = HMM_NormalizeVec3({ 4.0f * cosf(lightTime), 4.0f, 4.0f * sinf(lightTime) });
+
+	const RSMatrix id = HMM_Mat4d(1);
 
 	Renderer.SetLight(light);
 	Renderer.Draw3D({ false }, [&] () {
-		Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX);
+		Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX, id);
 	});
 }

@@ -71,7 +71,7 @@ void SCStrike::RunFrame(const FrameParams& p)
 
 	Renderer.SetLight(light);
 	Renderer.Draw3D({}, [&] () {
-		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, 400, p.currentTime);
+		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.currentTime);
 		Renderer.RenderSky();
 	});
 }
