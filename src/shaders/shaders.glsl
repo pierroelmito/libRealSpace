@@ -8,6 +8,15 @@
 // common
 // -----------------------------------------------------------
 
+@block common
+
+float mypow(float x, float y)
+{
+	return exp(log(x) * y);
+}
+
+@end
+
 @block fog
 vec3 computeFog(vec3 v, float depth)
 {
@@ -17,12 +26,14 @@ vec3 computeFog(vec3 v, float depth)
 @end
 
 @block lighting
+@include_block common
+
 vec3 computeLight(vec3 albedo, vec3 n, vec3 l, vec3 eyeDir, float specParam)
 {
 	vec3 h = normalize(l - eyeDir);
 	float ndotl = dot(l, -n);
 	float ndoth = max(0, dot(h, -n));
-	ndoth = ndoth * ndoth * ndoth * ndoth * ndoth * ndoth * ndoth * ndoth;
+	ndoth = mypow(ndoth, 20);
 	float diffuse = max(ndotl, 0.2);
 	vec3 result = diffuse * albedo.xyz + specParam * ndoth.xxx;
 	//result = 0.001 * result + specParam * ndoth.xxx;
@@ -38,25 +49,37 @@ vec3 computeLight(vec3 albedo, vec3 n, vec3 l, vec3 eyeDir, float specParam)
 
 layout(location=0) in vec4 position;
 
-out vec2 uv;
+uniform fsq_vs_params {
+	vec2 xy;
+};
+
+out vec4 uv;
 
 void main() {
-	uv = 0.5 * (vec2(1, -1) * position.xy + 1);
+	uv = vec4(0.5 * (xy * position.xy + 1), position.xy);
 	gl_Position = position;
 }
 
 @end
 @fs bitmap_fs
+@include_block common
 
 uniform sampler2D fs_bitmap;
 
-in vec2 uv;
+in vec4 uv;
 
 out vec4 frag_color;
 
+vec3 vignetting(vec3 color, float p, float b)
+{
+	float bf = (1 - mypow(abs(uv.z), p)) * (1 - mypow(abs(uv.w), p));
+	float f = (b + bf) / (b + 1);
+	return f * color;
+}
+
 void main() {
-	vec4 tc = texture(fs_bitmap, uv);
-	frag_color = vec4(tc.xyz, 1);
+	vec4 tc = texture(fs_bitmap, uv.xy);
+	frag_color = vec4(vignetting(tc.xyz, 8, 1.5), 1);
 }
 
 @end
@@ -192,12 +215,14 @@ out vec4 frag_color;
 
 void main() {
 	vec4 tc = texture(model_bitmap, uv);
-	if (tc.a * color.a < 0.5)
+	if (tc.a * color.a < 0.1)
 		discard;
 
-	frag_color = vec4(color.xyz * tc.xyz, 1);
+	frag_color = color * tc;
 
-	frag_color.xyz = computeLight(frag_color.xyz, -normalize(n), l, normalize(worldpos - campos), 0.3);
+	float si = 0.299 * frag_color.x + 0.587 * frag_color.y + 0.114 * frag_color.z;
+
+	frag_color.xyz = computeLight(frag_color.xyz, -normalize(n), l, normalize(worldpos - campos), si * 0.3);
 	frag_color.xyz = computeFog(frag_color.xyz, depth);
 }
 

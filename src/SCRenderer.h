@@ -34,6 +34,7 @@ public:
 
 	void Prepare();
 	void Init(int32_t zoom);
+	void Release();
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix& world);
 	bool CreateTextureInGPU(RSTexture* texture);
 	bool UploadTextureContentToGPU(RSTexture* texture);
@@ -49,7 +50,6 @@ public:
 	void RenderObjects(const RSArea& area,size_t blockID);
 	void RenderVerticeField(RSVector3* vertices, int numVertices);
 	void RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock);
-	void DisplayModel(RSEntity* object,size_t lodLevel);
 #endif
 
 	using AddVertex = std::function<void(uint32_t, const RSVector3&, const RSVector3&, const float*, const float*)>;
@@ -60,11 +60,17 @@ public:
 	void RenderQuad(const AddVertex& vfunc, const RSArea& area, const MapVertex* currentVertex, const MapVertex* rightVertex, const MapVertex* bottomRightVertex, const MapVertex* bottomVertex, bool renderTexture);
 	void RenderBlock(const AddVertex& vfunc, const RSArea& area,int LOD, int blockID,bool renderTexture);
 	void RenderWorldSolid(const RSArea& area, int LOD, double gtime);
+	void RenderWorldGround(const RSArea& area, int LOD, double gtime);
+	void RenderWorldModels(const RSArea& area, int LOD, double gtime);
 	void RenderJets(const RSArea& area);
 	void RenderSky();
 
 	struct Render3DParams {
-		bool clearColors{ true };
+		enum Flags {
+			CLEAR_COLORS = 1,
+			USE_RENDER_TARGETS = 2
+		};
+		uint32_t flags{ CLEAR_COLORS };
 	};
 	void Draw3D(const Render3DParams& params, std::function<void()>&& f);
 

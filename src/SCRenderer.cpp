@@ -25,6 +25,13 @@
 
 extern GLFWwindow* win;
 
+struct SgTexture
+{
+	int w{ 0 };
+	int h{ 0 };
+	sg_image img{ 0 };
+};
+
 RSVector3 DecodeColor(const std::string& col)
 {
 	if (col.size() != 6)
@@ -79,7 +86,7 @@ sg_pixel_format GetFormatFromDDS(tinyddsloader::DDSFile::DXGIFormat fmt)
 	return SG_PIXELFORMAT_NONE;
 }
 
-std::optional<sg_image> LoadDDS(const char* path)
+std::optional<SgTexture> LoadDDS(const char* path)
 {
 	tinyddsloader::DDSFile dds;
 	tinyddsloader::Result result = dds.Load(path);
@@ -112,7 +119,7 @@ std::optional<sg_image> LoadDDS(const char* path)
 		idesc.data.subimage[0][i] = { data->m_mem, data->m_memSlicePitch };
 	}
 
-	return sg_make_image(&idesc);
+	return std::make_optional<SgTexture>(idesc.width, idesc.height, sg_make_image(&idesc));
 }
 
 enum ImageFlags
@@ -142,22 +149,23 @@ sg_image_desc MakeImageDesc(int w, int h, sg_pixel_format fmt, sg_usage usage, u
 	idesc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
 	idesc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
 	idesc.max_anisotropy = 4;
+	idesc.sample_count = rt ? 1: 1;
 
 	return idesc;
 }
 
 template <typename T>
-sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, uint32_t flags, const std::vector<T>& data)
+SgTexture MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, uint32_t flags, const std::vector<T>& data)
 {
 	sg_image_desc idesc = MakeImageDesc(w, h, fmt, usage, flags);
 	idesc.data.subimage[0][0] = { &data[0], w * h * sizeof(T) };
-	return sg_make_image(&idesc);
+	return { w, h, sg_make_image(&idesc) };
 }
 
-sg_image MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, uint32_t flags)
+SgTexture MakeImage(int w, int h, sg_pixel_format fmt, sg_usage usage, uint32_t flags)
 {
 	sg_image_desc idesc = MakeImageDesc(w, h, fmt, usage, flags);
-	return sg_make_image(&idesc);
+	return { w, h, sg_make_image(&idesc) };
 }
 
 template <typename T>
@@ -171,7 +179,7 @@ sg_buffer MakeBuffer(sg_buffer_type bt, sg_usage usage, const std::vector<T>& da
 	return sg_make_buffer(vdesc);
 }
 
-sg_image MakeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(const RSVector3& dir)>& fn)
+std::vector<uint32_t> ComputeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(const RSVector3& dir)>& fn)
 {
 	std::vector<uint32_t> data;
 	data.resize(w * h);
@@ -188,7 +196,12 @@ sg_image MakeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(co
 		}
 	}
 
-	return MakeImage(w, h, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, IFLinear, data);
+	return data;
+}
+
+SgTexture MakeSkyDome(int w, int h, const std::function<std::array<uint8_t, 4>(const RSVector3& dir)>& fn)
+{
+	return MakeImage(w, h, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, IFLinear, ComputeSkyDome(w, h, fn));
 }
 
 template <class T>
@@ -217,7 +230,7 @@ struct ModelRenderData
 	};
 	using Mesh = std::vector<MeshItem>;
 
-	ModelRenderData()
+	bool Init()
 	{
 		shd = sg_make_shader(model_shader_desc(sg_query_backend()));
 
@@ -248,6 +261,8 @@ struct ModelRenderData
 
 			pip_blend = sg_make_pipeline(&pdesc);
 		}
+
+		return true;
 	}
 };
 
@@ -264,7 +279,7 @@ struct GroundRenderData
 	};
 	using Mesh = std::vector<MeshItem>;
 
-	GroundRenderData()
+	bool Init()
 	{
 		shd = sg_make_shader(ground_shader_desc(sg_query_backend()));
 
@@ -280,6 +295,8 @@ struct GroundRenderData
 			pdesc.cull_mode = SG_CULLMODE_BACK;
 			pip = sg_make_pipeline(&pdesc);
 		}
+
+		return true;
 	}
 };
 
@@ -290,7 +307,7 @@ struct FullscreenSky
 	sg_pipeline pip{};
 	sg_bindings bind{};
 
-	FullscreenSky()
+	bool Init()
 	{
 		shd = sg_make_shader(sky_shader_desc(sg_query_backend()));
 
@@ -321,18 +338,18 @@ struct FullscreenSky
 		}
 
 		bind.vertex_buffers[0] = vbuf;
+
+		return true;
 	}
 };
 
 struct FullscreenBitmapData
 {
 	sg_buffer vbuf{};
-	sg_image img{};
 	sg_shader shd{};
 	sg_pipeline pip{};
-	sg_bindings bind{};
 
-	FullscreenBitmapData(uint32_t width, uint32_t height)
+	bool Init()
 	{
 		shd = sg_make_shader(bitmap_shader_desc(sg_query_backend()));
 
@@ -353,8 +370,6 @@ struct FullscreenBitmapData
 			vbuf = sg_make_buffer(&bdesc);
 		}
 
-		img = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, 0);
-
 		{
 			sg_pipeline_desc pdesc{};
 			pdesc.shader = shd;
@@ -362,20 +377,47 @@ struct FullscreenBitmapData
 			pip = sg_make_pipeline(&pdesc);
 		}
 
+		return true;
+	}
+
+	void DrawImage(sg_image img, hmm_vec2 xy = { 1.0f, -1.0f })
+	{
+		int cur_width{}, cur_height{};
+		glfwGetFramebufferSize(win, &cur_width, &cur_height);
+
+		sg_pass_action pass_action = {0};
+		sg_begin_default_pass(&pass_action, cur_width, cur_height);
+
+		sg_apply_pipeline(pip);
+
+		fsq_vs_params_t params;
+		params.xy = xy;
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_fsq_vs_params, { &params, sizeof(params) });
+
+		sg_bindings bind{};
 		bind.vertex_buffers[0] = vbuf;
 		bind.fs_images[SLOT_fs_bitmap] = img;
+
+		sg_apply_bindings(bind);
+
+		sg_draw(0, 6, 1);
+
+		sg_end_pass();
 	}
 };
 
-sg_image noise{};
-sg_image white{};
-sg_image skydome{};
-std::optional<sg_image> renderTarget{};
+SgTexture noise{};
+SgTexture white{};
+SgTexture skydome{};
+SgTexture screen{};
+SgTexture renderTargetColor{};
+SgTexture renderTargetDepth{};
+sg_pass renderPass{};
 
-std::optional<FullscreenBitmapData> FbdRender;
-std::optional<FullscreenSky> FullscreenSky;
-std::optional<ModelRenderData> ModelRender;
-std::optional<GroundRenderData> GroundRender;
+FullscreenBitmapData FbdRender;
+FullscreenSky FullscreenSky;
+ModelRenderData ModelRender;
+GroundRenderData GroundRender;
 
 template <class K, class V>
 class ObjectCacheManager
@@ -412,25 +454,6 @@ SCRenderer::SCRenderer()
 SCRenderer::~SCRenderer(){
 }
 
-void
-SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
-{
-	if (!ModelRender)
-		ModelRender.emplace();
-	ModelRender->dirtyGlobals = true;
-
-	sg_pass_action pass_action = {0};
-	if (!params.clearColors)
-		pass_action.colors[0].action = SG_ACTION_DONTCARE;
-	int cur_width{}, cur_height{};
-	glfwGetFramebufferSize(win, &cur_width, &cur_height);
-	sg_begin_default_pass(&pass_action, cur_width, cur_height);
-
-	f();
-
-	sg_end_pass();
-}
-
 float Ratio(float a, float b, float x)
 {
 	if (x < a)
@@ -446,7 +469,7 @@ float SmoothStep(float x)
 }
 
 template <size_t N, typename S, typename... PARAMS>
-std::array<uint8_t, 4> ComputeSkyDome(const RSVector3& v, const std::array<hmm_vec2, N>& seeds, const S& sampler, const PARAMS&... params)
+std::array<uint8_t, 4> FractalNoiseSkyDome(const RSVector3& v, const std::array<hmm_vec2, N>& seeds, const S& sampler, const PARAMS&... params)
 {
 	float tc = 0.0f;
 	float tw = 0.0f;
@@ -478,7 +501,7 @@ std::pair<int, float> GetBilinear(float v, int sz)
 }
 
 template <size_t N>
-float CloudAt(float x, float y, const std::array<hmm_vec2, N * N>& gradients)
+float PerlinNoise(float x, float y, const std::array<hmm_vec2, N * N>& gradients)
 {
 	const auto [ ix0, rx ] = GetBilinear(x, N);
 	const auto [ iy0, ry ] = GetBilinear(y, N);
@@ -540,29 +563,78 @@ void SCRenderer::Init(int32_t zoomFactor)
 	}
 
 	skydome = MakeSkyDome(1024, 1024, [&] (const RSVector3& d) {
-		return ComputeSkyDome(d, seeds, CloudAt<sz>, gradients);
+		return FractalNoiseSkyDome(d, seeds, PerlinNoise<sz>, gradients);
 	});
+
+	ModelRender.Init();
+	FullscreenSky.Init();
+	GroundRender.Init();
+	FbdRender.Init();
 
 	initialized = true;
 }
 
-void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
+void SCRenderer::Release()
 {
-	if (!FbdRender)
-		FbdRender.emplace(width, height);
 
-	sg_image_data idata{};
-	idata.subimage[0][0] = { data, width * height * sizeof(Texel) };
-	sg_update_image(FbdRender->img, idata);
+}
+
+void
+SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
+{
+	ModelRender.dirtyGlobals = true;
+
+	sg_pass_action pass_action = {0};
+	if ((params.flags & Render3DParams::CLEAR_COLORS) == 0)
+		pass_action.colors[0].action = SG_ACTION_DONTCARE;
 
 	int cur_width{}, cur_height{};
 	glfwGetFramebufferSize(win, &cur_width, &cur_height);
-	sg_pass_action pass_action = {0};
-	sg_begin_default_pass(&pass_action, cur_width, cur_height);
-	sg_apply_pipeline(FbdRender->pip);
-	sg_apply_bindings(&FbdRender->bind);
-	sg_draw(0, 6, 1);
+
+	const bool useRt = (params.flags & Render3DParams::USE_RENDER_TARGETS) != 0;
+	if (!useRt) {
+		sg_begin_default_pass(&pass_action, cur_width, cur_height);
+	} else {
+		if (renderTargetColor.w != cur_width || renderTargetColor.h != cur_height) {
+			if (renderTargetColor.w != 0) {
+				sg_destroy_pass(renderPass);
+				sg_destroy_image(renderTargetColor.img);
+				sg_destroy_image(renderTargetDepth.img);
+			}
+			const int rtWidth = cur_width;
+			const int rtHeight = cur_height;
+			renderTargetColor = MakeImage(rtWidth, rtHeight, SG_PIXELFORMAT_RGBA8, _SG_USAGE_DEFAULT, IFRenderTarget);
+			renderTargetDepth = MakeImage(rtWidth, rtHeight, SG_PIXELFORMAT_DEPTH_STENCIL, _SG_USAGE_DEFAULT, IFRenderTarget);
+			sg_pass_desc passdesc{};
+			passdesc.color_attachments[0].image = renderTargetColor.img;
+			passdesc.depth_stencil_attachment.image = renderTargetDepth.img;
+			renderPass = sg_make_pass(passdesc);
+		}
+		sg_begin_pass(renderPass, &pass_action);
+	}
+
+	f();
+
 	sg_end_pass();
+
+	if (useRt) {
+		FbdRender.DrawImage(renderTargetColor.img, { 1, 1 });
+	}
+}
+
+void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
+{
+	if (screen.w != width || screen.h != height) {
+		if (screen.w != 0)
+			sg_destroy_image(screen.img);
+		screen = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, 0);
+	}
+
+	sg_image_data idata{};
+	idata.subimage[0][0] = { data, width * height * sizeof(Texel) };
+	sg_update_image(screen.img, idata);
+
+	FbdRender.DrawImage(screen.img);
 }
 
 bool SCRenderer::CreateTextureInGPU(RSTexture* texture)
@@ -570,7 +642,7 @@ bool SCRenderer::CreateTextureInGPU(RSTexture* texture)
 	if (!initialized)
 		return false;
 
-	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, IFLinear);
+	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, IFLinear).img;
 	texture->id = img.id;
 
 	return true;
@@ -613,10 +685,7 @@ void SCRenderer::DeleteTextureInGPU(RSTexture* texture)
 
 void SCRenderer::RenderSky()
 {
-	if (!FullscreenSky)
-		FullscreenSky.emplace();
-
-	sg_apply_pipeline(FullscreenSky->pip);
+	sg_apply_pipeline(FullscreenSky.pip);
 
 	sky_vs_params_t vsParams;
 	vsParams.view = camera.getView();
@@ -635,8 +704,8 @@ void SCRenderer::RenderSky()
 
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_sky_fs_params, { &fsParams, sizeof(fsParams) });
 
-	FullscreenSky->bind.fs_images[SLOT_skydome] = skydome;
-	sg_apply_bindings(&FullscreenSky->bind);
+	FullscreenSky.bind.fs_images[SLOT_skydome] = skydome.img;
+	sg_apply_bindings(&FullscreenSky.bind);
 	sg_draw(0, 6, 1);
 }
 
@@ -719,7 +788,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 		if (useTex)
 			return { 255, 255, 255, 255 };
 		if (prop == 2)
-			return { tx.r, tx.g, tx.b, 64 };
+			return { tx.r, tx.g, tx.b, 128 };
 		return { tx.r, tx.g, tx.b, tx.a };
 	};
 
@@ -844,7 +913,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 		const bool opt = opaque.total != opaque.vertice.size();
 		//printf("opt: %s...\n", opt ? "yes" : "no");
 		computeNormals(opaque);
-		mshOpaque.texture = white;
+		mshOpaque.texture = white.img;
 		mshOpaque.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, opaque.vertice);
 		mshOpaque.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, opaque.indice);
 		mshOpaque.pcount = opaque.indice.size();
@@ -855,7 +924,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 		const bool opt = blend.total != blend.vertice.size();
 		//printf("opt: %s...\n", opt ? "yes" : "no");
 		computeNormals(blend);
-		mshBlend.texture = white;
+		mshBlend.texture = white.img;
 		mshBlend.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, blend.vertice);
 		mshBlend.ibuf = MakeBuffer(SG_BUFFERTYPE_INDEXBUFFER, SG_USAGE_IMMUTABLE, blend.indice);
 		mshBlend.pcount = blend.indice.size();
@@ -897,11 +966,8 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 		PrepareModel(*this, o, lodLevel, tmp);
 	});
 
-	if (!ModelRender)
-		ModelRender.emplace();
-
-	if (ModelRender->dirtyGlobals) {
-		ModelRender->dirtyGlobals = false;
+	if (ModelRender.dirtyGlobals) {
+		ModelRender.dirtyGlobals = false;
 
 		model_vs_global_params_t gparams;
 		gparams.proj = camera.getProj();
@@ -911,29 +977,29 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 
 		const auto fog = GetFogParams<model_fog_params_t>();
 
-		sg_apply_pipeline(ModelRender->pip_opaque);
+		sg_apply_pipeline(ModelRender.pip_opaque);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_model_fog_params, { &fog, sizeof(fog) });
 
-		sg_apply_pipeline(ModelRender->pip_blend);
+		sg_apply_pipeline(ModelRender.pip_blend);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_model_fog_params, { &fog, sizeof(fog) });
 	}
 
 	{
 		const model_vs_instance_params_t iparams{ world };
-		sg_apply_pipeline(ModelRender->pip_opaque);
+		sg_apply_pipeline(ModelRender.pip_opaque);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
-		sg_apply_pipeline(ModelRender->pip_blend);
+		sg_apply_pipeline(ModelRender.pip_blend);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
 	}
 
 	for (const auto& msh : meshes) {
 		if (msh.pcount != 0) {
 			if (msh.blend)
-				sg_apply_pipeline(ModelRender->pip_blend);
+				sg_apply_pipeline(ModelRender.pip_blend);
 			else
-				sg_apply_pipeline(ModelRender->pip_opaque);
+				sg_apply_pipeline(ModelRender.pip_opaque);
 			sg_bindings bind{};
 			bind.vertex_buffers[0] = msh.vbuf;
 			bind.index_buffer = msh.ibuf;
@@ -1135,7 +1201,12 @@ void SCRenderer::RenderJets(const RSArea& area)
 void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 {
 	running = true;
+	RenderWorldGround(area, LOD, gtime);
+	RenderWorldModels(area, LOD, gtime);
+}
 
+void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
+{
 	static std::vector<GroundRenderData::MeshItem> groundMeshes;
 	groundMeshes.resize(0);
 
@@ -1179,7 +1250,7 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 			const auto& data = tmp[PASS_VCOLOR];
 			if (data.size() != 0) {
 				auto& msh = meshes.emplace_back();
-				msh.texture = white;
+				msh.texture = white.img;
 				msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER, SG_USAGE_IMMUTABLE, data);
 				msh.pcount = data.size();
 			}
@@ -1208,9 +1279,6 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 
 	if (!groundMeshes.empty())
 	{
-		if (!GroundRender)
-			GroundRender.emplace();
-
 		ground_vs_params_t params;
 		params.view = camera.getView();
 		params.proj = camera.getProj();
@@ -1221,12 +1289,12 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 
 		const auto fog = GetFogParams<ground_fog_params_t>();
 
-		sg_apply_pipeline(GroundRender->pip);
+		sg_apply_pipeline(GroundRender.pip);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params, { &params, sizeof(params) });
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_ground_fog_params, { &fog, sizeof(fog) });
 
 		sg_bindings bind{};
-		bind.fs_images[SLOT_water] = noise;
+		bind.fs_images[SLOT_water] = noise.img;
 		for (const auto& msh : groundMeshes) {
 			bind.vertex_buffers[0] = msh.vbuf;
 			bind.fs_images[SLOT_ground_bitmap] = msh.texture;
@@ -1234,7 +1302,10 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 			sg_draw(0, msh.pcount, 1);
 		}
 	}
+}
 
+void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)
+{
 	const float ofs0 = UserProperties::Get().Floats.Get("BlockObjOfsX", 1.0f);
 	const float ofs1 = UserProperties::Get().Floats.Get("BlockObjOfsZ", 1.0f);
 	const float factorX = UserProperties::Get().Floats.Get("BlockObjFactorX", -1.0f);
@@ -1297,42 +1368,6 @@ void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 }
 
 #if USE_SHADER_PIPELINE != 1
-
-void SCRenderer::DisplayModel(RSEntity* object,size_t lodLevel)
-{
-	if (!initialized)
-		return;
-
-	if (object->IsPrepared())
-		Prepare(object);
-
-	SetProj(camera.proj);
-
-	running = true;
-	float counter = 0;
-	while (running) {
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		light = { 20 * cos(counter), 10, 20 * sin(counter) };
-		counter += 0.02;
-
-		//camera.SetPosition(position);
-
-		SetView(camera.getView());
-
-		DrawModel(object, lodLevel);
-
-		//Render light
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_BLEND);
-		glDisable(GL_DEPTH_TEST);
-		glPointSize(6);
-		glBegin(GL_POINTS);
-		glColor4f(1, 1,0 , 1);
-		glVertex(light);
-		glEnd();
-	}
-}
 
 void SCRenderer::RenderObjects(const RSArea& area,size_t blockID)
 {

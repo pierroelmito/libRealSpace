@@ -343,7 +343,7 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	const RSMatrix id = HMM_Mat4d(1);
 
 	Renderer.SetLight(light);
-	Renderer.Draw3D({ false }, [&] () {
+	Renderer.Draw3D({ 0 }, [&] () {
 		Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX, id);
 	});
 }
