@@ -49,11 +49,7 @@ void RSScreen::Init(int32_t zoomFactor)
 	glfwMakeContextCurrent(win);
 	glfwSwapInterval(1);
 
-	sg_desc desc{ 0 };
-	desc.buffer_pool_size = 1 << 15;
-	desc.image_pool_size = 1 << 15;
-	//desc.context.sample_count = 4;
-	sg_setup(desc);
+	Renderer.MakeContext();
 }
 
 bool RSScreen::StartFrame()

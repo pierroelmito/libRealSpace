@@ -35,6 +35,7 @@ public:
 	void Prepare();
 	void Init(int32_t zoom);
 	void Release();
+	void MakeContext();
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix& world);
 	bool CreateTextureInGPU(RSTexture* texture);
 	bool UploadTextureContentToGPU(RSTexture* texture);
@@ -64,11 +65,13 @@ public:
 	void RenderWorldModels(const RSArea& area, int LOD, double gtime);
 	void RenderJets(const RSArea& area);
 	void RenderSky();
+	void RenderClouds();
 
 	struct Render3DParams {
 		enum Flags {
 			CLEAR_COLORS = 1,
-			USE_RENDER_TARGETS = 2
+			SKY = 2,
+			CLOUDS = 4,
 		};
 		uint32_t flags{ CLEAR_COLORS };
 	};
@@ -91,6 +94,8 @@ private:
 	bool running;
 	bool paused;
 };
+
+using R3Dp = SCRenderer::Render3DParams;
 
 /*
 void IMG_Init();

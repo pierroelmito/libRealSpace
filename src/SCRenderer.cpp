@@ -25,6 +25,10 @@
 
 extern GLFWwindow* win;
 
+const sg_pixel_format RSColorFormat = SG_PIXELFORMAT_RGB10A2;
+const sg_pixel_format RSDepthFormat = SG_PIXELFORMAT_DEPTH;
+const int RSSampleCount = 4;
+
 struct SgTexture
 {
 	int w{ 0 };
@@ -148,8 +152,8 @@ sg_image_desc MakeImageDesc(int w, int h, sg_pixel_format fmt, sg_usage usage, u
 	idesc.num_mipmaps = mipcount;
 	idesc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
 	idesc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
-	idesc.max_anisotropy = 4;
-	idesc.sample_count = rt ? 1: 1;
+	idesc.max_anisotropy = rt ? 1 : 4;
+	idesc.sample_count = rt ? RSSampleCount: 1;
 
 	return idesc;
 }
@@ -245,6 +249,8 @@ struct ModelRenderData
 			pdesc.depth.write_enabled = true;
 			pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
 			pdesc.cull_mode = SG_CULLMODE_BACK;
+			pdesc.color_count = 2;
+			pdesc.colors[1].pixel_format = SG_PIXELFORMAT_R32F;
 
 			pip_opaque = sg_make_pipeline(&pdesc);
 
@@ -293,6 +299,8 @@ struct GroundRenderData
 			pdesc.layout.attrs[ATTR_ground_vs_texcoord].format = SG_VERTEXFORMAT_FLOAT2;
 			pdesc.layout.attrs[ATTR_ground_vs_vcolor].format = SG_VERTEXFORMAT_UBYTE4N;
 			pdesc.cull_mode = SG_CULLMODE_BACK;
+			pdesc.color_count = 2;
+			pdesc.colors[1].pixel_format = SG_PIXELFORMAT_R32F;
 			pip = sg_make_pipeline(&pdesc);
 		}
 
@@ -334,6 +342,59 @@ struct FullscreenSky
 			pdesc.depth.write_enabled = false;
 			pdesc.depth.compare = SG_COMPAREFUNC_EQUAL;
 			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
+			pip = sg_make_pipeline(&pdesc);
+		}
+
+		bind.vertex_buffers[0] = vbuf;
+
+		return true;
+	}
+};
+
+struct FullscreenClouds
+{
+	sg_buffer vbuf{};
+	sg_shader shd{};
+	sg_pipeline pip{};
+	sg_bindings bind{};
+
+	bool Init()
+	{
+		sg_shader_desc sd = *clouds_shader_desc(sg_query_backend());
+		shd = sg_make_shader(sd);
+
+		{
+			const float N = -1.0f;
+			const float P = -N;
+			const float Z = 1.0f;
+			const float vertices[] = {
+				N, P, Z,
+				P, P, Z,
+				N, N, Z,
+				P, P, Z,
+				P, N, Z,
+				N, N, Z,
+			};
+			sg_buffer_desc bdesc{};
+			bdesc.data = SG_RANGE(vertices);
+			vbuf = sg_make_buffer(&bdesc);
+		}
+
+		{
+			sg_pipeline_desc pdesc{};
+			pdesc.shader = shd;
+			pdesc.depth.pixel_format = SG_PIXELFORMAT_NONE;
+			pdesc.depth.write_enabled = false;
+			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
+			pdesc.colors[0].blend = {
+				true,
+				SG_BLENDFACTOR_SRC_ALPHA,
+				SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+				SG_BLENDOP_ADD,
+				SG_BLENDFACTOR_ZERO,
+				SG_BLENDFACTOR_ONE,
+				SG_BLENDOP_ADD,
+			};
 			pip = sg_make_pipeline(&pdesc);
 		}
 
@@ -386,6 +447,7 @@ struct FullscreenBitmapData
 		glfwGetFramebufferSize(win, &cur_width, &cur_height);
 
 		sg_pass_action pass_action = {0};
+		pass_action.colors[0].action = SG_ACTION_LOAD;
 		sg_begin_default_pass(&pass_action, cur_width, cur_height);
 
 		sg_apply_pipeline(pip);
@@ -406,16 +468,21 @@ struct FullscreenBitmapData
 	}
 };
 
+SgTexture debugFont{};
 SgTexture noise{};
 SgTexture white{};
 SgTexture skydome{};
 SgTexture screen{};
 SgTexture renderTargetColor{};
-SgTexture renderTargetDepth{};
-sg_pass renderPass{};
+SgTexture renderTargetGDepth{};
+SgTexture renderTargetZBuffer{};
+sg_pass renderPassScene0{};
+sg_pass renderPassScene1{};
+sg_pass renderPassScreen{};
 
 FullscreenBitmapData FbdRender;
 FullscreenSky FullscreenSky;
+FullscreenClouds FullscreenClouds;
 ModelRenderData ModelRender;
 GroundRenderData GroundRender;
 
@@ -454,20 +521,6 @@ SCRenderer::SCRenderer()
 SCRenderer::~SCRenderer(){
 }
 
-float Ratio(float a, float b, float x)
-{
-	if (x < a)
-		return 0.0f;
-	if (x > b)
-		return 1.0f;
-	return (x - a) / (b - a);
-}
-
-float SmoothStep(float x)
-{
-	return x * x * (3 - 2 * x);
-}
-
 template <size_t N, typename S, typename... PARAMS>
 std::array<uint8_t, 4> FractalNoiseSkyDome(const RSVector3& v, const std::array<hmm_vec2, N>& seeds, const S& sampler, const PARAMS&... params)
 {
@@ -488,41 +541,6 @@ std::array<uint8_t, 4> FractalNoiseSkyDome(const RSVector3& v, const std::array<
 	assert(fc >= 0.0f && fc <= 1.0f);
 	const uint8_t c = uint8_t(fc * 255.9f);
 	return { 255, 255, 255, c };
-}
-
-std::pair<int, float> GetBilinear(float v, int sz)
-{
-	const int ix = v > 0.0f ? (int(sz * v) % sz) & (sz - 1) : (sz - 1) - (int(sz * -v) % sz) & (sz - 1);
-	const float av = abs(v);
-	const float sr = av * sz - truncf(av * sz);
-	if (v < 0.0f)
-		return { ix, 1.0f - sr };
-	return { ix, sr };
-}
-
-template <size_t N>
-float PerlinNoise(float x, float y, const std::array<hmm_vec2, N * N>& gradients)
-{
-	const auto [ ix0, rx ] = GetBilinear(x, N);
-	const auto [ iy0, ry ] = GetBilinear(y, N);
-	const float rx1 = rx;
-	const float ry1 = ry;
-	const float rx0 = 1.0f - rx;
-	const float ry0 = 1.0f - ry;
-	const float srx0 = SmoothStep(rx0);
-	const float srx1 = SmoothStep(rx1);
-	const float sry0 = SmoothStep(ry0);
-	const float sry1 = SmoothStep(ry1);
-	const int ix1 = (ix0 + 1) % N;
-	const int iy1 = (iy0 + 1) % N;
-	const float x0y0 = HMM_DotVec2(gradients[iy0 * N + ix0], { srx0, sry0 });
-	const float x1y0 = HMM_DotVec2(gradients[iy0 * N + ix1], { srx1, sry0 });
-	const float x0y1 = HMM_DotVec2(gradients[iy1 * N + ix0], { srx0, sry1 });
-	const float x1y1 = HMM_DotVec2(gradients[iy1 * N + ix1], { srx1, sry1 });
-	const float ir = srx0 * sry0 * x0y0 + srx1 * sry0 * x1y0 + srx0 * sry1 * x0y1 + srx1 * sry1 * x1y1;
-	const float r = 0.5f * (1.0f + ir);
-	assert(r >= 0.0f && r <= 1.0f);
-	return r;
 }
 
 void SCRenderer::Init(int32_t zoomFactor)
@@ -547,6 +565,7 @@ void SCRenderer::Init(int32_t zoomFactor)
 	std::vector<uint32_t> pixels = { 0xffffffffu };
 	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, 0, pixels);
 	noise = LoadDDS("../assets/noise.dds").value_or(white);
+	debugFont = LoadDDS("../assets/font.dds").value_or(white);
 
 	std::array<hmm_vec2, 7> seeds;
 	for (hmm_vec2& v : seeds) {
@@ -561,13 +580,13 @@ void SCRenderer::Init(int32_t zoomFactor)
 		const float a = HMM_PI32 * 2.0f * float(rand() % 1024) / 1023.0f;
 		g = cf * HMM_NormalizeVec2({ cosf(a), sinf(a) });
 	}
-
 	skydome = MakeSkyDome(1024, 1024, [&] (const RSVector3& d) {
 		return FractalNoiseSkyDome(d, seeds, PerlinNoise<sz>, gradients);
 	});
 
 	ModelRender.Init();
 	FullscreenSky.Init();
+	FullscreenClouds.Init();
 	GroundRender.Init();
 	FbdRender.Init();
 
@@ -576,7 +595,18 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 void SCRenderer::Release()
 {
+}
 
+void
+SCRenderer::MakeContext()
+{
+	sg_desc desc{ 0 };
+	desc.buffer_pool_size = 1 << 15;
+	desc.image_pool_size = 1 << 15;
+	desc.context.color_format = RSColorFormat;
+	desc.context.depth_format = RSDepthFormat;
+	desc.context.sample_count = RSSampleCount;
+	sg_setup(desc);
 }
 
 void
@@ -584,42 +614,68 @@ SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 {
 	ModelRender.dirtyGlobals = true;
 
-	sg_pass_action pass_action = {0};
-	if ((params.flags & Render3DParams::CLEAR_COLORS) == 0)
-		pass_action.colors[0].action = SG_ACTION_DONTCARE;
-
-	int cur_width{}, cur_height{};
-	glfwGetFramebufferSize(win, &cur_width, &cur_height);
-
-	const bool useRt = (params.flags & Render3DParams::USE_RENDER_TARGETS) != 0;
-	if (!useRt) {
-		sg_begin_default_pass(&pass_action, cur_width, cur_height);
-	} else {
-		if (renderTargetColor.w != cur_width || renderTargetColor.h != cur_height) {
-			if (renderTargetColor.w != 0) {
-				sg_destroy_pass(renderPass);
-				sg_destroy_image(renderTargetColor.img);
-				sg_destroy_image(renderTargetDepth.img);
-			}
-			const int rtWidth = cur_width;
-			const int rtHeight = cur_height;
-			renderTargetColor = MakeImage(rtWidth, rtHeight, SG_PIXELFORMAT_RGBA8, _SG_USAGE_DEFAULT, IFRenderTarget);
-			renderTargetDepth = MakeImage(rtWidth, rtHeight, SG_PIXELFORMAT_DEPTH_STENCIL, _SG_USAGE_DEFAULT, IFRenderTarget);
-			sg_pass_desc passdesc{};
-			passdesc.color_attachments[0].image = renderTargetColor.img;
-			passdesc.depth_stencil_attachment.image = renderTargetDepth.img;
-			renderPass = sg_make_pass(passdesc);
+	{
+		sg_pass_action pass_action = {0};
+		if ((params.flags & Render3DParams::CLEAR_COLORS) == 0) {
+			pass_action.colors[0].action = SG_ACTION_DONTCARE;
+		} else {
+			pass_action.colors[0].action = SG_ACTION_CLEAR;
+			pass_action.colors[0].value = { 1, 0, 0, 0 };
 		}
-		sg_begin_pass(renderPass, &pass_action);
+
+		{
+			int cur_width{}, cur_height{};
+			glfwGetFramebufferSize(win, &cur_width, &cur_height);
+			if (renderTargetColor.w != cur_width || renderTargetColor.h != cur_height) {
+				if (renderTargetColor.w != 0) {
+					sg_destroy_pass(renderPassScene0);
+					sg_destroy_pass(renderPassScene1);
+					sg_destroy_pass(renderPassScreen);
+					sg_destroy_image(renderTargetColor.img);
+					sg_destroy_image(renderTargetGDepth.img);
+					sg_destroy_image(renderTargetZBuffer.img);
+				}
+				const int rtWidth = cur_width;
+				const int rtHeight = cur_height;
+				renderTargetColor = MakeImage(rtWidth, rtHeight, RSColorFormat, _SG_USAGE_DEFAULT, IFRenderTarget);
+				renderTargetGDepth = MakeImage(rtWidth, rtHeight, SG_PIXELFORMAT_R32F, _SG_USAGE_DEFAULT, IFRenderTarget);
+				renderTargetZBuffer = MakeImage(rtWidth, rtHeight, RSDepthFormat, _SG_USAGE_DEFAULT, IFRenderTarget);
+				sg_pass_desc passdesc{};
+				passdesc.color_attachments[0].image = renderTargetColor.img;
+				renderPassScreen = sg_make_pass(passdesc);
+				passdesc.depth_stencil_attachment.image = renderTargetZBuffer.img;
+				renderPassScene1 = sg_make_pass(passdesc);
+				passdesc.color_attachments[1].image = renderTargetGDepth.img;
+				renderPassScene0 = sg_make_pass(passdesc);
+			}
+			sg_begin_pass(renderPassScene0, &pass_action);
+		}
 	}
 
 	f();
 
 	sg_end_pass();
 
-	if (useRt) {
-		FbdRender.DrawImage(renderTargetColor.img, { 1, 1 });
+	const bool renderSky = (params.flags & Render3DParams::SKY) != 0;
+	if (renderSky) {
+		sg_pass_action pass_action = {0};
+		pass_action.colors[0].action = SG_ACTION_LOAD;
+		pass_action.depth.action = SG_ACTION_LOAD;
+		sg_begin_pass(renderPassScene1, pass_action);
+		RenderSky();
+		sg_end_pass();
 	}
+
+	const bool renderClouds = (params.flags & Render3DParams::CLOUDS) != 0;
+	if (renderClouds) {
+		sg_pass_action screenPassAction = {0};
+		screenPassAction.colors[0] = { SG_ACTION_LOAD, { 0, 0, 1, 0 } };
+		sg_begin_pass(renderPassScreen, screenPassAction);
+		RenderClouds();
+		sg_end_pass();
+	}
+
+	FbdRender.DrawImage(renderTargetColor.img, { 1, 1 });
 }
 
 void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
@@ -693,19 +749,23 @@ void SCRenderer::RenderSky()
 	vsParams.plightdir = lightDir;
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_sky_vs_params, { &vsParams, sizeof(vsParams) });
 
-	RSVector3 colUp = DecodeColor("1a216e");
-	RSVector3 colBot = DecodeColor("1b669b");
-	RSVector3 colLight = DecodeColor("dfedd3");
-
 	sky_fs_params_t fsParams;
-	fsParams.colUp = colUp;
-	fsParams.colBot = colBot;
-	fsParams.colLight = colLight;
-
+	fsParams.colUp = DecodeColor("1a216e");
+	fsParams.colBot = DecodeColor("1b669b");
+	fsParams.colLight = DecodeColor("dfedd3");
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_sky_fs_params, { &fsParams, sizeof(fsParams) });
 
 	FullscreenSky.bind.fs_images[SLOT_skydome] = skydome.img;
 	sg_apply_bindings(&FullscreenSky.bind);
+	sg_draw(0, 6, 1);
+}
+
+void SCRenderer::RenderClouds()
+{
+	sg_apply_pipeline(FullscreenClouds.pip);
+	FullscreenClouds.bind.fs_images[SLOT_tex_depth] = renderTargetGDepth.img;
+	//FullscreenClouds.bind.fs_images[SLOT_tex_depth] = noise.img;
+	sg_apply_bindings(&FullscreenClouds.bind);
 	sg_draw(0, 6, 1);
 }
 
@@ -816,7 +876,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 		return res - 1;
 	};
 
-	mdata.emplace_back();
+	mdata.emplace_back(); // always reserve vertex color at index 0
 
 	int propCount0[256]{};
 
@@ -950,22 +1010,14 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 
 void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix& world)
 {
-	if (!initialized)
+	if (!initialized || object == nullptr || lodLevel >= object->lods.size())
 		return;
-
-	if (object == nullptr)
-		return;
-
-	if (lodLevel >= object->lods.size()) {
-		const auto maxl = std::min(0UL, object->lods.size() - 1);
-		printf("Unable to render this Level Of Details (out of range): Max level is  %lu\n", maxl);
-		return;
-	}
 
 	ModelRenderData::Mesh& meshes = cacheEntityToModel.GetData(object, [&] (const RSEntity* o, ModelRenderData::Mesh& tmp) {
 		PrepareModel(*this, o, lodLevel, tmp);
 	});
 
+	// update global constants only once per frame...
 	if (ModelRender.dirtyGlobals) {
 		ModelRender.dirtyGlobals = false;
 
@@ -975,6 +1027,13 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 		gparams.pcampos = camera.getPosition();
 		gparams.lightDir = lightDir;
 
+#if 1
+		sg_apply_pipeline(ModelRender.pip_opaque);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
+
+		sg_apply_pipeline(ModelRender.pip_blend);
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
+#else
 		const auto fog = GetFogParams<model_fog_params_t>();
 
 		sg_apply_pipeline(ModelRender.pip_opaque);
@@ -984,22 +1043,26 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 		sg_apply_pipeline(ModelRender.pip_blend);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_model_fog_params, { &fog, sizeof(fog) });
+#endif
 	}
 
-	{
-		const model_vs_instance_params_t iparams{ world };
-		sg_apply_pipeline(ModelRender.pip_opaque);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
-		sg_apply_pipeline(ModelRender.pip_blend);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
-	}
+	const model_vs_instance_params_t iparams{ world };
+	bool iparamsOpaqueOk = false;
+	bool iparamsBlendOk = false;
 
 	for (const auto& msh : meshes) {
 		if (msh.pcount != 0) {
-			if (msh.blend)
+			if (msh.blend) {
 				sg_apply_pipeline(ModelRender.pip_blend);
-			else
+				if (!iparamsBlendOk)
+					sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
+				iparamsBlendOk = true;
+			} else {
 				sg_apply_pipeline(ModelRender.pip_opaque);
+				if (!iparamsOpaqueOk)
+					sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_instance_params, { &iparams, sizeof(iparams) });
+				iparamsOpaqueOk = true;
+			}
 			sg_bindings bind{};
 			bind.vertex_buffers[0] = msh.vbuf;
 			bind.index_buffer = msh.ibuf;
@@ -1010,7 +1073,8 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 	}
 }
 
-void SCRenderer::SetLight(const RSVector3& l){
+void SCRenderer::SetLight(const RSVector3& l)
+{
 	this->lightDir = l;
 }
 
@@ -1021,26 +1085,6 @@ void SCRenderer::Prepare(RSEntity* object)
 	object->prepared = true;
 }
 
-#define TEX_ZERO 0.0f
-#define TEX_ONE 1.0f
-
-// What is this offset ? It is used to get rid of the red delimitations
-// in the 64x64 textures.
-#define OFFSET (1.1f / 64.0f)
-
-const float textTrianCoo64[2][3][2] = {
-	{{TEX_ZERO,TEX_ZERO+OFFSET},    {TEX_ONE-2*OFFSET,TEX_ONE-OFFSET},    {TEX_ZERO,TEX_ONE-OFFSET} }, // LOWER_TRIANGE
-	{{TEX_ZERO+2*OFFSET,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ONE-OFFSET} }  //UPPER_TRIANGE
-};
-
-const float textTrianCoo[2][3][2] = {
-	{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ONE},    {TEX_ZERO,TEX_ONE} }, // LOWER_TRIANGE
-	{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ZERO},    {TEX_ONE,TEX_ONE} }  //UPPER_TRIANGE
-};
-
-#define LOWER_TRIANGE 0
-#define UPPER_TRIANGE 1
-
 bool SCRenderer::IsTextured(const MapVertex* tri0, const MapVertex* tri1, const MapVertex* tri2)
 {
 	return
@@ -1048,6 +1092,9 @@ bool SCRenderer::IsTextured(const MapVertex* tri0, const MapVertex* tri1, const 
 		//tri0->type != tri2->type ||
 		tri0->upperImageID == 0xFF || tri0->lowerImageID == 0xFF ;
 }
+
+constexpr int LOWER_TRIANGE = 0;
+constexpr int UPPER_TRIANGE = 1;
 
 void SCRenderer::RenderTexturedTriangle(
 	const AddVertex& vfunc,
@@ -1058,6 +1105,20 @@ void SCRenderer::RenderTexturedTriangle(
 	int triangleType)
 {
 	const float white[4] { 1, 1, 1, 1 };
+
+	const float TEX_ZERO = 0.0f;
+	const float TEX_ONE = 1.0f;
+	// What is this offset ? It is used to get rid of the red delimitations
+	// in the 64x64 textures.
+	const float OFFSET = (1.1f / 64.0f);
+	const float textTrianCoo64[2][3][2] = {
+		{{TEX_ZERO,TEX_ZERO+OFFSET},    {TEX_ONE-2*OFFSET,TEX_ONE-OFFSET},    {TEX_ZERO,TEX_ONE-OFFSET} }, // LOWER_TRIANGE
+		{{TEX_ZERO+2*OFFSET,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ONE-OFFSET} }  //UPPER_TRIANGE
+	};
+	const float textTrianCoo[2][3][2] = {
+		{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ONE},    {TEX_ZERO,TEX_ONE} }, // LOWER_TRIANGE
+		{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ZERO},    {TEX_ONE,TEX_ONE} }  //UPPER_TRIANGE
+	};
 
 	RSImage* image = NULL;
 	if (triangleType == LOWER_TRIANGE)
@@ -1287,11 +1348,13 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 		params.plightdir = lightDir;
 		params.gtime = float(gtime);
 
-		const auto fog = GetFogParams<ground_fog_params_t>();
-
 		sg_apply_pipeline(GroundRender.pip);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params, { &params, sizeof(params) });
+
+#if 0
+		const auto fog = GetFogParams<ground_fog_params_t>();
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_ground_fog_params, { &fog, sizeof(fog) });
+#endif
 
 		sg_bindings bind{};
 		bind.fs_images[SLOT_water] = noise.img;

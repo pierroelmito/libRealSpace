@@ -70,8 +70,7 @@ void SCStrike::RunFrame(const FrameParams& p)
 	const RSVector3 light = HMM_NormalizeVec3({ 2, 3, 2 });
 
 	Renderer.SetLight(light);
-	Renderer.Draw3D({ SCRenderer::Render3DParams::USE_RENDER_TARGETS }, [&] () {
+	Renderer.Draw3D({ R3Dp::SKY | R3Dp::CLOUDS }, [&] () {
 		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.currentTime);
-		Renderer.RenderSky();
 	});
 }
