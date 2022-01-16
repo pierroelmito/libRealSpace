@@ -9,33 +9,9 @@
 // -----------------------------------------------------------
 
 @block common
-
-vec4 encodeDepth(float v)
-{
-	vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * v;
-	enc = fract(enc);
-	enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);
-	return enc;
-}
-
-float decodeDepth(vec4 rgba)
-{
-	return dot(rgba, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/160581375.0));
-}
-
 float mypow(float x, float y)
 {
 	return exp(log(x) * y);
-}
-
-@end
-
-@block fog
-vec3 computeFog(vec3 v, float depth)
-{
-	return v;
-	//float intensity = exp(thickNess * depth);
-	//return mix(fogColor, v.rgb, intensity * intensity);
 }
 @end
 
@@ -111,20 +87,17 @@ void main() {
 uniform sky_vs_params {
 	mat4 view;
 	mat4 proj;
-	vec3 plightdir;
 };
 
 layout(location=0) in vec4 position;
 
 out vec3 eyedir;
-out vec3 lightdir;
 
 void main() {
 	vec3 x = vec3(view[0][0], view[1][0], view[2][0]);
 	vec3 y = vec3(view[0][1], view[1][1], view[2][1]);
 	vec3 z = vec3(view[0][2], view[1][2], view[2][2]);
 	eyedir = z + ((-position.x / proj[0][0]) * x) + ((-position.y / proj[1][1]) * y);
-	lightdir = plightdir;
 	gl_Position = position;
 }
 
@@ -134,13 +107,13 @@ void main() {
 uniform sampler2D skydome;
 
 uniform sky_fs_params {
+	vec3 lightdir;
 	vec3 colUp;
 	vec3 colBot;
 	vec3 colLight;
 };
 
 in vec3 eyedir;
-in vec3 lightdir;
 
 out vec4 frag_color;
 
@@ -184,6 +157,11 @@ void main() {
 @end
 @fs clouds_fs
 
+uniform fog_params {
+	vec3 fogColor;
+	float thickNess;
+};
+
 uniform sampler2D tex_depth;
 
 in vec4 uv;
@@ -192,8 +170,8 @@ out vec4 frag_color;
 
 void main() {
 	float d = texture(tex_depth, uv.xy).x;
-	float intensity = 1 - exp(0.0001 * d);
-	frag_color = vec4(1, 0, 0, intensity);
+	float intensity = 1 - exp(thickNess * d);
+	frag_color = vec4(fogColor, intensity);
 }
 
 @end
@@ -244,12 +222,6 @@ void main() {
 @end
 @fs model_fs
 
-uniform model_fog_params {
-	vec3 fogColor;
-	float thickNess;
-};
-
-@include_block fog
 @include_block lighting
 
 uniform sampler2D model_bitmap;
@@ -277,8 +249,7 @@ void main() {
 	float si = 0.299 * frag_color.x + 0.587 * frag_color.y + 0.114 * frag_color.z;
 
 	frag_color.xyz = computeLight(frag_color.xyz, -normalize(n), l, normalize(worldpos - campos), si * 0.3);
-	frag_color.xyz = computeFog(frag_color.xyz, depth);
-	frag_depth = depth.xxxx;
+	frag_depth = vec4(depth.xxx, 1);
 }
 
 @end
@@ -305,20 +276,18 @@ layout(location=2) in vec4 texcoord;
 layout(location=3) in vec4 vcolor;
 
 out vec4 color;
-out vec3 worldpos;
+out vec4 worldpos_depth;
 out vec3 campos;
 out vec3 lightdir;
 out vec3 n;
 out vec3 uv;
-out float depth;
 
 void main() {
 	color = vcolor;
 	n = normalize((world * vec4(normal.xyz, 0)).xyz);
 	uv = vec3(texcoord.xy, gtime);
 	vec4 tmp = (view * world) * position;
-	depth = tmp.z / tmp.w;
-	worldpos = (world * position).xyz;
+	worldpos_depth = vec4((world * position).xyz, tmp.z / tmp.w);
 	campos = pcampos;
 	lightdir = plightdir;
 	gl_Position = (proj * view * world) * position;
@@ -327,41 +296,34 @@ void main() {
 @end
 @fs ground_fs
 
-uniform ground_fog_params {
-	vec3 fogColor;
-	float thickNess;
-};
-
-@include_block fog
 @include_block lighting
 
 uniform sampler2D ground_bitmap;
 uniform sampler2D water;
 
 in vec4 color;
-in vec3 worldpos;
+in vec4 worldpos_depth;
 in vec3 campos;
 in vec3 lightdir;
 in vec3 n;
 in vec3 uv;
-in float depth;
 
 layout(location=0) out vec4 frag_color;
 layout(location=1) out vec4 frag_depth;
 
-vec4 sampleWater(float cf, float sc, vec2 dir)
+vec4 sampleWater(vec3 wpos, float cf, float sc, vec2 dir)
 {
-	vec2 uv = sc * (0.002 * worldpos.xz + cf * 0.05 * dir);
+	vec2 uv = sc * (0.002 * wpos.xz + cf * 0.05 * dir);
 	vec4 wc = texture(water, uv);
 	return wc;
 }
 
 float computeWater(vec3 wpos, float cf, float sc)
 {
-	vec4 wc0 = sampleWater(cf, sc, vec2(1, 0.1));
-	vec4 wc1 = sampleWater(cf, sc, vec2(0, 0.76));
-	vec4 wc2 = sampleWater(cf, sc, vec2(0, -0.65));
-	vec4 wc3 = sampleWater(cf, sc, vec2(-0.2, -0.05));
+	vec4 wc0 = sampleWater(wpos, cf, sc, vec2(1, 0.1));
+	vec4 wc1 = sampleWater(wpos, cf, sc, vec2(0, 0.76));
+	vec4 wc2 = sampleWater(wpos, cf, sc, vec2(0, -0.65));
+	vec4 wc3 = sampleWater(wpos, cf, sc, vec2(-0.2, -0.05));
 	vec4 wc = (wc0 + wc1 + wc2 + wc3) / 4;
 	float ws = wc.r * wc.r * wc.r * wc.r;
 	//return ws > 0.06 ? 1.0 : 0.0;
@@ -375,6 +337,8 @@ void main() {
 	tc.a = 1;
 
 	float spec = 0.1;
+	vec3 worldpos = worldpos_depth.xyz;
+	float depth = worldpos_depth.w;
 
 	//int idx = int(color.a * tc.a * 255.0);
 	int idx = int(color.a * 255.0);
@@ -408,8 +372,7 @@ void main() {
 	//float ndotl = dot(lightdir, -normal);
 	//float diffuse = max(ndotl, 0.5);
 	frag_color.xyz = computeLight(frag_color.xyz, normalize(n), lightdir, normalize(worldpos - campos), spec);
-	frag_color.xyz = computeFog(frag_color.xyz, depth);
-	frag_depth = depth.xxxx;
+	frag_depth = vec4(depth.xxx, 1);
 }
 
 @end

@@ -212,7 +212,7 @@ template <class T>
 T GetFogParams()
 {
 	T fog;
-	fog.fogColor = DecodeColor("1b669b");
+	fog.fogColor = DecodeColor(UserProperties::Get().Strings.Get("FogColor", "1b669b"));
 	fog.thickNess = UserProperties::Get().Floats.Get("FogThickness", 0.0002);
 	return fog;
 }
@@ -260,8 +260,17 @@ struct ModelRenderData
 				SG_BLENDFACTOR_SRC_ALPHA,
 				SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 				SG_BLENDOP_ADD,
-				SG_BLENDFACTOR_ZERO,
 				SG_BLENDFACTOR_ONE,
+				SG_BLENDFACTOR_ZERO,
+				SG_BLENDOP_ADD,
+			};
+			pdesc.colors[1].blend = {
+				true,
+				SG_BLENDFACTOR_ONE,
+				SG_BLENDFACTOR_ZERO,
+				SG_BLENDOP_ADD,
+				SG_BLENDFACTOR_ONE,
+				SG_BLENDFACTOR_ZERO,
 				SG_BLENDOP_ADD,
 			};
 
@@ -617,11 +626,11 @@ SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 	{
 		sg_pass_action pass_action = {0};
 		if ((params.flags & Render3DParams::CLEAR_COLORS) == 0) {
-			pass_action.colors[0].action = SG_ACTION_DONTCARE;
+			pass_action.colors[0] = { SG_ACTION_DONTCARE };
 		} else {
-			pass_action.colors[0].action = SG_ACTION_CLEAR;
-			pass_action.colors[0].value = { 1, 0, 0, 0 };
+			pass_action.colors[0] = { SG_ACTION_CLEAR, { 1, 0, 0, 0 } };
 		}
+		pass_action.colors[1] = { SG_ACTION_CLEAR, { 0, 0, 0, 0 } };
 
 		{
 			int cur_width{}, cur_height{};
@@ -743,16 +752,18 @@ void SCRenderer::RenderSky()
 {
 	sg_apply_pipeline(FullscreenSky.pip);
 
+	auto& userStrings = UserProperties::Get().Strings;
+
 	sky_vs_params_t vsParams;
 	vsParams.view = camera.getView();
 	vsParams.proj = camera.getProj();
-	vsParams.plightdir = lightDir;
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_sky_vs_params, { &vsParams, sizeof(vsParams) });
 
 	sky_fs_params_t fsParams;
-	fsParams.colUp = DecodeColor("1a216e");
-	fsParams.colBot = DecodeColor("1b669b");
-	fsParams.colLight = DecodeColor("dfedd3");
+	fsParams.lightdir = lightDir;
+	fsParams.colUp = DecodeColor(userStrings.Get("SkyColUp", "1a216e"));
+	fsParams.colBot = DecodeColor(userStrings.Get("SkyColBot", "1b669b"));
+	fsParams.colLight = DecodeColor(userStrings.Get("SkyColLight", "dfedd3"));
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_sky_fs_params, { &fsParams, sizeof(fsParams) });
 
 	FullscreenSky.bind.fs_images[SLOT_skydome] = skydome.img;
@@ -762,9 +773,11 @@ void SCRenderer::RenderSky()
 
 void SCRenderer::RenderClouds()
 {
+	const auto fog = GetFogParams<fog_params_t>();
+
 	sg_apply_pipeline(FullscreenClouds.pip);
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fog_params, { &fog, sizeof(fog) });
 	FullscreenClouds.bind.fs_images[SLOT_tex_depth] = renderTargetGDepth.img;
-	//FullscreenClouds.bind.fs_images[SLOT_tex_depth] = noise.img;
 	sg_apply_bindings(&FullscreenClouds.bind);
 	sg_draw(0, 6, 1);
 }
@@ -941,7 +954,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 	MeshData opaque;
 	MeshData blend;
 	for (int i = 0 ; i < lod.numTriangles ; i++) {
-		uint16_t triangleID = lod.triangleIDs[i];
+		const uint16_t triangleID = lod.triangleIDs[i];
 		const Triangle& tri = object->triangles[triangleID];
 		MeshData& d = tri.property == RSEntity::TRANSPARENT ? blend : opaque;
 		++propCount1[tri.property];
@@ -1027,23 +1040,11 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 		gparams.pcampos = camera.getPosition();
 		gparams.lightDir = lightDir;
 
-#if 1
 		sg_apply_pipeline(ModelRender.pip_opaque);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
 
 		sg_apply_pipeline(ModelRender.pip_blend);
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
-#else
-		const auto fog = GetFogParams<model_fog_params_t>();
-
-		sg_apply_pipeline(ModelRender.pip_opaque);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_model_fog_params, { &fog, sizeof(fog) });
-
-		sg_apply_pipeline(ModelRender.pip_blend);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_model_vs_global_params, { &gparams, sizeof(gparams) });
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_model_fog_params, { &fog, sizeof(fog) });
-#endif
 	}
 
 	const model_vs_instance_params_t iparams{ world };
@@ -1099,32 +1100,32 @@ constexpr int UPPER_TRIANGE = 1;
 void SCRenderer::RenderTexturedTriangle(
 	const AddVertex& vfunc,
 	const RSArea& area,
-	const MapVertex* tri0,
-	const MapVertex* tri1,
-	const MapVertex* tri2,
+	const MapVertex& tri0,
+	const MapVertex& tri1,
+	const MapVertex& tri2,
 	int triangleType)
 {
-	const float white[4] { 1, 1, 1, 1 };
+	constexpr float white[4] { 1, 1, 1, 1 };
 
-	const float TEX_ZERO = 0.0f;
-	const float TEX_ONE = 1.0f;
+	constexpr float TEX_ZERO = 0.0f;
+	constexpr float TEX_ONE = 1.0f;
 	// What is this offset ? It is used to get rid of the red delimitations
 	// in the 64x64 textures.
-	const float OFFSET = (1.1f / 64.0f);
-	const float textTrianCoo64[2][3][2] = {
+	constexpr float OFFSET = (1.1f / 64.0f);
+	constexpr float textTrianCoo64[2][3][2] = {
 		{{TEX_ZERO,TEX_ZERO+OFFSET},    {TEX_ONE-2*OFFSET,TEX_ONE-OFFSET},    {TEX_ZERO,TEX_ONE-OFFSET} }, // LOWER_TRIANGE
 		{{TEX_ZERO+2*OFFSET,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ZERO+OFFSET},    {TEX_ONE,TEX_ONE-OFFSET} }  //UPPER_TRIANGE
 	};
-	const float textTrianCoo[2][3][2] = {
+	constexpr float textTrianCoo[2][3][2] = {
 		{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ONE},    {TEX_ZERO,TEX_ONE} }, // LOWER_TRIANGE
 		{{TEX_ZERO,TEX_ZERO},    {TEX_ONE,TEX_ZERO},    {TEX_ONE,TEX_ONE} }  //UPPER_TRIANGE
 	};
 
 	RSImage* image = NULL;
 	if (triangleType == LOWER_TRIANGE)
-		image = area.GetImageByID(tri0->lowerImageID);
+		image = area.GetImageByID(tri0.lowerImageID);
 	if (triangleType == UPPER_TRIANGE)
-		image = area.GetImageByID(tri0->upperImageID);
+		image = area.GetImageByID(tri0.upperImageID);
 
 	if (image == NULL){
 		assert(false);
@@ -1137,59 +1138,59 @@ void SCRenderer::RenderTexturedTriangle(
 	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
 
 	const uint32_t texId = image->GetTexture()->GetTextureID();
-	vfunc(texId, tri0->v, tri0->n, white, ttc[triangleType][0]);
-	vfunc(texId, tri1->v, tri1->n, white, ttc[triangleType][1]);
-	vfunc(texId, tri2->v, tri2->n, white, ttc[triangleType][2]);
+	vfunc(texId, tri0.v, tri0.n, white, ttc[triangleType][0]);
+	vfunc(texId, tri1.v, tri1.n, white, ttc[triangleType][1]);
+	vfunc(texId, tri2.v, tri2.n, white, ttc[triangleType][2]);
 }
 
 void SCRenderer::RenderColoredTriangle(
 	const AddVertex& vfunc,
-	const MapVertex* tri0,
-	const MapVertex* tri1,
-	const MapVertex* tri2)
+	const MapVertex& tri0,
+	const MapVertex& tri1,
+	const MapVertex& tri2)
 {
 	const float noUv[2] = { 0.5f, 0.5f };
-	if (tri0->type != tri1->type || tri0->type != tri2->type) {
+	if (tri0.type != tri1.type || tri0.type != tri2.type) {
 		const MapVertex* tri{};
-		if (tri1->type > tri0->type)
-			if (tri1->type > tri2->type)
-				tri = tri1;
+		if (tri1.type > tri0.type)
+			if (tri1.type > tri2.type)
+				tri = &tri1;
 			else
-				tri = tri2;
+				tri = &tri2;
 		else
-			if (tri0->type > tri2->type)
-				tri = tri0;
+			if (tri0.type > tri2.type)
+				tri = &tri0;
 			else
-				tri = tri2;
-		vfunc(PASS_VCOLOR, tri0->v, tri0->n, tri->color, noUv);
-		vfunc(PASS_VCOLOR, tri1->v, tri1->n, tri->color, noUv);
-		vfunc(PASS_VCOLOR, tri2->v, tri2->n, tri->color, noUv);
+				tri = &tri2;
+		vfunc(PASS_VCOLOR, tri0.v, tri0.n, tri->color, noUv);
+		vfunc(PASS_VCOLOR, tri1.v, tri1.n, tri->color, noUv);
+		vfunc(PASS_VCOLOR, tri2.v, tri2.n, tri->color, noUv);
 	} else{
-		vfunc(PASS_VCOLOR, tri0->v, tri0->n, tri0->color, noUv);
-		vfunc(PASS_VCOLOR, tri1->v, tri1->n, tri1->color, noUv);
-		vfunc(PASS_VCOLOR, tri2->v, tri2->n, tri2->color, noUv);
+		vfunc(PASS_VCOLOR, tri0.v, tri0.n, tri0.color, noUv);
+		vfunc(PASS_VCOLOR, tri1.v, tri1.n, tri1.color, noUv);
+		vfunc(PASS_VCOLOR, tri2.v, tri2.n, tri2.color, noUv);
 	}
 }
 
 void SCRenderer::RenderQuad(
 	const AddVertex& vfunc,
 	const RSArea& area,
-	const MapVertex* currentVertex,
-	const MapVertex* rightVertex,
-	const MapVertex* bottomRightVertex,
-	const MapVertex* bottomVertex,
+	const MapVertex& currentVertex,
+	const MapVertex& rightVertex,
+	const MapVertex& bottomRightVertex,
+	const MapVertex& bottomVertex,
 	bool renderTexture)
 {
 	if (!renderTexture){
 		//if (currentVertex->lowerImageID == 0xFF )
-		RenderColoredTriangle(vfunc,currentVertex,bottomRightVertex,bottomVertex);
+		RenderColoredTriangle(vfunc, currentVertex, bottomRightVertex, bottomVertex);
 		// if (currentVertex->upperImageID == 0xFF )
-		RenderColoredTriangle(vfunc,currentVertex,rightVertex,bottomRightVertex);
+		RenderColoredTriangle(vfunc, currentVertex, rightVertex, bottomRightVertex);
 	} else{
-		if (currentVertex->lowerImageID != 0xFF)
-			RenderTexturedTriangle(vfunc,area,currentVertex,bottomRightVertex,bottomVertex,LOWER_TRIANGE);
-		if (currentVertex->upperImageID != 0xFF)
-			RenderTexturedTriangle(vfunc,area,currentVertex,rightVertex,bottomRightVertex,UPPER_TRIANGE);
+		if (currentVertex.lowerImageID != 0xFF)
+			RenderTexturedTriangle(vfunc, area, currentVertex, bottomRightVertex, bottomVertex, LOWER_TRIANGE);
+		if (currentVertex.upperImageID != 0xFF)
+			RenderTexturedTriangle(vfunc, area, currentVertex, rightVertex, bottomRightVertex, UPPER_TRIANGE);
 	}
 }
 
@@ -1200,10 +1201,10 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 
 	for (size_t x=0 ; x < sideSize-1 ; x ++){
 		for (size_t y=0 ; y < sideSize-1 ; y ++){
-			const MapVertex* currentVertex     =   &block.vertice[x+y*sideSize];
-			const MapVertex* rightVertex       =   &block.vertice[(x+1)+y*sideSize];
-			const MapVertex* bottomRightVertex =   &block.vertice[(x+1)+(y+1)*sideSize];
-			const MapVertex* bottomVertex      =   &block.vertice[x+(y+1)*sideSize];
+			const MapVertex& currentVertex     = block.vertice[x+y*sideSize];
+			const MapVertex& rightVertex       = block.vertice[(x+1)+y*sideSize];
+			const MapVertex& bottomRightVertex = block.vertice[(x+1)+(y+1)*sideSize];
+			const MapVertex& bottomVertex      = block.vertice[x+(y+1)*sideSize];
 			RenderQuad(vfunc,area,currentVertex,rightVertex, bottomRightVertex, bottomVertex,renderTexture);
 		}
 	}
@@ -1213,10 +1214,10 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 		const AreaBlock& currentBlock = block;
 		const AreaBlock& rightBlock = area.GetAreaBlockByID(LOD, i+1);
 		for (int y=0 ; y < sideSize-1 ; y ++){
-			const MapVertex* currentVertex     =   currentBlock.GetVertice(currentBlock.sideSize-1, y);
-			const MapVertex* rightVertex       =   rightBlock.GetVertice(0, y);
-			const MapVertex* bottomRightVertex =   rightBlock.GetVertice(0, y+1);
-			const MapVertex* bottomVertex      =   currentBlock.GetVertice(currentBlock.sideSize-1, y+1);
+			const MapVertex& currentVertex     = *currentBlock.GetVertice(currentBlock.sideSize-1, y);
+			const MapVertex& rightVertex       = *rightBlock.GetVertice(0, y);
+			const MapVertex& bottomRightVertex = *rightBlock.GetVertice(0, y+1);
+			const MapVertex& bottomVertex      = *currentBlock.GetVertice(currentBlock.sideSize-1, y+1);
 			RenderQuad(vfunc,area,currentVertex,rightVertex, bottomRightVertex, bottomVertex,renderTexture);
 		}
 	}
@@ -1226,10 +1227,10 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 		const AreaBlock& currentBlock = block;
 		const AreaBlock& bottomBlock = area.GetAreaBlockByID(LOD, i+BLOCK_PER_MAP_SIDE);
 		for (int x=0 ; x < sideSize-1 ; x++){
-			const MapVertex* currentVertex     =   currentBlock.GetVertice(x,currentBlock.sideSize-1);
-			const MapVertex* rightVertex       =   currentBlock.GetVertice(x+1,currentBlock.sideSize-1);
-			const MapVertex* bottomRightVertex =   bottomBlock.GetVertice(x+1,0);
-			const MapVertex* bottomVertex      =   bottomBlock.GetVertice(x,0);
+			const MapVertex& currentVertex     = *currentBlock.GetVertice(x,currentBlock.sideSize-1);
+			const MapVertex& rightVertex       = *currentBlock.GetVertice(x+1,currentBlock.sideSize-1);
+			const MapVertex& bottomRightVertex = *bottomBlock.GetVertice(x+1,0);
+			const MapVertex& bottomVertex      = *bottomBlock.GetVertice(x,0);
 			RenderQuad(vfunc,area,currentVertex,rightVertex, bottomRightVertex, bottomVertex,renderTexture);
 		}
 	}
@@ -1240,10 +1241,10 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 		const AreaBlock& rightBlock = area.GetAreaBlockByID(LOD, i+1);
 		const AreaBlock& rightBottonBlock = area.GetAreaBlockByID(LOD, i+1+BLOCK_PER_MAP_SIDE);
 		const AreaBlock& bottomBlock = area.GetAreaBlockByID(LOD, i+BLOCK_PER_MAP_SIDE);
-		const MapVertex* currentVertex     =   currentBlock.GetVertice(currentBlock.sideSize-1,currentBlock.sideSize-1);
-		const MapVertex* rightVertex       =   rightBlock.GetVertice(0,currentBlock.sideSize-1);
-		const MapVertex* bottomRightVertex =   rightBottonBlock.GetVertice(0,0);
-		const MapVertex* bottomVertex      =   bottomBlock.GetVertice(currentBlock.sideSize-1,0);
+		const MapVertex& currentVertex     = *currentBlock.GetVertice(currentBlock.sideSize-1,currentBlock.sideSize-1);
+		const MapVertex& rightVertex       = *rightBlock.GetVertice(0,currentBlock.sideSize-1);
+		const MapVertex& bottomRightVertex = *rightBottonBlock.GetVertice(0,0);
+		const MapVertex& bottomVertex      = *bottomBlock.GetVertice(currentBlock.sideSize-1,0);
 		RenderQuad(vfunc,area,currentVertex,rightVertex, bottomRightVertex, bottomVertex,renderTexture);
 	}
 }
@@ -1369,16 +1370,19 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 
 void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)
 {
-	const float ofs0 = UserProperties::Get().Floats.Get("BlockObjOfsX", 1.0f);
-	const float ofs1 = UserProperties::Get().Floats.Get("BlockObjOfsZ", 1.0f);
-	const float factorX = UserProperties::Get().Floats.Get("BlockObjFactorX", -1.0f);
-	const float factorZ = UserProperties::Get().Floats.Get("BlockObjFactorZ", -1.0f);
-	const float objScale = UserProperties::Get().Floats.Get("BlockObjScale", OBJECT_SCALE);
-	const int axisX = UserProperties::Get().Ints.Get("BlockObjX", 1);
-	const int axisZ = UserProperties::Get().Ints.Get("BlockObjZ", 0);
+	const auto& userInts = UserProperties::Get().Ints;
+	const auto& userFloats = UserProperties::Get().Floats;
+
+	const float ofs0 = userFloats.Get("BlockObjOfsX", 1.0f);
+	const float ofs1 = userFloats.Get("BlockObjOfsZ", 1.0f);
+	const float factorX = userFloats.Get("BlockObjFactorX", -1.0f);
+	const float factorZ = userFloats.Get("BlockObjFactorZ", -1.0f);
+	const float objScale = userFloats.Get("BlockObjScale", OBJECT_SCALE);
+
+	const int axisX = userInts.Get("BlockObjX", 1);
+	const int axisZ = userInts.Get("BlockObjZ", 0);
 
 	//Render objects on the map
-	//for(int i=97 ; i < 98 ; i++)
 	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
 		const std::vector<MapObject>& objects = area.objects[id];
 

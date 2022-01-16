@@ -56,9 +56,9 @@ public:
 	using AddVertex = std::function<void(uint32_t, const RSVector3&, const RSVector3&, const float*, const float*)>;
 
 	bool IsTextured(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
-	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area,const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2,int triangleType);
-	void RenderColoredTriangle (const AddVertex& vfunc, const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
-	void RenderQuad(const AddVertex& vfunc, const RSArea& area, const MapVertex* currentVertex, const MapVertex* rightVertex, const MapVertex* bottomRightVertex, const MapVertex* bottomVertex, bool renderTexture);
+	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area,const MapVertex& tri0,const MapVertex& tri1,const MapVertex& tri2,int triangleType);
+	void RenderColoredTriangle (const AddVertex& vfunc, const MapVertex& tri0,const MapVertex& tri1,const MapVertex& tri2);
+	void RenderQuad(const AddVertex& vfunc, const RSArea& area, const MapVertex& currentVertex, const MapVertex& rightVertex, const MapVertex& bottomRightVertex, const MapVertex& bottomVertex, bool renderTexture);
 	void RenderBlock(const AddVertex& vfunc, const RSArea& area,int LOD, int blockID,bool renderTexture);
 	void RenderWorldSolid(const RSArea& area, int LOD, double gtime);
 	void RenderWorldGround(const RSArea& area, int LOD, double gtime);

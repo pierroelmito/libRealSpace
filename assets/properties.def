@@ -1,4 +1,5 @@
 
+# ===== tests for object spawns =====
 #float BlockObjOfsX 1.0
 #float BlockObjFactorX -1.0
 #float BlockObjOfsZ 1.0
@@ -7,5 +8,10 @@
 #int BlockObjX 1
 #int BlockObjZ 0
 
-float FogThickness 0.0001
-
+# ===== fog and sky =====
+#float FogThickness 0.0004
+#string FogColor 1b669b
+#float3 LightDir 2 3 2
+#string SkyColUp 1a216e
+#string SkyColBot 1b669b
+#string SkyColLight dfedd3

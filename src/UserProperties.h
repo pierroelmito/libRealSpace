@@ -5,6 +5,8 @@
 #include <map>
 #include <sstream>
 
+#include "HandmadeMath.h"
+
 class StringReader
 {
 public:
@@ -43,6 +45,7 @@ public:
 	PropContainer<bool> Bools;
 	PropContainer<int> Ints;
 	PropContainer<float> Floats;
+	PropContainer<hmm_vec3> Vectors3;
 	PropContainer<std::string> Strings;
 
 	static UserProperties& Get();

@@ -10,6 +10,8 @@
 
 #include "precomp.h"
 
+#include "UserProperties.h"
+
 SCStrike::SCStrike()
 {
 }
@@ -67,7 +69,7 @@ void SCStrike::RunFrame(const FrameParams& p)
 	cam.LookAt(camPos + camDir);
 #endif
 
-	const RSVector3 light = HMM_NormalizeVec3({ 2, 3, 2 });
+	const RSVector3 light = HMM_NormalizeVec3(UserProperties::Get().Vectors3.Get("LightDir", { 2, 3, 2 }));
 
 	Renderer.SetLight(light);
 	Renderer.Draw3D({ R3Dp::SKY | R3Dp::CLOUDS }, [&] () {

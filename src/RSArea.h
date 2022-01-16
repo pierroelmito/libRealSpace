@@ -16,11 +16,19 @@ class PakEntry;
 class PakArchive;
 
 //DIRTY HACK !!! DELETE ME ASAP
-//#define HEIGHT_DIVIDER 17
-//#define BLOCK_WIDTH 512
-#define HEIGHT_DIVIDER 64
-#define BLOCK_WIDTH 512
-#define OBJECT_SCALE 0.05f
+constexpr int HEIGHT_DIVIDER = 64; // 17
+constexpr int BLOCK_WIDTH = 512;
+constexpr float OBJECT_SCALE = 0.05f;
+constexpr int BLOCK_PER_MAP_SIDE = 18;
+constexpr int BLOCKS_PER_MAP = BLOCK_PER_MAP_SIDE * BLOCK_PER_MAP_SIDE;
+
+enum BLOCK_LOD
+{
+	BLOCK_LOD_MAX = 0,
+	BLOCK_LOD_MED = 1,
+	BLOCK_LOD_MIN = 2,
+	NUM_LODS = 3,
+};
 
 struct MapObject
 {
@@ -56,15 +64,6 @@ struct AreaBlock
 	}
 };
 
-#define BLOCK_LOD_MAX 0
-#define BLOCK_LOD_MED 1
-#define BLOCK_LOD_MIN 2
-
-#define NUM_LODS 3
-
-#define BLOCK_PER_MAP_SIDE 18
-#define BLOCKS_PER_MAP (BLOCK_PER_MAP_SIDE*BLOCK_PER_MAP_SIDE)
-
 class RSArea
 {
 public:
@@ -77,10 +76,6 @@ public:
 		return this->blocks[lod][blockID];
 	}
 
-	inline const AreaBlock* GetAreaBlockByCoo(int lod, int x, int y) const {
-		return &this->blocks[lod][x + y * BLOCK_PER_MAP_SIDE];
-	}
-
 	RSImage* GetImageByID(size_t ID) const;
 
 	//Per block objects list
@@ -90,33 +85,32 @@ public:
 	const std::vector<RSEntity*>& GetJets() const { return jets; }
 
 private:
-    
-    void ParseMetadata(void );
-    void ParseObjects(void );
-    
+
+	void ParseMetadata(void );
+	void ParseObjects(void );
+
 #if USE_SHADER_PIPELINE != 1
 	void ParseTrigo(void );
 	void ParseTriFile(const PakEntry* entry);
 #endif
 
-    //Temporary name: I don't know yet what is in there.
-    void ParseHeightMap(void);
+	//Temporary name: I don't know yet what is in there.
+	void ParseHeightMap(void);
 	void ParseBlocks(size_t lod,const PakEntry* entry,size_t verticePerBlock);
-    
+
 	void ParseElevations();
-    
-    std::vector<RSMapTextureSet*> textures;
-    PakArchive* archive;
-    
-    // An area is made of 18*18 (324) blocks each block has 3 levels of details
-    // Level 0 blocks are 20*20;
-    // Level 1 blocks are 10*10;
-    // Level 0 blocks are  5* 5;
-    AreaBlock blocks[NUM_LODS][BLOCKS_PER_MAP];
-    
-    
-    char name[16];
-    
+
+	std::vector<RSMapTextureSet*> textures;
+	PakArchive* archive;
+
+	// An area is made of 18*18 (324) blocks each block has 3 levels of details
+	// Level 0 blocks are 20*20;
+	// Level 1 blocks are 10*10;
+	// Level 0 blocks are  5* 5;
+	AreaBlock blocks[NUM_LODS][BLOCKS_PER_MAP];
+
+	char name[16];
+
 	void AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation, RSVector3* position);
 	void AddJets();
 
