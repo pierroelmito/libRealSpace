@@ -341,7 +341,7 @@ void main() {
 	float depth = worldpos_depth.w;
 
 	//int idx = int(color.a * tc.a * 255.0);
-	int idx = int(color.a * 255.0);
+	int idx = int(color.a * 255.0 + 0.5);
 	if (idx == 0x7) {
 		// ground!!
 		frag_color = tc * vec4(color.rgb, 1);
