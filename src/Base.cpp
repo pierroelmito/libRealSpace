@@ -11,6 +11,13 @@
 #include <cstring>
 #include <cstdio>
 
+#ifdef _WIN32
+#include <FileAPI.h>
+#else
+#include <sys/stat.h>
+#include <errno.h>
+#endif
+
 static char base[512];
 
 const char* GetBase(void)
@@ -26,20 +33,17 @@ void SetBase(const char* newBase)
 		strcat(base,"/");
 }
 
+int Sys_CreateDirectory(const char* path){
 #ifdef _WIN32
-int Sys_CreateDirectory(const char* path){
-#include <FileAPI.h>
 	return CreateDirectoryA(path,NULL);
-}
 #else
-	#include <sys/stat.h>
-	#include <errno.h>
-int Sys_CreateDirectory(const char* path){
 	return mkdir(path,S_IRWXU | S_IRUSR | S_IWUSR| S_IXUSR);
+#endif
 }
 
 void printErrorMessage(int error,const char* subPath)
 {
+#if 0
 	if (error ==EEXIST || error == ENOENT)
 		return;
 
@@ -63,8 +67,8 @@ void printErrorMessage(int error,const char* subPath)
 			break;
 	}
 	printf("\n\n");
-}
 #endif
+}
 
 void CreateDirectories(const char* path)
 {

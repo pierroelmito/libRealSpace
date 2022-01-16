@@ -5,7 +5,7 @@
 #include <map>
 #include <sstream>
 
-#include "HandmadeMath.h"
+#include "Math.h"
 
 class StringReader
 {

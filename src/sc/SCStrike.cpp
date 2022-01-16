@@ -57,9 +57,9 @@ void SCStrike::RunFrame(const FrameParams& p)
 
 	auto& cam = Renderer.GetCamera();
 	const RSVector3 camDir = {
-		cos(angleV) * cos(angleH),
-		sin(angleH),
-		sin(angleV) * cos(angleH)
+		cosf(angleV) * cosf(angleH),
+		sinf(angleH),
+		sinf(angleV) * cosf(angleH)
 	};
 	const RSVector3 strafe = HMM_Cross(camDir, { 0, 1, 0 });
 
