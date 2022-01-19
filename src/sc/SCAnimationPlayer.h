@@ -15,10 +15,10 @@
 class SCAnimationPlayer: public IActivity
 {
 public:
-	SCAnimationPlayer(int32_t animationID, int32_t backgroundID);
+	SCAnimationPlayer();
 	~SCAnimationPlayer();
 
-	void Init() override;
+	void Init(int32_t animationID, int32_t backgroundID);
 	void RunFrame(const FrameParams& p) override;
 
 protected:

@@ -16,6 +16,6 @@ public:
 	SCMainMenu();
 	~SCMainMenu();
 
-	virtual void Init(void) override;
+	virtual void Init();
 	virtual void RunFrame(const FrameParams& p) override;
 };

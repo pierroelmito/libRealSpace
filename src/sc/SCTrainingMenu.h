@@ -16,7 +16,7 @@ public:
 	SCTrainingMenu();
 	~SCTrainingMenu();
 
-	void Init( ) override;
+	void Init();
 	void RunFrame(const FrameParams& p) override;
 };
 

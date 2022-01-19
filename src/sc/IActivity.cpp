@@ -26,25 +26,15 @@ void IActivity::SetTitle(const char* title){
 	Screen.SetTitle(title);
 }
 
-void IActivity::Frame2D(std::initializer_list<RLEShape*> shapes)
-{
-	CheckButtons();
-	VGA.Clear();
-	VGA.SetPalette(this->palette);
-	for (RLEShape* shape : shapes)
-		VGA.DrawShape(*shape);
-	DrawButtons();
-	Mouse.Draw();
-	VGA.VSync();
-}
-
-void IActivity::Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes)
+void IActivity::Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes, std::function<void()> userDraw)
 {
 	CheckButtons();
 	VGA.Clear();
 	VGA.SetPalette(this->palette);
 	for (auto& shape : shapes)
 		VGA.DrawShape(*shape);
+	if (userDraw)
+		userDraw();
 	DrawButtons();
 	Mouse.Draw();
 	VGA.VSync();
@@ -52,6 +42,9 @@ void IActivity::Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes)
 
 SCButton* IActivity::CheckButtons(void)
 {
+	if (buttons.empty())
+		return nullptr;
+
 	for(SCButton* button : buttons) {
 		if (!button->IsEnabled())
 			continue;
@@ -74,8 +67,10 @@ SCButton* IActivity::CheckButtons(void)
 			button->SetAppearance(SCButton::APR_DOWN);
 
 		//If the mouse button has just been released: trigger action.
-		if (Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::RELEASED)
+		if (Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::RELEASED) {
+			Mouse.SetMode(SCMouse::CURSOR);
 			button->OnAction();
+		}
 
 		return button;
 	}

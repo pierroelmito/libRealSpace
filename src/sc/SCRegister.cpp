@@ -10,8 +10,9 @@
 
 #include "precomp.h"
 
-#include "SCWildCatBase.h"
+#include "SCGenericScene.h"
 #include "SCAnimationPlayer.h"
+#include "SCConvPlayer.h"
 
 SCRegister::SCRegister()
 {
@@ -31,8 +32,9 @@ void SCRegister::RunFrame(const FrameParams& p)
 	if (p.pressed.contains(257)) {
 		Stop();
 		//Add both animation and next location on the stack.
-		Game.MakeActivity<SCWildCatBase>();
+		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar);
 		Game.MakeActivity<SCAnimationPlayer>(0, 0);
+		Game.MakeActivity<SCConvPlayer>().SetID(14);
 	}
 
 	Frame2D(shapes);

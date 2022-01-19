@@ -28,7 +28,7 @@ public:
 	void Init(void);
 	void SetPalette(const VGAPalette& newPalette);
 	bool DrawShape(RLEShape& shape);
-	void DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_t start, uint32_t size,size_t interLetterSpace, size_t spaceSize);
+	void DrawText(RSFont* font, const Point2D& coo, const char* text, const uint8_t color, const size_t start, const uint32_t size, const size_t interLetterSpace, const size_t spaceSize);
 	void VSync(void);
 	void Clear(void);
 	void FillLineColor(size_t lineIndex, uint8_t color);

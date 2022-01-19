@@ -16,7 +16,7 @@ public:
 	SCRegister();
 	~SCRegister();
 
-	void Init( ) override;
+	void Init();
 	void RunFrame(const FrameParams& p) override;
 };
 

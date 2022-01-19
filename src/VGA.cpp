@@ -63,8 +63,10 @@ void RSVGA::FillLineColor(size_t lineIndex, uint8_t color)
 	memset(frameBuffer+lineIndex * WIDTH, color, WIDTH);
 }
 
-void RSVGA::DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_t start, uint32_t size,size_t interLetterSpace, size_t spaceSize)
+void RSVGA::DrawText(RSFont* font, const Point2D& baseCoo, const char* text, const uint8_t color, const size_t start, const uint32_t size, const size_t interLetterSpace, const size_t spaceSize)
 {
+	Point2D coo = baseCoo;
+
 	if (text == NULL)
 		return;
 
@@ -77,21 +79,21 @@ void RSVGA::DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_
 
 		shape->SetColorOffset(color);
 		//Adjust height
-		int32_t lineHeight = coo->y;
-		coo->y -= shape->GetHeight();
+		int32_t lineHeight = coo.y;
+		coo.y -= shape->GetHeight();
 
 		if (chartoDraw== 'p' ||
 			chartoDraw== 'y' ||
 			chartoDraw== 'g' )
-			coo->y += 1;
+			coo.y += 1;
 
-		shape->SetPosition(*coo);
+		shape->SetPosition(coo);
 		DrawShape(*shape);
-		coo->y = lineHeight;
+		coo.y = lineHeight;
 
 		if (chartoDraw == ' ')
-			coo->x += spaceSize ;
+			coo.x += spaceSize ;
 		else
-			coo->x+=shape->GetWidth() + interLetterSpace;
+			coo.x+=shape->GetWidth() + interLetterSpace;
 	}
 }

@@ -10,7 +10,7 @@
 
 #include "precomp.h"
 
-SCAnimationPlayer::SCAnimationPlayer(int32_t animationID, int32_t backgroundID)
+SCAnimationPlayer::SCAnimationPlayer()
 {
 }
 
@@ -18,7 +18,7 @@ SCAnimationPlayer::~SCAnimationPlayer()
 {
 }
 
-void SCAnimationPlayer::Init()
+void SCAnimationPlayer::Init(int32_t animationID, int32_t backgroundID)
 {
 }
 

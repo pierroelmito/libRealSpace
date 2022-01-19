@@ -53,7 +53,7 @@ public:
 	SCConvPlayer();
 	~SCConvPlayer();
 
-	void Init() override;
+	void Init();
 	void RunFrame(const FrameParams& p) override;
 	void SetID(int32_t id);
 	virtual void Focus(void) override;

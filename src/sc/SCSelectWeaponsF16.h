@@ -20,7 +20,7 @@ public:
 	SCSelectWeaponF16();
 	~SCSelectWeaponF16();
 
-	void Init( ) override;
+	void Init();
 	void RunFrame(const FrameParams& p) override;
 
 protected:

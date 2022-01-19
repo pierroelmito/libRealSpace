@@ -48,14 +48,13 @@ public:
 		this->running = true;
 	}
 
-	virtual void Init() = 0;
+	//virtual void Init() = 0;
 	virtual void RunFrame(const FrameParams& p) = 0;
 
 	void Stop() { running = false;}
 	bool IsRunning() const { return running; }
 	void SetTitle(const char* title);
-	void Frame2D(std::initializer_list<RLEShape*> shapes);
-	void Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes);
+	void Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes, std::function<void()> userDraw = {});
 
 protected:
 	IActivity();

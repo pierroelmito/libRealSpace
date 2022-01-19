@@ -1,3 +1,6 @@
+data/*
+.xmake/*
+
 # OS X
 .DS_Store
 
