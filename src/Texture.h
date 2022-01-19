@@ -36,20 +36,19 @@ struct VGAPalette
 
 	void Diff(const VGAPalette& other)
 	{
-		for (int i=0  ;i <256 ; i++){
-			if(colors[i].r != other.colors[i].r ||
-			   colors[i].g != other.colors[i].g ||
-			   colors[i].b != other.colors[i].b ||
-			   colors[i].a != other.colors[i].a
-			   )
+		for (int i=0  ;i <256 ; i++) {
+			if (colors[i].r != other.colors[i].r ||
+				colors[i].g != other.colors[i].g ||
+				colors[i].b != other.colors[i].b ||
+				colors[i].a != other.colors[i].a)
 				printf("diff: %d.\n",i);
 		}
 	}
 
 	void ReadPatch(ByteStream* s)
 	{
-		int16_t offset = s->ReadShort();
-		int16_t numColors = s->ReadShort();
+		const int16_t offset = s->ReadShort();
+		const int16_t numColors = s->ReadShort();
 
 		if (offset + numColors > 256){
 			printf("VGAPalette::ReadPatch => Error, this will overflow.\n");
@@ -57,19 +56,18 @@ struct VGAPalette
 		}
 
 		for (uint16_t i= 0 ; i < numColors ; i++){
-			colors[offset+i].r = s->ReadByte() * 255/63.0f;
-			colors[offset+i].g = s->ReadByte() * 255/63.0f;
-			colors[offset+i].b = s->ReadByte() * 255/63.0f;
-			colors[offset+i].a = 1 ;
+			colors[offset + i].r = s->ReadByte() * 255/63.0f;
+			colors[offset + i].g = s->ReadByte() * 255/63.0f;
+			colors[offset + i].b = s->ReadByte() * 255/63.0f;
+			colors[offset + i].a = 1;
 		}
-
 	}
 };
 
 class RSImage;
 
-class RSTexture{
-
+class RSTexture
+{
 public:
 	RSTexture();
 	~RSTexture();
@@ -80,14 +78,12 @@ public:
 	char name[8];
 	uint8_t* data;
 
-	enum Location{ DISK=0x1,RAM=0x2,VRAM=0x4};
+	enum Location{ DISK = 0x1, RAM = 0x2, VRAM = 0x4 };
 	uint8_t locFlag;
 
 	//GPU stuff
 	static constexpr uint32_t InvalidID = ~0u;
 	uint32_t id{ InvalidID };
 	uint32_t GetTextureID(void) { return id; }
-
 	void UpdateContent(RSImage* image);
-private:
 };

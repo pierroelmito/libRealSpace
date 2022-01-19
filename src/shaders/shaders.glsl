@@ -342,10 +342,10 @@ void main() {
 
 	//int idx = int(color.a * tc.a * 255.0);
 	int idx = int(color.a * 255.0 + 0.5);
-	if (idx == 0x7) {
+	if (idx == 0x7 * 16) {
 		// ground!!
 		frag_color = tc * vec4(color.rgb, 1);
-	} else if (idx == 0x5) {
+	} else if (idx == 0x5 * 16) {
 		// grass!!
 		vec4 gc0 = 0.1 * (2 * texture(water, 0.005 * worldpos.xz) - 1);
 		vec4 gc1 = 0.1 * (2 * texture(water, 0.006 * worldpos.zx) - 1);
@@ -354,7 +354,7 @@ void main() {
 		vec4 gc = gc0 + gc1  + gc2 + gc3;
 		//frag_color = computeFog(vec4(tc.xyz * color.xyz + gc.xyz, 1) + gc.xyz, depth);
 		frag_color = tc * vec4(color.rgb + 0.5 * gc.rgb, 1);
-	} else if (idx == 0xA) {
+	} else if (idx == 0xA * 16) {
 		// water!!
 		float ws = 0.9 * computeWater(worldpos, 0.3 * uv.z, 1.0) + 0.6 * computeWater(worldpos, 0.1 * uv.z, 5.0);
 		vec3 wcolor1 = color.rgb * 1.2f;

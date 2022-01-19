@@ -116,8 +116,13 @@ void SCObjectViewer::NextObject()
 	currentObject = (currentObject + 1) % showCases.size();
 }
 
-void SCObjectViewer::ParseAssets(PakArchive* archive)
+void SCObjectViewer::ParseAssets()
 {
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	auto archive = GetPak("OBJVIEW.PAK", *treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK"));
+	//assets->List(stdout);
+	//assets->Decompress("/Users/fabiensanglard/Desktop/ObjViewer.PAK", "MEH");
+
 	/*
 	PakEntry* entry0 = archive->GetEntry(PAK_ID_MENU_DYNAMC); OBJ_VIEWER BOARD
 	PakArchive file0;
@@ -127,11 +132,6 @@ void SCObjectViewer::ParseAssets(PakArchive* archive)
 	*/
 
 	//Identified as OBJECT VIEWER STATIC TITLE
-
-	const PakEntry& entry0 = archive->GetEntry(0);
-	PakArchive file0;
-	file0.InitFromRAM("OBJVIEW.PAK: file 0", entry0);
-	title.Init(file0.GetEntry(0));
 
 	//Identified as TRAINING MISSION TITLE
 	/*
@@ -161,83 +161,30 @@ void SCObjectViewer::ParseAssets(PakArchive* archive)
 	*/
 
 	//Identified as BUTTONS OBJ VIEWER
-	const PakEntry& objButtonEntry = archive->GetEntry(4);
-	PakArchive objButtons;
-	objButtons.InitFromRAM("OBJVIEW.PAK: file 4", objButtonEntry);
-	objButtons.List(stdout);
+	auto objButtons = GetPak("OBJVIEW.PAK: file 4", archive->GetEntry(4));
+	objButtons->List(stdout);
 
-	SCButton* button;
-	Point2D boardPosition = {4, 155} ;
-
-	//EXIT BUTTON
-	button = new SCButton();
+	const Point2D boardPosition = { 4, 155 } ;
 	const Point2D exitDimension{ 30, 15 };
-	Point2D exitPosition = {boardPosition.x+268,boardPosition.y+15};
-	button->InitBehavior(exitPosition,exitDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(14),&exitPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(15),&exitPosition);
-	buttons.push_back(button);
-
+	const Point2D exitPosition = { boardPosition.x + 268, boardPosition.y + 15 };
+	const Point2D rotRightButtonPosition = { boardPosition.x + 232, boardPosition.y + 12 };
+	const Point2D rotLeftButtonPosition = { boardPosition.x + 174, boardPosition.y + 12 };
+	const Point2D rotDownButtonPosition = { boardPosition.x + 198, boardPosition.y + 24 };
+	const Point2D rotUpButtonPosition = { boardPosition.x + 198, boardPosition.y + 6 };
+	const Point2D zoomOutButtonPosition = { boardPosition.x + 122, boardPosition.y + 25 };
+	const Point2D zoomInButtonPosition = { boardPosition.x + 121, boardPosition.y + 7 };
+	const Point2D nextButtonPosition = { boardPosition.x + 10, boardPosition.y + 15 };
 	const Point2D arrowDimension{ 15, 15 };
+	const Point2D nextDimension = { 75, 15 };
 
-	//ROT RIGHT OBJ BUTTON
-	button = new SCButton();
-
-	Point2D rotRightButtonPosition = {boardPosition.x+232,boardPosition.y+12};
-	button->InitBehavior(rotRightButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(12),&rotRightButtonPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(13),&rotRightButtonPosition);
-	buttons.push_back(button);
-
-	//ROT LEFT OBJ BUTTON
-	button = new SCButton();
-	Point2D rotLeftButtonPosition = {boardPosition.x+174,boardPosition.y+12};
-	button->InitBehavior(rotLeftButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(10),&rotLeftButtonPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(11),&rotLeftButtonPosition);
-	buttons.push_back(button);
-
-	//ROT DOWN OBJ BUTTON
-	button = new SCButton();
-	Point2D rotDownButtonPosition = {boardPosition.x+198,boardPosition.y+24};
-	button->InitBehavior(rotDownButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(8),&rotDownButtonPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(9),&rotDownButtonPosition);
-	buttons.push_back(button);
-
-
-	//ROT UP OBJ BUTTON
-	button = new SCButton();
-	Point2D rotUpButtonPosition = {boardPosition.x+198,boardPosition.y+6};
-	button->InitBehavior(rotUpButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(6),&rotUpButtonPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(7),&rotUpButtonPosition);
-	buttons.push_back(button);
-
-	//ZOOM OUT OBJ BUTTON
-	button = new SCButton();
-	Point2D zoomOutButtonPosition = {boardPosition.x+122,boardPosition.y+25};
-	button->InitBehavior(zoomOutButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(4),&zoomOutButtonPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(5),&zoomOutButtonPosition);
-	buttons.push_back(button);
-
-	//ZOOM IN OBJ BUTTON
-	button = new SCButton();
-	Point2D zoomInButtonPosition = {boardPosition.x+121,boardPosition.y+7};
-	button->InitBehavior(zoomInButtonPosition,arrowDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(2),&zoomInButtonPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(3),&zoomInButtonPosition);
-	buttons.push_back(button);
-
-	//NEXT OBJ BUTTON
-	Point2D nextDimension = {75, 15} ;
-	button = new SCButton();
-	Point2D nextButtonPosition = {boardPosition.x+10,boardPosition.y+15};
-	button->InitBehavior(nextButtonPosition,nextDimension, [this] { NextObject(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(objButtons.GetEntry(0),&nextButtonPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(objButtons.GetEntry(1),&nextButtonPosition);
-	buttons.push_back(button);
+	MakeButton(exitPosition, exitDimension, *objButtons, 14, 15, [] { Game.StopTopActivity(); });
+	MakeButton(rotRightButtonPosition, arrowDimension, *objButtons, 12, 13, [] { Game.StopTopActivity(); });
+	MakeButton(rotLeftButtonPosition, arrowDimension, *objButtons, 10, 11, [] { Game.StopTopActivity(); });
+	MakeButton(rotDownButtonPosition, arrowDimension, *objButtons, 8, 9, [] { Game.StopTopActivity(); });
+	MakeButton(rotUpButtonPosition, arrowDimension, *objButtons, 6, 7, [] { Game.StopTopActivity(); });
+	MakeButton(zoomOutButtonPosition, arrowDimension, *objButtons, 4, 5, [] { Game.StopTopActivity(); });
+	MakeButton(zoomInButtonPosition, arrowDimension, *objButtons, 2, 3, [] { Game.StopTopActivity(); });
+	MakeButton(nextButtonPosition, nextDimension, *objButtons, 0, 1, [this] { NextObject(); });
 
 	//buttons.push_back(button);
 	//showAllImage(&file4);
@@ -271,10 +218,7 @@ void SCObjectViewer::ParseAssets(PakArchive* archive)
 
 	//Identified as blue background
 
-	const PakEntry& entry8 = archive->GetEntry(8);
-	PakArchive file8;
-	file8.InitFromRAM("OBJVIEW.PAK: file 8", entry8);
-	bluePrint.Init(file8.GetEntry(0));
+	InitShapes({ ShpBlueprint, ShpTitle });
 
 	//Unknown content
 	/*
@@ -296,16 +240,10 @@ void SCObjectViewer::ParseAssets(PakArchive* archive)
 
 void SCObjectViewer::Init(void)
 {
-	auto treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	ParseAssets();
+
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 	TreEntry* objViewIFF = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
-	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");
-
-	PakArchive assets;
-	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);
-	//assets.List(stdout);
-	//assets.Decompress("/Users/fabiensanglard/Desktop/ObjViewer.PAK", "MEH");
-	ParseAssets(&assets);
-
 	IffLexer objToDisplay;
 	objToDisplay.InitFromRAM(*objViewIFF);
 	//objToDisplay.List(stdout);
@@ -320,7 +258,7 @@ void SCObjectViewer::Init(void)
 
 void SCObjectViewer::RunFrame(const FrameParams& p)
 {
-	Frame2D({ &bluePrint, &title });
+	Frame2D(shapes);
 
 	const RSShowCase& showCase = showCases[currentObject];
 
@@ -330,16 +268,17 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 
 	const BoudingBox bbox = showCases[currentObject].entity->GetBoudingBpx();
 
-	RSVector3 newPosition;
-	newPosition.X = showCase.cameraDist / 150 * cos(camTime);
-	newPosition.Y = showCase.cameraDist / 350;
-	newPosition.Z = showCase.cameraDist / 150 * sin(camTime);
+	const RSVector3 newPosition{
+		showCase.cameraDist / 150 * cosf(camTime),
+		showCase.cameraDist / 350,
+		showCase.cameraDist / 150 * sinf(camTime)
+	};
+
 	auto& cam = Renderer.GetCamera();
 	cam.SetPosition(newPosition);
 	cam.LookAt({ 0, 0.2f * (bbox.min.Y + bbox.max.Y), 0 });
 
 	const RSVector3 light = HMM_NormalizeVec3({ 4.0f * cosf(lightTime), 4.0f, 4.0f * sinf(lightTime) });
-
 	const RSMatrix id = HMM_Mat4d(1);
 
 	Renderer.SetLight(light);

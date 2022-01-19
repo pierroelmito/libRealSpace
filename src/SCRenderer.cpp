@@ -564,7 +564,6 @@ void SCRenderer::Init(int32_t zoomFactor)
 
 	RSPalette palette;
 	palette.InitFromIFF(&lexer);
-
 	this->palette = *palette.GetColorPalette();
 
 	camera.SetPersective(50.0f, width / (float)height, 0.1f, 20000.0f);
@@ -1333,14 +1332,14 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 			groundMeshes.push_back(msh);
 	}
 
-	std::sort(groundMeshes.begin(), groundMeshes.end(), [] (const GroundRenderData::MeshItem& a, const GroundRenderData::MeshItem& b) {
-		if (a.texture.id != b.texture.id)
-			return a.texture.id < b.texture.id;
-		return false;
-	});
-
 	if (!groundMeshes.empty())
 	{
+		std::sort(groundMeshes.begin(), groundMeshes.end(), [] (const GroundRenderData::MeshItem& a, const GroundRenderData::MeshItem& b) {
+			if (a.texture.id != b.texture.id)
+				return a.texture.id < b.texture.id;
+			return false;
+		});
+
 		ground_vs_params_t params;
 		params.view = camera.getView();
 		params.proj = camera.getProj();

@@ -35,9 +35,12 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 		buttons[button].event = SCMouseButton::RELEASED;
 }
 
+std::set<int> JustPressed;
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	if (action == GLFW_PRESS)
+		JustPressed.insert(key);
 	if (mods == GLFW_MOD_CONTROL && key == GLFW_KEY_R && action == GLFW_PRESS)
 		UserProperties::Get().Reload();
 }
@@ -199,12 +202,14 @@ void GameEngine::Run()
 		IActivity* currentActivity = activities.top();
 		if (currentActivity->IsRunning()) {
 			currentActivity->Focus();
-			currentActivity->RunFrame({ glfwGetTime() });
+			currentActivity->RunFrame({ JustPressed, glfwGetTime() });
 			currentActivity->UnFocus();
 		} else{
 			activities.pop();
 			delete currentActivity;
 		}
+
+		JustPressed.clear();
 
 		//Swap GL buffer
 		Screen.Refresh();

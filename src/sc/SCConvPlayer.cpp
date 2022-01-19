@@ -191,19 +191,16 @@ void SCConvPlayer::SetID(int32_t id)
 {
 	this->conversationID = id;
 
-	TreEntry* convEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "CONV.PAK");
+	auto convPak = GetPak("CONV.PAK", *Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "CONV.PAK"));
+	//convPak->List(stdout);
 
-	PakArchive convPak;
-	convPak.InitFromRAM("CONV.PAK", *convEntry);
-	//convPak.List(stdout);
-
-	if (convPak.GetNumEntries() <= id){
+	if (convPak->GetNumEntries() <= id){
 		Stop();
-		Game.Log("Cannot load conversation id (max convID is %lu).",convPak.GetNumEntries()-1);
+		Game.Log("Cannot load conversation id (max convID is %lu).",convPak->GetNumEntries()-1);
 		return;
 	}
 
-	SetArchive(&convPak.GetEntry(id));
+	SetArchive(&convPak->GetEntry(id));
 }
 
 void SCConvPlayer::Init( )
@@ -215,7 +212,7 @@ void SCConvPlayer::Init( )
 void SCConvPlayer::CheckFrameExpired(const FrameParams& p)
 {
 	//A frame expires either after a player press a key, click or 6 seconds elapse.
-	if(Game.AnyInput() || TimeToMSec * (p.currentTime - currentFrame.creationTime) > 5000)
+	if (!p.pressed.empty() || TimeToMSec * (p.currentTime - currentFrame.creationTime) > 5000)
 		this->currentFrame.SetExpired(true);
 }
 
@@ -256,8 +253,6 @@ void SCConvPlayer::DrawText(void)
 				lastGoodPos = currentFrame.text + strlen(currentFrame.text);
 			//Skip the space char
 			wordSearch++;
-
-
 		}
 
 		//Draw the line
@@ -316,15 +311,9 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 
 	//
 	if (currentFrame.mode == ConvFrame::CONV_CLOSEUP || currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE) {
+		auto convPals = GetPak("CONVPALS.PAK", *Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "CONVPALS.PAK"));
 
-		TreEntry* convPalettesEntry = Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "CONVPALS.PAK");
-		PakArchive convPals;
-		convPals.InitFromRAM("CONVPALS.PAK", *convPalettesEntry);
-
-
-		ByteStream paletteReader;
-		paletteReader.Set(convPals.GetEntry(currentFrame.facePaletteID).data); //mountains Good but not sky
-		this->palette.ReadPatch(&paletteReader);
+		ReadPatch(convPals->GetEntry(currentFrame.facePaletteID));
 
 		int32_t pos = 0 ;
 		if (currentFrame.mode == ConvFrame::CONV_CLOSEUP) {

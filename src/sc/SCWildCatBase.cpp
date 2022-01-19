@@ -21,44 +21,15 @@ SCWildCatBase::~SCWildCatBase()
 
 void SCWildCatBase::Init()
 {
-	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-
-	//Load book
-	TreEntry* entryMountain = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTSHPS.PAK");
-	PakArchive pak;
-	pak.InitFromRAM("", *entryMountain);
-
-	PakArchive bookPak;
-	bookPak.InitFromRAM("subPak board", pak.GetEntry(OptionShapeID::WILDCAT_HANGAR));
-	hangar.Init(bookPak.GetEntry(0));
-
-	//Load vehicule
-	PakArchive vehiculePak;
-	vehiculePak.InitFromRAM("subPak board", pak.GetEntry(OptionShapeID::WILDCAT_HANGAR_VEHICULE_F16));
-	vehicule.Init(vehiculePak.GetEntry(0));
-
-	//Load palette
-	this->palette = VGA.GetPalette();
-
-	TreEntry* palettesEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTPALS.PAK");
-	PakArchive palettesPak;
-	palettesPak.InitFromRAM("OPTSHPS.PAK",*palettesEntry);
-
-	ByteStream paletteReader;
-	paletteReader.Set(palettesPak.GetEntry(OPTPALS_PAK_WILD_CAT_HANGAR).data);
-	this->palette.ReadPatch(&paletteReader);
+	InitShapes({ OptHangar, OptHangarDoor0, OptHangarDoor1, OptF16 });
 }
 
 void SCWildCatBase::RunFrame(const FrameParams& p)
 {
-	if (Game.IsKeyPressed(257 /*'\r'*/)) {
+	if (p.pressed.contains(257)) {
 		Stop();
-		SCConvPlayer* conv = new SCConvPlayer();
-		conv->Init();
-		conv->SetID(14);
-		Game.AddActivity(conv);
+		Game.MakeActivity<SCConvPlayer>().SetID(14);
 	}
 
-	Frame2D({ &hangar, &vehicule });
+	Frame2D(shapes);
 }
-

@@ -23,7 +23,7 @@ public:
 
 protected:
 	void ParseObjList(IffLexer* lexer);
-	void ParseAssets(PakArchive* archive);
+	void ParseAssets();
 
 	struct RSShowCase
 	{
@@ -33,8 +33,4 @@ protected:
 	};
 	std::vector<RSShowCase> showCases;
 	uint32_t currentObject;
-
-	RLEShape bluePrint;
-	RLEShape title;
-	RLEShape board;
 };

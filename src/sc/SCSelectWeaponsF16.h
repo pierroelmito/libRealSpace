@@ -16,7 +16,6 @@
 
 class SCSelectWeaponF16 : public IActivity
 {
-
 public:
 	SCSelectWeaponF16();
 	~SCSelectWeaponF16();
@@ -25,6 +24,7 @@ public:
 	void RunFrame(const FrameParams& p) override;
 
 protected:
-	RLEShape background;
+	PalBg wantedBg{};
+	PalBg currentBg{};
 };
 

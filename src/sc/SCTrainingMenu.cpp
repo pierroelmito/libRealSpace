@@ -22,80 +22,46 @@ SCTrainingMenu::~SCTrainingMenu()
 
 void SCTrainingMenu::Init()
 {
-	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-
-	TreEntry* objViewPAK = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");
-	PakArchive assets;
-	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);
-	assets.List(stdout);
-
-	//Load palette
-	ByteStream paletteReader;
-	paletteReader.Set(assets.GetEntry(7).data);
-	this->palette.ReadPatch(&paletteReader);
-
-	const PakEntry& backgroundPakEntry = assets.GetEntry(6);
-	//Identified as Dodge Fight background
-	PakArchive bgPack;
-	bgPack.InitFromRAM("OBJVIEW.PAK: file 6",backgroundPakEntry);
-	background.Init(bgPack.GetEntry(0));
-
-	const PakEntry& titlePackEntry = assets.GetEntry(1);
-	PakArchive titlePack;
-	titlePack.InitFromRAM("", titlePackEntry);
-	title.Init(titlePack.GetEntry(0));
-	Point2D positionTitle = {4,0};
-	title.SetPosition(&positionTitle);
+	InitShapes({ ShpTraingBg0, ShpTrainingTitle });
 
 	/*
 	PakEntry* ue = assets.GetEntry(8);
 	PakArchive up;
 	up.InitFromRAM("OBJVIEW.PAK: file 5",ue->data, ue->size);
 	up.List(stdout);
-
 	title.Init(up.GetEntry(0)->data, up.GetEntry(0)->size);
 	 */
 
-	TreEntry* trButtonsEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "TM.SHP");
-	PakArchive trButtonsPack;
-	trButtonsPack.InitFromRAM("TM.SHP", *trButtonsEntry);
+	const Point2D positionBoard = { 6, 150 };
 
-	Point2D positionBoard = {6,150};
-	board.Init(trButtonsPack.GetEntry(0));
-	board.SetPosition(&positionBoard);
+	//InitShapeAt(*s, { 4, 0 }, "", assets->GetEntry(1));
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	auto trButtonsPack = GetPak("TM.SHP", *treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "TM.SHP"));
+	auto& board = AddShape();
+	board.Init(trButtonsPack->GetEntry(0));
+	board.SetPosition(positionBoard);
 
-	//Search and destroy button
-	SCButton* button;
-	button = new SCButton();
-	Point2D sandDDimension = {130, 15};
-	Point2D sanDPosition = {positionBoard.x+16,positionBoard.y+9};
-	button->InitBehavior(sanDPosition,sandDDimension, [] {
+	const Point2D sandDDimension = { 130, 15 };
+	const Point2D sanDPosition = { positionBoard.x + 16, positionBoard.y + 9 };
+	const Point2D dogDDimension = { 130, 15 } ;
+	const Point2D dogDPosition = { positionBoard.x + 155, positionBoard.y + 9 };
+	const Point2D exitDDimension = { 60, 15 } ;
+	const Point2D exitDPosition = { positionBoard.x + 155, positionBoard.y + 23 };
+
+	MakeButton(sanDPosition, sandDDimension, *trButtonsPack, 1, 2, [] {
 		Game.MakeActivity<SCStrike>();
 		Game.MakeActivity<SCSelectWeaponF16>();
 	});
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(1),&sanDPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(2),&sanDPosition);
-	buttons.push_back(button);
 
-	button = new SCButton();
-	Point2D dogDDimension = {130, 15} ;
-	Point2D dogDPosition = {positionBoard.x+155,positionBoard.y+9};
-	button->InitBehavior(dogDPosition,dogDDimension, [] {});
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(3),&dogDPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(4),&dogDPosition);
-	button->SetEnable(false);
-	buttons.push_back(button);
+	MakeButton(dogDPosition, dogDDimension, *trButtonsPack, 3, 4, [] {
+	})->SetEnable(false);
 
-	button = new SCButton();
-	Point2D exitDDimension = {60, 15} ;
-	Point2D exitDPosition = {positionBoard.x+155,positionBoard.y+23};
-	button->InitBehavior(exitDPosition,exitDDimension, [] { Game.StopTopActivity(); });
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(trButtonsPack.GetEntry(5),&exitDPosition);
-	button->appearance[SCButton::APR_DOWN].InitWithPosition(trButtonsPack.GetEntry(6),&exitDPosition);
-	buttons.push_back(button);
+	MakeButton(exitDPosition, exitDDimension, *trButtonsPack, 5, 6, [] {
+		Game.StopTopActivity();
+	});
 }
 
 void SCTrainingMenu::RunFrame(const FrameParams& p)
 {
-	Frame2D({ &background, &title, &board });
+	Frame2D(shapes);
 }

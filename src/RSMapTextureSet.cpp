@@ -26,8 +26,11 @@ void RSMapTextureSet::InitFromPAK(PakArchive* archive)
 	strcpy(name,archive->GetName());
 	Parse(archive);
 	printf("%d images in set\n", int(images.size()));
+	std::map<std::pair<int, int>, int> counts;
 	for (RSImage* img : images)
-		printf("- %d x %d\n", int(img->width), int(img->height));
+		counts[{ int(img->width), int(img->height) }] += 1;
+	for (const auto& i : counts)
+		printf("- %d x %d: %d images\n", int(i.first.first), int(i.first.second), i.second);
 }
 
 size_t RSMapTextureSet::GetNumImages(void){

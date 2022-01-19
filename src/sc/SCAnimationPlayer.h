@@ -14,7 +14,7 @@
 
 class SCAnimationPlayer: public IActivity
 {
-public :
+public:
 	SCAnimationPlayer(int32_t animationID, int32_t backgroundID);
 	~SCAnimationPlayer();
 

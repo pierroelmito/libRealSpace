@@ -11,13 +11,10 @@
 #include <vector>
 #include <array>
 
+#include "ShapeIDs.h"
+
 class TreArchive;
 class PakArchive;
-
-#define TRE_DATA "..\\..\\DATA\\"
-#define TRE_DATA_GAMEFLOW TRE_DATA "GAMEFLOW\\"
-#define TRE_DATA_OBJECTS TRE_DATA "OBJECTS\\"
-#define TRE_DATA_TXM TRE_DATA "TXM\\"
 
 class AssetManager
 {

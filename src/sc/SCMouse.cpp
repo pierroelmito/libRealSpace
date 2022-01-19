@@ -10,8 +10,6 @@
 
 #include "precomp.h"
 
-const char* const CURSOR_SHAPE_PATH = TRE_DATA "MOUSE.SHP";
-
 SCMouse::SCMouse()
 {
 }
@@ -22,15 +20,12 @@ SCMouse::~SCMouse()
 
 void SCMouse::Init(void)
 {
-	TreEntry* cursorShape = Assets.tres[AssetManager::TRE_MISC].GetEntryByName(CURSOR_SHAPE_PATH);
-
-	PakArchive cursors ;
+	TreEntry* cursorShape = Assets.tres[AssetManager::TRE_MISC].GetEntryByName(TRE_DATA "MOUSE.SHP");
+	PakArchive cursors;
 	cursors.InitFromRAM("MOUSE.SHP",*cursorShape);
 
-	RLEShape* shape;
-
 	for (int i = 0 ; i < 4; i++) {
-		shape = new RLEShape();
+		RLEShape* shape = new RLEShape();
 		shape->Init(cursors.GetEntry(i));
 		appearances[i] = shape;
 	}
@@ -48,20 +43,19 @@ void SCMouse::Draw()
 	cursorPos.y -= 4;
 
 	//If the mouse is over a clickable button, the current appearance has already been selected.
-	if (mode == CURSOR){
-		appearances[1]->SetPosition(&cursorPos);
+	if (mode == CURSOR) {
+		appearances[1]->SetPosition(cursorPos);
 		VGA.DrawShape(*appearances[1]);
 	}
 
-	if (mode == VISOR){
-		appearances[0]->SetPosition(&cursorPos);
+	if (mode == VISOR) {
+		appearances[0]->SetPosition(cursorPos);
 		VGA.DrawShape(*appearances[0]);
 	}
 }
 
 void SCMouse::FlushEvents(void)
 {
-	for (size_t i = 0 ; i < 3 ; i++) {
+	for (size_t i = 0 ; i < 3 ; i++)
 		buttons[i].event = SCMouseButton::NONE;
-	}
 }

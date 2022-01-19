@@ -8,6 +8,11 @@
 
 #pragma once
 
+#include "PaletteIDs.h"
+
+#include <cstring>
+#include <utility>
+
 //CONVSHPS.PAK
 enum ConvShapeID
 {
@@ -116,7 +121,6 @@ enum ConvShapeID
 	BANKRUPT_VIRGIL_OFFICE = 92,
 };
 
-
 //OPTSHPS.PAK
 enum OptionShapeID{
 	BAR_ROOM_PRUDEAUX = 0,
@@ -210,6 +214,8 @@ enum OptionShapeID{
 	TO_SALIM_FRONT_CAR_GOING_ANIM = 138, //animation (not in a pak)
 	TO_WILCAT_BASE_CAR_GOING_ANIM = 139, //animation (not in a pak)
 
+	NOTE_BOOK = 140,
+
 	JET_SIDE_PAINT_SHOTS = 141,
 	JET_SIDE_PAINT_SHOTS_ITEMS= 142, //not a pak
 							//planes
@@ -242,4 +248,88 @@ enum OptionShapeID{
 	WILDCAT_CHANGEROOM_PINUP_M = 174,
 	//NO MORE IMAGES AFTER THAT
 };
+
+struct PalBg {
+	const char* pakShp{};
+	const char* pakPal{};
+	int pal{};
+	int shp{};
+	bool operator !=(const PalBg& o) {
+		if (o.pal != pal)
+			return true;
+		if (o.shp != shp)
+			return true;
+		if (strcmp(o.pakShp, pakShp) != 0)
+			return true;
+		if (strcmp(o.pakPal, pakPal) != 0)
+			return true;
+		return false;
+	}
+};
+
+#define TRE_DATA "..\\..\\DATA\\"
+#define TRE_DATA_GAMEFLOW TRE_DATA "GAMEFLOW\\"
+#define TRE_DATA_OBJECTS TRE_DATA "OBJECTS\\"
+#define TRE_DATA_TXM TRE_DATA "TXM\\"
+
+#define OPTSHPS TRE_DATA_GAMEFLOW "OPTSHPS.PAK"
+#define OPTPALS TRE_DATA_GAMEFLOW "OPTPALS.PAK"
+#define CONVSHPS TRE_DATA_GAMEFLOW "CONVSHPS.PAK"
+#define CONVPALS TRE_DATA_GAMEFLOW "CONVPALS.PAK"
+#define MIDGAMES TRE_DATA "MIDGAMES\\MIDGAMES.PAK"
+#define MAINMENU TRE_DATA_GAMEFLOW "MAINMENU.PAK"
+#define OBJVIEW TRE_DATA_GAMEFLOW "OBJVIEW.PAK"
+
+constexpr PalBg OptTable =          { OPTSHPS,  OPTPALS,   1,   8 };
+constexpr PalBg OptBar =            { OPTSHPS,  OPTPALS,   2,   9 };
+constexpr PalBg OptTables =         { OPTSHPS,  OPTPALS,   3,  10 };
+constexpr PalBg OptChangeRoomBg =   { OPTSHPS,  OPTPALS,   4,  13 };
+constexpr PalBg OptHangarDoor0 =    { OPTSHPS,  OPTPALS,   5,  14 };
+constexpr PalBg OptHangarDoor1 =    { OPTSHPS,  OPTPALS,   5,  15 };
+constexpr PalBg OptF16 =            { OPTSHPS,  OPTPALS,   5,  16 };
+constexpr PalBg OptHangar =         { OPTSHPS,  OPTPALS,   5,  18 };
+constexpr PalBg OptDesk =           { OPTSHPS,  OPTPALS,   6,  21 };
+constexpr PalBg OptDesertCity =     { OPTSHPS,  OPTPALS,   7,  43 };
+constexpr PalBg OptLookOutside =    { OPTSHPS,  OPTPALS,   8,  24 };
+constexpr PalBg OptTentInside =     { OPTSHPS,  OPTPALS,   9,  25 };
+constexpr PalBg OptBaseOutside =    { OPTSHPS,  OPTPALS,  11, 119 };
+constexpr PalBg OptTentOutside00 =  { OPTSHPS,  OPTPALS,  12,  40 };
+constexpr PalBg OptOutsideHanger =  { OPTSHPS,  OPTPALS,  12,  91 };
+constexpr PalBg OptCalculator =     { OPTSHPS,  OPTPALS,  13,  92 };
+constexpr PalBg OptTentOutside01 =  { OPTSHPS,  OPTPALS,  14, 115 };
+constexpr PalBg OptDesertStreet =   { OPTSHPS,  OPTPALS,  15, 117 };
+constexpr PalBg OptPinupF =         { OPTSHPS,  OPTPALS,  17, 118 };
+constexpr PalBg OptPlaneOutside =   { OPTSHPS,  OPTPALS,  19, 141 };
+constexpr PalBg OptSky =            { OPTSHPS,  OPTPALS,  21, 116 };
+constexpr PalBg OptMountain	=       { OPTSHPS,  OPTPALS,  24,  44 };
+constexpr PalBg OptDesert =         { OPTSHPS,  OPTPALS,  25,  42 };
+constexpr PalBg OptRegistration =   { OPTSHPS,  OPTPALS,  30, 160 };
+constexpr PalBg OptChangeRoomFg =   { OPTSHPS,  OPTPALS,  31,  26 };
+constexpr PalBg OptRoad00 =         { OPTSHPS,  OPTPALS,  32,  45 };
+constexpr PalBg OptPinupM =         { OPTSHPS,  OPTPALS,  40, 174 };
+
+constexpr PalBg ConvCamp =          { CONVSHPS, CONVPALS,  0,   0 };
+constexpr PalBg ConvHouse =         { CONVSHPS, CONVPALS,  1,   1 };
+constexpr PalBg ConvHangerInside0 = { CONVSHPS, CONVPALS,  2,   7 };
+constexpr PalBg ConvTentInside0 =   { CONVSHPS, CONVPALS,  8,   9 };
+constexpr PalBg ConvPortraint =     { CONVSHPS, CONVPALS, 10,  12 };
+constexpr PalBg ConvWall =          { CONVSHPS, CONVPALS, 13,  13 };
+constexpr PalBg ConvDesk0 =         { CONVSHPS, CONVPALS, 14,  15 };
+constexpr PalBg ConvDesk1 =         { CONVSHPS, CONVPALS, 16,  16 };
+constexpr PalBg ConvHangerInside1 = { CONVSHPS, CONVPALS, 17,  19 };
+constexpr PalBg ConvElevator =      { CONVSHPS, CONVPALS, 20,  20 };
+constexpr PalBg ConvTentInside1 =   { CONVSHPS, CONVPALS, 21,  21 };
+constexpr PalBg ConvTentInside2 =   { CONVSHPS, CONVPALS, 22,  22 };
+constexpr PalBg ConvChair =         { CONVSHPS, CONVPALS, 23,  23 };
+constexpr PalBg ConvBooksStatue =   { CONVSHPS, CONVPALS, 24,  24 };
+
+//constexpr PalBg ShpClouds =         { MIDGAMES, MAINMENU,  2,  20 };
+constexpr PalBg ShpClouds =         { MIDGAMES, OPTPALS,  21,  20 };
+
+constexpr PalBg ShpBoard =          { MAINMENU, MAINMENU,  2,   1 };
+
+constexpr PalBg ShpTraingBg0 =      { OBJVIEW, OBJVIEW,    7,   6 };
+constexpr PalBg ShpTrainingTitle =  { OBJVIEW, OBJVIEW,    7,   1 };
+constexpr PalBg ShpBlueprint =      { OBJVIEW, nullptr,    0,   8 };
+constexpr PalBg ShpTitle =          { OBJVIEW, nullptr,    0,   0 };
 

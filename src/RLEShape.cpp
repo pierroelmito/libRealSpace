@@ -101,21 +101,21 @@ void RLEShape::Init(uint8_t* idata, size_t isize)
 	this->size = isize;
 	this->data = idata;
 
-	this->rightDist= stream.ReadShort();
-	this->leftDist  =  stream.ReadShort();
-	this->topDist   =  stream.ReadShort();
-	this->botDist=   stream.ReadShort();
+	this->rightDist = stream.ReadShort();
+	this->leftDist = stream.ReadShort();
+	this->topDist = stream.ReadShort();
+	this->botDist = stream.ReadShort();
 	/*rleCenter= dst->data + abs(leftDist) + abs(topDist) * dst->width;*/
 
 	data = stream.GetPosition();
 }
 
-void RLEShape::InitWithPosition(const ByteSlice& bytes,Point2D* position)
+void RLEShape::InitWithPosition(const ByteSlice& bytes, const Point2D& position)
 {
 	return InitWithPositionOld(bytes.data, bytes.size, position);
 }
 
-void RLEShape::InitWithPositionOld(uint8_t* idata, size_t isize,Point2D* position)
+void RLEShape::InitWithPositionOld(uint8_t* idata, size_t isize, const Point2D& position)
 {
 	Init(idata,isize);
 	SetPosition(position);

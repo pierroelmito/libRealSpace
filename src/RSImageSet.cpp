@@ -28,9 +28,8 @@ void RSImageSet::InitFromRAM(const ByteSlice& entry)
 	//printf("flag = %2X\n",flag);
 	nextImage = nextImage & 0x00FFFFFF;
 
-	uint32_t numImages = nextImage/4 ;
-	for(size_t i = 0 ; i < numImages && (entry.data+nextImage < end) ; i++){
-
+	const uint32_t numImages = nextImage / 4;
+	for(size_t i = 0 ; i < numImages && (entry.data + nextImage < end); i++) {
 		uint8_t* currImage = entry.data+nextImage;
 
 		nextImage = index.ReadUInt32LE();
@@ -39,13 +38,13 @@ void RSImageSet::InitFromRAM(const ByteSlice& entry)
 		//printf("flag = %2X\n",flag);
 
 		size_t size = 0;
-		if (i == numImages-1){
+		if (i == numImages - 1){
 		} else {
 		}
 
 		RLEShape* shape = new RLEShape();
 		shape->Init(currImage, size);
-		this->shapes.push_back(shape);
+		shapes.push_back(shape);
 	}
 }
 

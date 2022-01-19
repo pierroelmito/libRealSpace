@@ -18,10 +18,5 @@ public:
 
 	void Init( ) override;
 	void RunFrame(const FrameParams& p) override;
-
-protected:
-	RLEShape title;
-	RLEShape background;
-	RLEShape board;
 };
 

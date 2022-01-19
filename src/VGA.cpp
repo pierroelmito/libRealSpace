@@ -85,7 +85,7 @@ void RSVGA::DrawText(RSFont* font, Point2D* coo, char* text, uint8_t color,size_
 			chartoDraw== 'g' )
 			coo->y += 1;
 
-		shape->SetPosition(coo);
+		shape->SetPosition(*coo);
 		DrawShape(*shape);
 		coo->y = lineHeight;
 

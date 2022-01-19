@@ -9,6 +9,8 @@
 #pragma once
 
 #include <vector>
+#include <memory>
+#include <set>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -20,6 +22,7 @@
 #include "RLEShape.h"
 #include "SCMouse.h"
 #include "SCButton.h"
+#include "ShapeIDs.h"
 
 class SCButton;
 
@@ -31,6 +34,7 @@ class IActivity
 public:
 	struct FrameParams
 	{
+		const std::set<int>& pressed;
 		GTime currentTime{};
 	};
 
@@ -51,13 +55,29 @@ public:
 	bool IsRunning() const { return running; }
 	void SetTitle(const char* title);
 	void Frame2D(std::initializer_list<RLEShape*> shapes);
+	void Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes);
 
 protected:
 	IActivity();
 	SCButton* CheckButtons();
 	void DrawButtons();
 
+	void ReadPatch(VGAPalette& pal, const ByteSlice& bytes);
+	void ReadPatch(const ByteSlice& bytes);
+	bool ReadPatches(std::initializer_list<int> patches, const char* pak = TRE_DATA_GAMEFLOW "OPTPALS.PAK");
+
+	std::unique_ptr<PakArchive> GetPak(const char* label, const ByteSlice& bs);
+	RLEShape& AddShape() { return *shapes.emplace_back(new RLEShape()); }
+
+	bool InitShapes(std::initializer_list<PalBg> ids);
+	bool InitShape(RLEShape& shp, const char* label, const ByteSlice& entry);
+	void InitShapeAt(RLEShape& shp, const Point2D& position, const char* label, const ByteSlice& entry);
+
+	SCButton* MakeButton(Point2D pos, Point2D size, PakArchive& subPak, size_t upEntry, size_t downEntry, SCButton::ActionFunction&& fn);
+
 	VGAPalette palette;
+	//std::vector<std::unique_ptr<RLEShape>> shapes;
+	std::vector<std::unique_ptr<RLEShape>> shapes;
 	std::vector<SCButton*> buttons;
 	GTime startTime{};
 

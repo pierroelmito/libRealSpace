@@ -456,7 +456,6 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			vertex->flag = vertStream.ReadByte();
 			vertex->type = vertStream.ReadByte();
 
-			const uint8_t paletteColor = typeToPal(vertex->type);
 
 			uint8_t shade = (vertex->flag & 0x0F);
 			shade = shade >> 1;
@@ -468,7 +467,7 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			int16_t unknown = (vertex->flag & 0xF0);
 			unknown = unknown >> 8;
 
-			vertex->upperImageID    = vertStream.ReadByte();
+			vertex->upperImageID = vertStream.ReadByte();
 			vertex->lowerImageID = vertStream.ReadByte();
 
 			/*
@@ -481,7 +480,6 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			}
 			*/
 
-			Texel* t = Renderer.GetPalette().GetRGBColor(paletteColor * 16 + shade);
 
 			//Texel* t = renderer.GetDefaultPalette()->GetRGBColor(vertex->text);
 			/*
@@ -504,6 +502,8 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			// need to compute normals
 			vertex->n = { 0, -1, 0 };
 
+			const uint8_t paletteColor = 16 * typeToPal(vertex->type);
+			Texel* t = Renderer.GetPalette().GetRGBColor(paletteColor + shade);
 			vertex->color[0] = t->r/255.0f;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[1] = t->g/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[2] = t->b/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;

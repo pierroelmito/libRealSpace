@@ -125,7 +125,7 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 		s->Init(subPAK.GetEntry(0));
 		if (s->GetHeight() < 199){                  //  If this is not a background, we need to move down
 			Point2D pos = {0,CONV_TOP_BAR_HEIGHT+1};  //  to allow the black band on top of the screen
-			s->SetPosition(&pos);
+			s->SetPosition(pos);
 		}
 	}
 
@@ -182,7 +182,7 @@ void ConvAssetManager::ReadFaces(const IffChunk* root)
 		for (size_t fid=0; fid < shapes.size(); fid++) {
 			RLEShape*s = shapes[fid];
 				Point2D pos = {0,CONV_TOP_BAR_HEIGHT+1}; //  to allow the black band on top of the screen
-				s->SetPosition(&pos);
+				s->SetPosition(pos);
 		}
 
 		//printf("Face '%s' features %lu images.\n",face->name,imageSet->GetNumImages());

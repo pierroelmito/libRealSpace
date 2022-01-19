@@ -46,10 +46,11 @@ public:
 
 	//Add an activity on the top of the stack.
 	template <class T, typename... ARGS>
-	void MakeActivity(const ARGS&... args) {
+	T& MakeActivity(const ARGS&... args) {
 		T* activity = new T(args...);
 		activity->Init();
 		AddActivity(activity);
+		return *activity;
 	}
 	void AddActivity(IActivity* activity);
 	void StopTopActivity(void);

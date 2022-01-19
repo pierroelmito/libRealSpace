@@ -10,51 +10,41 @@
 
 #include "precomp.h"
 
-static const uint8_t PAK_ID_PALETTE          = 7;
-static const uint8_t PAK_ID_BACKGROUND       = 6;
-static const uint8_t PAK_ID_TITLE            = 1 ;
-static const uint8_t PAK_ID_BUTTONS          = 3 ;
+constexpr uint8_t PAK_ID_PALETTE    = 7;
+constexpr uint8_t PAK_ID_BACKGROUND = 6;
+constexpr uint8_t PAK_ID_TITLE      = 1 ;
+constexpr uint8_t PAK_ID_BUTTONS    = 3 ;
 
-SCDogFightMenu::SCDogFightMenu(){
-    
+SCDogFightMenu::SCDogFightMenu()
+{
 }
 
-SCDogFightMenu::~SCDogFightMenu(){
-    
+SCDogFightMenu::~SCDogFightMenu()
+{
 }
 
 void SCDogFightMenu::Init()
 {
 	TreArchive tre ;
-    tre.InitFromFile("GAMEFLOW.TRE");
-    
+	tre.InitFromFile("GAMEFLOW.TRE");
+
 	TreEntry* objViewIFF = NULL;//Assets.tres[]->GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
 	TreEntry* objViewPAK = NULL;//tre.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");
-    
-    
-    IffLexer objToDisplay;
-	objToDisplay.InitFromRAM(*objViewIFF);
-    objToDisplay.List(stdout);
-    
-    PakArchive assets;
-	assets.InitFromRAM("OBJVIEW.PAK", *objViewPAK);
-    assets.List(stdout);
-    
 
-    
-    this->palette.Diff(Renderer.GetPalette());
-    
-	const PakEntry& entry0 = assets.GetEntry(PAK_ID_BACKGROUND);
-    PakArchive file0;
-	file0.InitFromRAM("OBJVIEW.PAK: file PAK_ID_MENU_DYNAMC",entry0);
-    file0.List(stdout);
-    //showAllImage(&file0);
+	IffLexer objToDisplay;
+	objToDisplay.InitFromRAM(*objViewIFF);
+	objToDisplay.List(stdout);
+
+	auto assets = GetPak("OBJVIEW.PAK", *objViewPAK);
+	assets->List(stdout);
+
+	palette.Diff(Renderer.GetPalette());
+
+	auto file0 = GetPak("OBJVIEW.PAK: file PAK_ID_MENU_DYNAMC", assets->GetEntry(PAK_ID_BACKGROUND));
+	file0->List(stdout);
+	//showAllImage(&file0);
 }
 
-
-
-
-void SCDogFightMenu::RunFrame(const FrameParams& p){
-    
- 
+void SCDogFightMenu::RunFrame(const FrameParams& p)
+{
 }
