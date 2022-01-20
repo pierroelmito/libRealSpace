@@ -10,12 +10,25 @@
 
 #include "IActivity.h"
 
+#include <optional>
+
 enum class Scene {
 	WildcatBaseHangar,
 	WildcatBaseOffice,
 	WildcatBaseChangeroom,
 	WildcatBasePinupF,
 	WildcatBasePinupM,
+	WildcatTentInside,
+	WildcatTentOutside,
+	WildcatTentWeapons,
+	Bar,
+	BarTables,
+	CutsceneMoveA,
+	Exit,
+};
+
+enum class Character {
+	Janet,
 };
 
 class RSFont;
@@ -31,12 +44,15 @@ public:
 		int x0, y0, x1, y1;
 	};
 
-	void AddInteraction(Area area, Scene sc);
+	void AddInteraction(Area area, Scene sc, std::optional<Scene> next = {});
+	void AddInteraction(Area area, Character ch);
 
-	virtual void Init(Scene sc);
+	virtual void Init(Scene sc, std::optional<Scene> next = {});
 	virtual void RunFrame(const FrameParams& p) override;
 
 protected:
 	std::vector<std::pair<Area, std::function<void(SCGenericScene*)>>> _interactions;
+	std::optional<std::pair<double, std::function<void(SCGenericScene*)>>> _activated;
+	std::optional<Scene> _next{};
 	RSFont* _font;
 };

@@ -41,12 +41,15 @@ layout(location=0) in vec4 position;
 
 uniform fsq_vs_params {
 	vec2 xy;
+	vec3 pcolor;
 };
 
 out vec4 uv;
+out vec3 color;
 
 void main() {
 	uv = vec4(0.5 * (xy * position.xy + 1), position.xy);
+	color = pcolor;
 	gl_Position = position;
 }
 
@@ -57,6 +60,7 @@ void main() {
 uniform sampler2D fs_bitmap;
 
 in vec4 uv;
+in vec3 color;
 
 out vec4 frag_color;
 
@@ -73,6 +77,7 @@ void main() {
 	if (tc.a < 0.5)
 		discard;
 	frag_color = vec4(vignetting(tc.xyz, 8, 1.5), 1);
+	frag_color.xyz = color * frag_color.xyz;
 }
 
 @end

@@ -18,7 +18,8 @@ RSTexture::RSTexture()
 
 RSTexture::~RSTexture()
 {
-	Renderer.DeleteTextureInGPU(this);
+	if (id != InvalidID)
+		Renderer.DeleteTextureInGPU(this);
 	if (data)
 		free(data);
 }

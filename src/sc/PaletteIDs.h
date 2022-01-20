@@ -8,6 +8,8 @@
 
 #pragma once
 
+#if 0
+
 enum PaletteIDs
 {
 	OPTPALS_PAK_WILDCAT_CHANGEROOM_BG = 4,
@@ -25,3 +27,4 @@ enum PaletteIDs
 	OPTPALS_PAK_WILDCAT_CHANGEROOM_PINUP_M = 40,
 };
 
+#endif

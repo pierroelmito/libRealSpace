@@ -33,7 +33,7 @@ void SCMainMenu::Init(void)
 	const Point2D boardPosition = { 44, 25 };
 
 	InitShapes({ OptSky, OptMountain, ShpClouds, ShpBoard });
-	shapes.back()->SetPosition(boardPosition);
+	shapes.back().frames.front()->SetPosition(boardPosition);
 
 	{
 		const Point2D buttonDimension = { 211, 15 };
@@ -58,5 +58,8 @@ void SCMainMenu::Init(void)
 
 void SCMainMenu::RunFrame(const FrameParams& p)
 {
-	Frame2D(shapes);
+	if (p.pressed.contains(GLFW_KEY_ESCAPE))
+		Stop();
+
+	Frame2D(p, shapes);
 }

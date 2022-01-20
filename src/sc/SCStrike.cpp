@@ -31,6 +31,9 @@ void SCStrike::Init(void )
 
 void SCStrike::RunFrame(const FrameParams& p)
 {
+	if (p.pressed.contains(GLFW_KEY_ESCAPE))
+		Stop();
+
 #if 0
 	auto& cam = Renderer.GetCamera();
 	GTime currentTime = p.currentTime * TimeToMSec;

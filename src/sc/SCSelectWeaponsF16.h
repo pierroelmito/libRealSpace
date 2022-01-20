@@ -14,6 +14,8 @@
 // 70 74
 //Main image 91	
 
+class RSFont;
+
 class SCSelectWeaponF16 : public IActivity
 {
 public:
@@ -24,7 +26,9 @@ public:
 	void RunFrame(const FrameParams& p) override;
 
 protected:
+	RSFont* _font;
 	PalBg wantedBg{};
 	PalBg currentBg{};
+	int colOfs{ 0 };
 };
 

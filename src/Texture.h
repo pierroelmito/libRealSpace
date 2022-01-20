@@ -24,9 +24,9 @@ struct VGAPalette
 {
 	Texel colors[256];
 
-	void SetColor(uint8_t value,Texel* texel)
+	void SetColor(uint8_t value, const Texel& texel)
 	{
-		colors[value] = *texel;
+		colors[value] = texel;
 	}
 
 	Texel* GetRGBColor(uint8_t value)
@@ -45,9 +45,9 @@ struct VGAPalette
 		}
 	}
 
-	void ReadPatch(ByteStream* s)
+	void ReadPatch(ByteStream* s, int colOffset)
 	{
-		const int16_t offset = s->ReadShort();
+		const int16_t offset = uint16_t(s->ReadShort() + colOffset);
 		const int16_t numColors = s->ReadShort();
 
 		if (offset + numColors > 256){

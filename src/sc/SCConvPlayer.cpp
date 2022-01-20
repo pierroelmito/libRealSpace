@@ -292,7 +292,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 	for (size_t i = 0; i < currentFrame.bgLayers->size(); i++) {
 		ByteStream paletteReader;
 		paletteReader.Set((*currentFrame.bgPalettes)[i]);
-		this->palette.ReadPatch(&paletteReader);
+		this->palette.ReadPatch(&paletteReader, 0);
 		VGA.SetPalette(this->palette);
 	}
 
@@ -441,9 +441,7 @@ afterFace:
 		}
 	}
 
-	//Draw text
 	DrawText();
-
 	DrawButtons();
 
 	//if (currentFrame.mode == ConvFrame::CONV_WIDE || currentFrame.mode == ConvFrame::CONV_CLOSEUP);

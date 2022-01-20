@@ -37,7 +37,7 @@ void SCTrainingMenu::Init()
 	//InitShapeAt(*s, { 4, 0 }, "", assets->GetEntry(1));
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 	auto trButtonsPack = GetPak("TM.SHP", *treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "TM.SHP"));
-	auto& board = AddShape();
+	auto& board = AddSingleShape();
 	board.Init(trButtonsPack->GetEntry(0));
 	board.SetPosition(positionBoard);
 
@@ -63,5 +63,5 @@ void SCTrainingMenu::Init()
 
 void SCTrainingMenu::RunFrame(const FrameParams& p)
 {
-	Frame2D(shapes);
+	Frame2D(p, shapes);
 }

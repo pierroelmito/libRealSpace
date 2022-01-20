@@ -20,8 +20,8 @@ public:
 	 RLEShape();
 	~RLEShape();
 
-	void Init(const ByteSlice& bytes);
-	void Init(uint8_t* data, size_t size);
+	bool Init(const ByteSlice& bytes);
+	bool Init(uint8_t* data, size_t size);
 	void InitWithPositionOld(uint8_t* data, size_t size, const Point2D& position );
 	void InitWithPosition(const ByteSlice& bytes, const Point2D& position );
 	bool Expand(uint8_t* dst, size_t* byteRead);
@@ -62,7 +62,7 @@ private:
 		int16_t dy;
 	};
 
-	void ReadFragment  (RLEFragment* frag);
+	void ReadFragment(RLEFragment* frag);
 	bool ExpandFragment(RLEFragment* frag, uint8_t* dst );
 
 	int16_t leftDist;

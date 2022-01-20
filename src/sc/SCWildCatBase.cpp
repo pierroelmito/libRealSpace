@@ -31,5 +31,5 @@ void SCWildCatBase::RunFrame(const FrameParams& p)
 		Game.MakeActivity<SCConvPlayer>().SetID(14);
 	}
 
-	Frame2D(shapes);
+	Frame2D(p, shapes);
 }

@@ -32,10 +32,18 @@ constexpr GTime TimeToMSec = 1000.0;
 class IActivity
 {
 public:
+	struct SceneSchape
+	{
+		std::vector<std::unique_ptr<RLEShape>> frames;
+		AnimMode am{ AnimMode::Cutscene };
+	};
+	using SceneSchapes = std::vector<SceneSchape>;
+
 	struct FrameParams
 	{
 		const std::set<int>& pressed;
 		GTime currentTime{};
+		float fade{};
 	};
 
 	virtual ~IActivity();
@@ -54,7 +62,7 @@ public:
 	void Stop() { running = false;}
 	bool IsRunning() const { return running; }
 	void SetTitle(const char* title);
-	void Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes, std::function<void()> userDraw = {});
+	bool Frame2D(const FrameParams& p, SceneSchapes& shapes, std::function<void()> userDraw = {});
 
 protected:
 	IActivity();
@@ -66,17 +74,19 @@ protected:
 	bool ReadPatches(std::initializer_list<int> patches, const char* pak = TRE_DATA_GAMEFLOW "OPTPALS.PAK");
 
 	std::unique_ptr<PakArchive> GetPak(const char* label, const ByteSlice& bs);
-	RLEShape& AddShape() { return *shapes.emplace_back(new RLEShape()); }
+	SceneSchape& AddShape();
+	RLEShape& AddSingleShape();
 
 	bool InitShapes(std::initializer_list<PalBg> ids);
 	bool InitShape(RLEShape& shp, const char* label, const ByteSlice& entry);
+	bool InitShape(SceneSchape& shp, const char* label, const ByteSlice& entry);
 	void InitShapeAt(RLEShape& shp, const Point2D& position, const char* label, const ByteSlice& entry);
 
 	SCButton* MakeButton(Point2D pos, Point2D size, PakArchive& subPak, size_t upEntry, size_t downEntry, SCButton::ActionFunction&& fn);
 
+	SceneSchapes shapes;
+
 	VGAPalette palette;
-	//std::vector<std::unique_ptr<RLEShape>> shapes;
-	std::vector<std::unique_ptr<RLEShape>> shapes;
 	std::vector<SCButton*> buttons;
 	GTime startTime{};
 

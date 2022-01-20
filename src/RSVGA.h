@@ -28,8 +28,15 @@ public:
 	void Init(void);
 	void SetPalette(const VGAPalette& newPalette);
 	bool DrawShape(RLEShape& shape);
+	template <typename... T>
+	void PrintText(RSFont* font, const Point2D& coo, const uint8_t color, const size_t interLetterSpace, const size_t spaceSize, const char* fmt, T&&... args)
+	{
+		char buffer[512]{};
+		auto sz = snprintf(buffer, sizeof(buffer), fmt, args...);
+		DrawText(font, coo, buffer, color, 0, sz, interLetterSpace, spaceSize);
+	}
 	void DrawText(RSFont* font, const Point2D& coo, const char* text, const uint8_t color, const size_t start, const uint32_t size, const size_t interLetterSpace, const size_t spaceSize);
-	void VSync(void);
+	void VSync(float fade = 0.0f);
 	void Clear(void);
 	void FillLineColor(size_t lineIndex, uint8_t color);
 

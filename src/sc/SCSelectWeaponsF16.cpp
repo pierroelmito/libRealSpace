@@ -20,36 +20,25 @@ SCSelectWeaponF16::~SCSelectWeaponF16()
 
 void SCSelectWeaponF16::Init()
 {
-	wantedBg = OptHangar;
+	_font = FontManager.GetFont("");
+
+	wantedBg = OptHangarTruck;
 }
 
 void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 {
 	if (wantedBg != currentBg) {
 		currentBg = wantedBg;
-		printf("pal : %d / bg : %d", currentBg.pal, currentBg.shp);
-		shapes.clear();
-		//Patch palette
-		if (ReadPatches({ currentBg.pal }, currentBg.pakPal)) {
-			auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-			auto optionShapes = GetPak("", *treGameFlow.GetEntryByName(currentBg.pakShp));
-			//auto optionShapes = GetPak("", *treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "CONVSHPS.PAK"));
-			//auto optionShapes = GetPak("", *treGameFlow.GetEntryByName(TRE_DATA "MIDGAMES\\MIDGAMES.PAK"));
-			//auto optionShapes = GetPak("", *treGameFlow.GetEntryByName(TRE_DATA "MIDGAMES\\MID12.PAK"));
-			if (currentBg.shp >= 0 && currentBg.shp < optionShapes->GetNumEntries()) {
-				if (!InitShape(AddShape(), "", optionShapes->GetEntry(currentBg.shp))) {
-					shapes.clear();
-					printf(" - ERR");
-				} else {
-					printf(" - OK");
-				}
-			} else {
-				printf(" - OOI");
-			}
-		} else {
-			printf(" - no pal");
-		}
-		printf("\n");
+		printf("pal : %d / bg : %d\n", currentBg.pal, currentBg.shp);
+		for (int i = 0; i < 256; ++i)
+			palette.SetColor(i, { 255u, 0, 255u, 255u });
+		startTime = p.currentTime;
+		InitShapes({ currentBg });
+	}
+
+	if (!shapes.empty()) {
+		for (auto& s : shapes[0].frames)
+			s->SetColorOffset(uint8_t(colOfs));
 	}
 
 	if (p.pressed.contains(257))
@@ -57,11 +46,19 @@ void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 	if (p.pressed.contains(GLFW_KEY_A))
 		wantedBg.shp+= 1;
 	if (p.pressed.contains(GLFW_KEY_Q))
-		wantedBg.shp -= 1;
-	if (p.pressed.contains(GLFW_KEY_Z))
+		wantedBg.shp = std::max(0, wantedBg.shp - 1);
+	if (p.pressed.contains(GLFW_KEY_W))
 		wantedBg.pal += 1;
 	if (p.pressed.contains(GLFW_KEY_S))
-		wantedBg.pal -= 1;
+		wantedBg.pal = std::max(0, wantedBg.pal - 1);
+	if (p.pressed.contains(GLFW_KEY_E))
+		colOfs += 1;
+	if (p.pressed.contains(GLFW_KEY_D))
+		colOfs = std::max(0, colOfs - 1);
 
-	Frame2D(shapes);
+	FrameParams np = p;
+	np.currentTime -= startTime;
+	Frame2D(np, shapes, [&] {
+		VGA.PrintText(_font, { 10, 10 }, uint8_t(p.currentTime * 40), 3, 5, "pal:%d - shp:%d - ofs:%d", currentBg.pal, currentBg.shp, colOfs);
+	});
 }

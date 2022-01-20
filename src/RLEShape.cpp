@@ -90,16 +90,19 @@ bool RLEShape::ExpandFragment(RLEFragment* frag, uint8_t* dst )
 	return false;
 }
 
-void RLEShape::Init(const ByteSlice& bytes)
+bool RLEShape::Init(const ByteSlice& bytes)
 {
 	return Init(bytes.data, bytes.size);
 }
 
-void RLEShape::Init(uint8_t* idata, size_t isize)
+bool RLEShape::Init(uint8_t* idata, size_t isize)
 {
 	stream.Set(idata);
 	this->size = isize;
 	this->data = idata;
+
+	//if (isize < 8)
+	//	printf("too short\n");
 
 	this->rightDist = stream.ReadShort();
 	this->leftDist = stream.ReadShort();
@@ -108,6 +111,8 @@ void RLEShape::Init(uint8_t* idata, size_t isize)
 	/*rleCenter= dst->data + abs(leftDist) + abs(topDist) * dst->width;*/
 
 	data = stream.GetPosition();
+
+	return true;
 }
 
 void RLEShape::InitWithPosition(const ByteSlice& bytes, const Point2D& position)

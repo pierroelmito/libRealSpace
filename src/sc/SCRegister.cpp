@@ -33,9 +33,9 @@ void SCRegister::RunFrame(const FrameParams& p)
 		Stop();
 		//Add both animation and next location on the stack.
 		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar);
-		Game.MakeActivity<SCAnimationPlayer>(0, 0);
-		Game.MakeActivity<SCConvPlayer>().SetID(14);
+		//Game.MakeActivity<SCAnimationPlayer>(0, 0);
+		//Game.MakeActivity<SCConvPlayer>().SetID(14);
 	}
 
-	Frame2D(shapes);
+	Frame2D(p, shapes);
 }

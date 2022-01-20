@@ -41,7 +41,7 @@ public:
 	bool UploadTextureContentToGPU(RSTexture* texture);
 	void DeleteTextureInGPU(RSTexture* texture);
 
-	static void UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height);
+	static void UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height, float fade);
 
 	VGAPalette& GetPalette() { return palette; }
 

@@ -450,7 +450,7 @@ struct FullscreenBitmapData
 		return true;
 	}
 
-	void DrawImage(sg_image img, hmm_vec2 xy = { 1.0f, -1.0f })
+	void DrawImage(sg_image img, float fade = 0.0f, hmm_vec2 xy = { 1.0f, -1.0f })
 	{
 		int cur_width{}, cur_height{};
 		glfwGetFramebufferSize(win, &cur_width, &cur_height);
@@ -462,6 +462,7 @@ struct FullscreenBitmapData
 		sg_apply_pipeline(pip);
 
 		fsq_vs_params_t params;
+		params.pcolor = { 1.0f - fade, 1.0f - fade, 1.0f - fade };
 		params.xy = xy;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_fsq_vs_params, { &params, sizeof(params) });
 
@@ -558,7 +559,7 @@ void SCRenderer::Init(int32_t zoomFactor)
 	int32_t height = 200 * zoomFactor;
 
 	//Load the default palette
-	IffLexer lexer ;
+	IffLexer lexer;
 	lexer.InitFromFile("PALETTE.IFF");
 	//lexer.List(stdout);
 
@@ -683,22 +684,22 @@ SCRenderer::Draw3D(const Render3DParams& params, std::function<void()>&& f)
 		sg_end_pass();
 	}
 
-	FbdRender.DrawImage(renderTargetColor.img, { 1, 1 });
+	FbdRender.DrawImage(renderTargetColor.img, 0.0f, { 1, 1 });
 }
 
-void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height)
+void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height, float fade)
 {
 	if (screen.w != width || screen.h != height) {
 		if (screen.w != 0)
 			sg_destroy_image(screen.img);
-		screen = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, 0);
+		screen = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, IFLinear);
 	}
 
 	sg_image_data idata{};
 	idata.subimage[0][0] = { data, width * height * sizeof(Texel) };
 	sg_update_image(screen.img, idata);
 
-	FbdRender.DrawImage(screen.img);
+	FbdRender.DrawImage(screen.img, fade);
 }
 
 bool SCRenderer::CreateTextureInGPU(RSTexture* texture)

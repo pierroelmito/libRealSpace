@@ -34,7 +34,7 @@ bool RSVGA::DrawShape(RLEShape& shape)
 void RSVGA::Init(void)
 {
 	//Load the default palette
-	IffLexer lexer ;
+	IffLexer lexer;
 	lexer.InitFromFile("PALETTE.IFF");
 	//lexer.List(stdout);
 
@@ -48,14 +48,29 @@ void RSVGA::SetPalette(const VGAPalette& newPalette)
 	palette = newPalette;
 }
 
-void RSVGA::VSync(void)
+void RSVGA::VSync(float fade)
 {
+	int counts[256]{};
 	Texel data[WIDTH * HEIGHT];
+
 	for (size_t i = 0; i < WIDTH * HEIGHT; i++) {
+		++counts[frameBuffer[i]];
 		data[i] = *palette.GetRGBColor(frameBuffer[i]);
 		data[i].a = 0xff;
 	}
-	SCRenderer::UpdateBitmapQuad(data, WIDTH, HEIGHT);
+
+#if 0
+	for (size_t i = 0; i < 256; i++) {
+		const int ofs = WIDTH * (HEIGHT - 2) + (WIDTH - 256) / 2 + i;
+		int sz = counts[i] == 0 ? 4 : 8;
+		for (int j = 0; j < sz; ++j) {
+			data[ofs - j * WIDTH] = *palette.GetRGBColor(i);
+			data[ofs - j * WIDTH].a = 0xff;
+		}
+	}
+#endif
+
+	SCRenderer::UpdateBitmapQuad(data, WIDTH, HEIGHT, fade);
 }
 
 void RSVGA::FillLineColor(size_t lineIndex, uint8_t color)

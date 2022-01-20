@@ -56,7 +56,7 @@ void RSPalette::ParsePALT(IffChunk* chunk)
 		texel.g *= 255/63.0f;
 		texel.b *= 255/63.0f;
 
-		colors.SetColor(i, &texel);
+		colors.SetColor(i, texel);
 	}
 }
 
@@ -82,7 +82,7 @@ void RSPalette::ParseBLWH(IffChunk* chunk){
         texel.r *= 255/63.0f;
         texel.g *= 255/63.0f;
         texel.b *= 255/63.0f;
-        bwColors.SetColor(i, &texel);
+		bwColors.SetColor(i, texel);
     }
 }
 
@@ -97,37 +97,36 @@ void RSPalette::ParseCMAP(IffChunk* chunk){
         texel.g = stream.ReadByte();
         texel.b = stream.ReadByte();
         texel.a = 255;
-        colors.SetColor(i, &texel);
+		colors.SetColor(i, texel);
     }
     
 }
 
 
-void RSPalette::InitFromIFF(IffLexer* lexer){
-    
-    bool foundPalette = false;
-    IffChunk* chunk = NULL;
-    
-    chunk = lexer->GetChunkByID("PALT");
-    if (chunk != NULL){
-        foundPalette = true;
-        this->ParsePALT(chunk);
-    }
-    
-    chunk = lexer->GetChunkByID("BLWH");
-    if (chunk != NULL){
-        foundPalette = true;
-        this->ParseBLWH(chunk);
-    }
-    
-    chunk = lexer->GetChunkByID("CMAP");
-    if (chunk != NULL){
-        foundPalette = true;
-        this->ParseCMAP(chunk);
-    }
-    
-    if (!foundPalette){
-        printf("Error: Unable to find palette with lexer '%s'\n",lexer->GetName());
-    }
-    
+void RSPalette::InitFromIFF(IffLexer* lexer)
+{
+	bool foundPalette = false;
+	IffChunk* chunk = NULL;
+
+	chunk = lexer->GetChunkByID("PALT");
+	if (chunk != NULL){
+		foundPalette = true;
+		this->ParsePALT(chunk);
+	}
+
+	chunk = lexer->GetChunkByID("BLWH");
+	if (chunk != NULL){
+		foundPalette = true;
+		this->ParseBLWH(chunk);
+	}
+
+	chunk = lexer->GetChunkByID("CMAP");
+	if (chunk != NULL){
+		foundPalette = true;
+		this->ParseCMAP(chunk);
+	}
+
+	if (!foundPalette){
+		printf("Error: Unable to find palette with lexer '%s'\n",lexer->GetName());
+	}
 }

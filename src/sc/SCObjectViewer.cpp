@@ -258,7 +258,7 @@ void SCObjectViewer::Init(void)
 
 void SCObjectViewer::RunFrame(const FrameParams& p)
 {
-	Frame2D(shapes);
+	Frame2D(p, shapes);
 
 	const RSShowCase& showCase = showCases[currentObject];
 

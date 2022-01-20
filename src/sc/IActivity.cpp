@@ -26,18 +26,56 @@ void IActivity::SetTitle(const char* title){
 	Screen.SetTitle(title);
 }
 
-void IActivity::Frame2D(std::vector<std::unique_ptr<RLEShape>>& shapes, std::function<void()> userDraw)
+bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::function<void()> userDraw)
 {
 	CheckButtons();
+
 	VGA.Clear();
 	VGA.SetPalette(this->palette);
-	for (auto& shape : shapes)
-		VGA.DrawShape(*shape);
+
+	bool running = false;
+
+	for (auto& shape : shapes) {
+		if (shape.frames.empty())
+			continue;
+		if (shape.frames.size() > 1) {
+			switch (shape.am) {
+			case AnimMode::Character:
+				{
+					VGA.DrawShape(*shape.frames[0]);
+					uint32_t idx = uint32_t(p.currentTime * 15) % (shape.frames.size() - 1);
+					VGA.DrawShape(*shape.frames[1 + idx]);
+				}
+				break;
+			case AnimMode::Cutscene:
+				{
+					uint32_t maxIdx = shape.frames.size() - 1;
+					uint32_t idx = std::min(maxIdx, uint32_t(p.currentTime * 15));
+					if (idx != maxIdx)
+						running = true;
+					VGA.DrawShape(*shape.frames[idx]);
+				}
+				break;
+			case AnimMode::First:
+				{
+					uint32_t idx = 0;
+					VGA.DrawShape(*shape.frames[idx]);
+				}
+				break;
+			}
+		} else {
+			VGA.DrawShape(*shape.frames[0]);
+		}
+	}
+
 	if (userDraw)
 		userDraw();
+
 	DrawButtons();
 	Mouse.Draw();
-	VGA.VSync();
+	VGA.VSync(p.fade);
+
+	return running;
 }
 
 SCButton* IActivity::CheckButtons(void)
@@ -83,7 +121,7 @@ void IActivity::ReadPatch(VGAPalette& pal, const ByteSlice& bytes)
 {
 	ByteStream paletteReader;
 	paletteReader.Set(bytes.data);
-	pal.ReadPatch(&paletteReader);
+	pal.ReadPatch(&paletteReader, 0);
 }
 
 void IActivity::ReadPatch(const ByteSlice& bytes)
@@ -104,21 +142,37 @@ bool IActivity::ReadPatches(std::initializer_list<int> patches, const char* pak)
 	return true;
 }
 
+IActivity::SceneSchape& IActivity::AddShape()
+{
+	return shapes.emplace_back();
+}
+
+RLEShape& IActivity::AddSingleShape()
+{
+	auto& v = shapes.emplace_back();
+	return *v.frames.emplace_back(new RLEShape());
+}
+
 bool IActivity::InitShapes(std::initializer_list<PalBg> ids)
 {
 	shapes.clear();
+
+	printf("init shapes\n");
 
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 	std::map<std::string, std::unique_ptr<PakArchive>> paks;
 	auto getPak = [&] (const char* path) -> PakArchive& {
 		auto& pak = paks[path];
-		if (!pak)
+		if (!pak) {
 			pak = GetPak(path, *treGameFlow.GetEntryByName(path));
+			printf("\tload pak %s\n", path);
+			//pak->List(stdout);
+		}
 		return *pak;
 	};
 
 	for (const PalBg& id : ids) {
-		printf("pal : %d / bg : %d\n", id.pal, id.shp);
+		printf("\tpal : %d / bg : %d\n", id.pal, id.shp);
 	}
 
 	for (const PalBg& id : ids) {
@@ -133,8 +187,14 @@ bool IActivity::InitShapes(std::initializer_list<PalBg> ids)
 		if (id.pakShp == nullptr)
 			continue;
 		auto& pak = getPak(id.pakShp);
-		if (id.shp >= 0 && id.shp < pak.GetNumEntries())
-			InitShape(AddShape(), "", pak.GetEntry(id.shp));
+		if (id.shp >= 0 && id.shp < pak.GetNumEntries()) {
+			auto& shp = AddShape();
+			shp.am = id.am;
+			if (!InitShape(shp, "", pak.GetEntry(id.shp)))
+				printf("titi\n");
+		} else {
+			printf("toto\n");
+		}
 	}
 
 	return true;
@@ -158,6 +218,18 @@ bool IActivity::InitShape(RLEShape& shp, const char* label, const ByteSlice& ent
 		printf("\t%d entries\n", entries);
 	shp.Init(pak.GetEntry(0));
 	return true;
+}
+
+bool IActivity::InitShape(SceneSchape& shp, const char* label, const ByteSlice& entry)
+{
+	PakArchive pak;
+	pak.InitFromRAM(label, entry);
+	const int entries = pak.GetNumEntries();
+	for (int i = 0; i < entries; ++i) {
+		auto& s = shp.frames.emplace_back(new RLEShape());
+		s->Init(pak.GetEntry(i));
+	}
+	return entries != 0;
 }
 
 void IActivity::InitShapeAt(RLEShape& shp, const Point2D& position, const char* label, const ByteSlice& entry)
