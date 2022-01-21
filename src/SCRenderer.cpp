@@ -553,10 +553,10 @@ std::array<uint8_t, 4> FractalNoiseSkyDome(const RSVector3& v, const std::array<
 	return { 255, 255, 255, c };
 }
 
-void SCRenderer::Init(int32_t zoomFactor)
+void SCRenderer::Init()
 {
-	int32_t width  = 320 * zoomFactor;
-	int32_t height = 200 * zoomFactor;
+	int32_t width  = 320;
+	int32_t height = 200;
 
 	//Load the default palette
 	IffLexer lexer;
@@ -692,7 +692,7 @@ void SCRenderer::UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height, 
 	if (screen.w != width || screen.h != height) {
 		if (screen.w != 0)
 			sg_destroy_image(screen.img);
-		screen = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, IFLinear);
+		screen = MakeImage(width, height, SG_PIXELFORMAT_RGBA8, SG_USAGE_STREAM, 0 /*IFLinear*/);
 	}
 
 	sg_image_data idata{};

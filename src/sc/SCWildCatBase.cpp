@@ -7,9 +7,10 @@
 //
 
 #include "SCWildCatBase.h"
-#include "SCConvPlayer.h"
 
 #include "precomp.h"
+
+#include "SCConvPlayer.h"
 
 SCWildCatBase::SCWildCatBase()
 {
@@ -26,7 +27,7 @@ void SCWildCatBase::Init()
 
 void SCWildCatBase::RunFrame(const FrameParams& p)
 {
-	if (p.pressed.contains(257)) {
+	if (p.pressed.contains(GLFW_KEY_ENTER)) {
 		Stop();
 		Game.MakeActivity<SCConvPlayer>().SetID(14);
 	}

@@ -29,12 +29,9 @@ void SCRegister::Init()
 
 void SCRegister::RunFrame(const FrameParams& p)
 {
-	if (p.pressed.contains(257)) {
+	if (p.pressed.contains(GLFW_KEY_ENTER)) {
 		Stop();
-		//Add both animation and next location on the stack.
-		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar);
-		//Game.MakeActivity<SCAnimationPlayer>(0, 0);
-		//Game.MakeActivity<SCConvPlayer>().SetID(14);
+		Game.MakeActivity<SCGenericScene>(Scene::CutsceneMoveA, Scene::WildcatBaseHangar);
 	}
 
 	Frame2D(p, shapes);

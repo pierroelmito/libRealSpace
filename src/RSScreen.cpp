@@ -54,6 +54,7 @@ void RSScreen::Init(int32_t zoomFactor)
 
 bool RSScreen::StartFrame()
 {
+	glfwGetFramebufferSize(win, &width, &height);
 	return !glfwWindowShouldClose(win);
 }
 

@@ -60,13 +60,10 @@ bool RSVocSoundData::InitFromRAM(const ByteSlice& bs)
 			break;
 		*/
 		default:
+			assert(false);
 			return false;
 		}
-
 		stream.MoveForward(szBlock);
 	}
-
-	printf("ok\n");
-
 	return true;
 }

@@ -50,14 +50,15 @@ void GameEngine::Init()
 	Assets.Init(); //Load all TREs and PAKs
 	FontManager.Init();
 	ConvAssets.Init(); //Load assets needed for Conversations (char and background)
-	Screen.Init(3); //Load Main Palette and Initialize the GL
+	Screen.Init(1); //Load Main Palette and Initialize the GL
 	VGA.Init();
 	Audio.Init();
-	Renderer.Init(2);
+	Renderer.Init();
 	Mouse.Init(); //Load the Mouse Cursor
 
 	glfwSetMouseButtonCallback(win, MouseButtonCallback);
 	glfwSetKeyCallback(win, KeyCallback);
+	glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 }
 
 bool GameEngine::AnyInput()
@@ -110,9 +111,11 @@ bool GameEngine::PumpEvents(void)
 #if 1
 	double mx, my;
 	glfwGetCursorPos(win, &mx, &my);
+	double x = 320.0 * saturate(mx / double(Screen.width));
+	double y = 200.0 * saturate(my / double(Screen.height));
 	Mouse.SetPosition({
-		int32_t(mx * 320.0 / Screen.width),
-		int32_t(my * 200.0 / Screen.height)
+		int32_t(x),
+		int32_t(y)
 	});
 #else
 	SDL_PumpEvents();

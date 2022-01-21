@@ -25,6 +25,22 @@ struct Point2D
 using RSVector3 = hmm_vec3;
 using RSMatrix = hmm_mat4;
 
+template <class T>
+T clamp(T v, T lo, T hi)
+{
+	if (v < lo)
+		return lo;
+	if (v > hi)
+		return hi;
+	return v;
+}
+
+template <class T>
+T saturate(T v)
+{
+	return clamp(v, T(0), T(1));
+}
+
 inline constexpr float Ratio(float a, float b, float x)
 {
 	if (x < a)

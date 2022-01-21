@@ -33,7 +33,7 @@ public:
 	~SCRenderer();
 
 	void Prepare();
-	void Init(int32_t zoom);
+	void Init();
 	void Release();
 	void MakeContext();
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix& world);
