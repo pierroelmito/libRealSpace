@@ -33,6 +33,7 @@ void SCGenericScene::Init(Scene sc, std::optional<Scene> next)
 			OptHangarDoor1,
 			//OptF16,
 			OptHangarTruck,
+			//OptHangarJeep,
 			OptHangarChar0,
 			OptHangarChar2,
 			OptHangarChar3,
@@ -40,7 +41,6 @@ void SCGenericScene::Init(Scene sc, std::optional<Scene> next)
 		AddInteraction({ 17, 78, 54, 110 }, Scene::WildcatBaseOffice);
 		//AddInteraction({ 17, 78, 54, 110 }, Scene::Bar);
 		AddInteraction({ 275, 84, 307, 137 }, Scene::WildcatBaseChangeroom);
-		//AddInteraction({ 103, 21, 237, 76 }, Scene::WildcatTentInside);
 		AddInteraction({ 103, 21, 237, 76 }, Scene::CutsceneMoveA, Scene::WildcatTentInside);
 		AddInteraction({ 189, 102, 198, 124 }, Character::Janet);
 		break;
@@ -83,12 +83,12 @@ void SCGenericScene::Init(Scene sc, std::optional<Scene> next)
 		});
 		AddInteraction({ 86, 95, 117, 131 }, Scene::WildcatTentOutside);
 		AddInteraction({ 4, 129, 94, 159 }, Scene::Exit);
-		AddInteraction({ 230, 92, 282, 126 }, Scene::WildcatBaseHangar);
+		AddInteraction({ 230, 92, 282, 126 }, Scene::CutsceneMoveB, Scene::WildcatBaseHangar);
 		break;
 	case Scene::WildcatTentOutside:
 		InitShapes({
 			OptTentOutsideBg,
-			OptTentOutPlane,
+			OptTentOutPlane00,
 		});
 		AddInteraction({ 6, 120, 190, 200 }, Scene::WildcatTentInside);
 		AddInteraction({ 110, 0, 320, 107 }, Scene::WildcatTentWeapons);
@@ -123,6 +123,12 @@ void SCGenericScene::Init(Scene sc, std::optional<Scene> next)
 		InitShapes({
 			OptCutsceneMoveA0,
 			OptCutsceneMoveA1,
+		});
+		break;
+	case Scene::CutsceneMoveB:
+		InitShapes({
+			OptLookOutside,
+			OptJeep01,
 		});
 		break;
 	}
@@ -181,10 +187,12 @@ void SCGenericScene::RunFrame(const FrameParams& p)
 		VGA.PrintText(_font, { 10, 10 }, 1, 3, 5, "%d,%d", mpos.x, mpos.y);
 	});
 
-	if (!running && _next && !_activated) {
-		_activated = { t, [&] (SCGenericScene*) {
-			Stop();
-			Game.MakeActivity<SCGenericScene>(*_next);
-		}};
+	if (_next && !_activated) {
+		if (!running || p.pressed.contains(GLFW_KEY_ESCAPE)) {
+			_activated = { t, [&] (SCGenericScene*) {
+				Stop();
+				Game.MakeActivity<SCGenericScene>(*_next);
+			}};
+		}
 	}
 }

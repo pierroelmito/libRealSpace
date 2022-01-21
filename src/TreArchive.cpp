@@ -21,8 +21,6 @@ void TreArchive::Release()
 {
 	if (initalizedFromFile)
 		delete[] this->data;
-	for(size_t i=0 ; i < entries.size() ; i++)
-		delete entries[i];
 }
 
 bool TreArchive::InitFromFile(const char* filepath)
@@ -103,10 +101,11 @@ void TreArchive::Parse(void)
 
 	//Now read all entries
 	for(size_t i =0; i < numEntries; i++){
-		TreEntry* entry = new TreEntry();
-		ReadEntry(&stream,entry);
+		TreEntry entry{};
+		ReadEntry(&stream, &entry);
 
-		mappedEntries[entry->name] = entry;
+		size_t index = entries.size();
+		mappedEntries[entry.name] = index;
 
 		// We use a vector so we can return the list of files in the order
 		// they were listed in the TRE index.
@@ -124,8 +123,8 @@ void TreArchive::List(FILE* output)
 	fprintf(output,"    %lu entrie(s) found.\n",entries.size());
 
 	for (size_t i=0 ; i < entries.size() ; i++){
-		TreEntry* entry = entries[i];
-		fprintf(output,"    Entry [%3lu] offset[0x%8lX]'%s' size: %lu bytes.\n",i,entry->data-this->data,entry->name,entry->size);
+		TreEntry& entry = entries[i];
+		fprintf(output,"    Entry [%3lu] offset[0x%8lX]'%s' size: %lu bytes.\n",i,entry.data-this->data,entry.name,entry.size);
 	}
 }
 
@@ -135,7 +134,7 @@ TreEntry* TreArchive::GetEntryByName(const char* entryName)
 	auto it = mappedEntries.find(entryName);
 	if (it == mappedEntries.end())
 		return nullptr;
-	return it->second;
+	return &entries[it->second];
 }
 
 bool TreArchive::GetPAKByName(const char* entryName,PakArchive* pak)
@@ -151,7 +150,7 @@ bool TreArchive::GetPAKByName(const char* entryName,PakArchive* pak)
 
 TreEntry* TreArchive::GetEntryByID(size_t entryID)
 {
-	return entries[entryID];
+	return &entries[entryID];
 }
 
 size_t TreArchive::GetNumEntries(void)
@@ -162,7 +161,7 @@ size_t TreArchive::GetNumEntries(void)
 bool TreArchive::Decompress(const char* dstDirectory)
 {
 	for(size_t i = 0; i < mappedEntries.size(); i++) {
-		TreEntry* entry = entries[i];
+		TreEntry& entry = entries[i];
 
 		char fullPath[512];
 		fullPath[0] = '\0';
@@ -174,7 +173,7 @@ bool TreArchive::Decompress(const char* dstDirectory)
 			strcat(fullPath,"/");
 
 		//Remove the leading . and .. and /
-		char* cursor = entry->name;
+		char* cursor = entry.name;
 		while(*cursor == '.' ||
 			  *cursor == '/' ||
 			  *cursor == '\\')
@@ -192,9 +191,9 @@ bool TreArchive::Decompress(const char* dstDirectory)
 		CreateDirectories(fullPath);
 
 		//Write file !
-		printf("Decompressing TRE file: %lu '%s' %lu (bytes).\n",i,fullPath,entry->size);
+		printf("Decompressing TRE file: %lu '%s' %lu (bytes).\n",i,fullPath,entry.size);
 		FILE* file = fopen(fullPath,"w");
-		fwrite(entry->data, 1, entry->size, file);
+		fwrite(entry.data, 1, entry.size, file);
 		fclose(file);
 	}
 

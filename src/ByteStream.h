@@ -10,6 +10,8 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
+#include <array>
 
 /*
 
@@ -36,12 +38,23 @@ public:
 		this->cursor += bytes;
 	}
 
+	const uint8_t* Cursor() const { return cursor; }
+
 	template <typename T>
 	inline T ReadT()
 	{
 		T* v = (T*)this->cursor;
 		this->cursor+=sizeof(T);
 		return *v;
+	}
+
+	template <size_t N>
+	inline std::array<uint8_t, N> ReadBytes()
+	{
+		std::array<uint8_t, N> r;
+		memcpy(&r[0], this->cursor, N);
+		this->cursor += N;
+		return r;
 	}
 
 	inline uint8_t ReadByte(void)

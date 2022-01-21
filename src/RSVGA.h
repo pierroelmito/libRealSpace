@@ -24,6 +24,7 @@ public:
 
 	const VGAPalette& GetPalette() const { return palette; }
 	uint8_t* GetFrameBuffer(void){ return frameBuffer;}
+	bool& ShowPalette() { return _showPalette; }
 
 	void Init(void);
 	void SetPalette(const VGAPalette& newPalette);
@@ -43,4 +44,5 @@ public:
 private:
 	VGAPalette palette;
 	uint8_t frameBuffer[WIDTH * HEIGHT];
+	bool _showPalette{ false };
 };

@@ -100,7 +100,7 @@ private:
 
 	void ParseElevations();
 
-	std::vector<RSMapTextureSet*> textures;
+	std::vector<std::unique_ptr<RSMapTextureSet>> textures;
 	PakArchive* archive;
 
 	// An area is made of 18*18 (324) blocks each block has 3 levels of details

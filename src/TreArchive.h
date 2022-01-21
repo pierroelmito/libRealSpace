@@ -13,6 +13,7 @@
 #include <cstdio>
 
 #include <vector>
+#include <string>
 #include <map>
 
 #include "ByteSlice.h"
@@ -72,8 +73,8 @@ private:
 	void Parse(void);
 
 	char path[512];
-	std::vector<TreEntry*> entries;
-	std::map<const char*,TreEntry*,Char_String_Comparator> mappedEntries;
+	std::vector<TreEntry> entries;
+	std::map<std::string, size_t> mappedEntries;
 	uint8_t* data{ nullptr };
 	size_t size{ 0 };
 	bool valid{ false };

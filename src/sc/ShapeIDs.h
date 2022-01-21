@@ -255,9 +255,9 @@ enum OptionShapeID{
 
 enum class AnimMode
 {
-	First,
-	Character,
-	Cutscene,
+	First, // display only first frame animation
+	Character, //display frame 0 + loop over remaining frames
+	Cutscene, // display each frame sequentially
 };
 
 struct PalBg {
@@ -309,40 +309,60 @@ constexpr PalBg OptHangarDoor1 =     { OPTSHPS,  OPTPALS,   5,  15 };
 constexpr PalBg OptF16 =             { OPTSHPS,  OPTPALS,   5,  16 };
 constexpr PalBg OptHangar =          { OPTSHPS,  OPTPALS,   5,  18 };
 constexpr PalBg OptHangarTruck =     { OPTSHPS,  OPTPALS,   5,  20, AnimMode::First };
+constexpr PalBg OptHangarJeep =      { OPTSHPS,  OPTPALS,   5,  17, AnimMode::Character };
 constexpr PalBg OptHangarChar2 =     { OPTSHPS,  OPTPALS,   5,  35 };
 constexpr PalBg OptHangarChar0 =     { OPTSHPS,  OPTPALS,   5,  37 };
 constexpr PalBg OptHangarChar3 =     { OPTSHPS,  OPTPALS,   5, 166 };
 constexpr PalBg OptDesk =            { OPTSHPS,  OPTPALS,   6,  21 };
 constexpr PalBg OptDesertCity =      { OPTSHPS,  OPTPALS,   7,  43 };
+constexpr PalBg OptJeep00 =          { OPTSHPS,  OPTPALS,   7, 121 };
+constexpr PalBg OptJeep02 =          { OPTSHPS,  OPTPALS,   7, 137 };
 constexpr PalBg OptLookOutside =     { OPTSHPS,  OPTPALS,   8,  24 };
+constexpr PalBg OptJeep01 =          { OPTSHPS,  OPTPALS,   8, 122, AnimMode::Cutscene };
 constexpr PalBg OptTentInsideBg =    { OPTSHPS,  OPTPALS,   9,  25 };
 constexpr PalBg OptTentInsideFg =    { OPTSHPS,  OPTPALS,   9,  27 };
 constexpr PalBg OptTentInsideChar0 = { OPTSHPS,  OPTPALS,   9,  30 };
 constexpr PalBg OptTentInsideChar1 = { OPTSHPS,  OPTPALS,   9,  31 };
 constexpr PalBg OptBaseOutside =     { OPTSHPS,  OPTPALS,  11, 119 };
+constexpr PalBg OptPlaneTakeoff00 =  { OPTSHPS,  OPTPALS,  11, 136 };
 constexpr PalBg OptTentOutside00 =   { OPTSHPS,  OPTPALS,  12,  40 };
 constexpr PalBg OptOutsideHanger =   { OPTSHPS,  OPTPALS,  12,  91 };
 constexpr PalBg OptCalculator =      { OPTSHPS,  OPTPALS,  13,  92 };
 constexpr PalBg OptTentOutsideBg =   { OPTSHPS,  OPTPALS,  14, 115 };
-constexpr PalBg OptTentOutPlane =    { OPTSHPS,  OPTPALS,  14, 147 };
+constexpr PalBg OptTentOutPlane00 =  { OPTSHPS,  OPTPALS,  14, 147 };
+constexpr PalBg OptTentOutPlane01 =  { OPTSHPS,  OPTPALS,  14, 162 };
 constexpr PalBg OptDesertStreet =    { OPTSHPS,  OPTPALS,  15, 117 };
 constexpr PalBg OptCutsceneMoveA0 =  { OPTSHPS,  OPTPALS,  16, 119 };
 constexpr PalBg OptCutsceneMoveA1 =  { OPTSHPS,  OPTPALS,  16, 139, AnimMode::Cutscene };
 constexpr PalBg OptPinupF =          { OPTSHPS,  OPTPALS,  17, 118 };
 constexpr PalBg OptPlaneOutside =    { OPTSHPS,  OPTPALS,  19, 141 };
 constexpr PalBg OptSky =             { OPTSHPS,  OPTPALS,  21, 116 };
+constexpr PalBg OptMap00 =           { OPTSHPS,  OPTPALS,  23, 128 };
+constexpr PalBg OptMap01 =           { OPTSHPS,  OPTPALS,  23, 129 };
+constexpr PalBg OptMap02 =           { OPTSHPS,  OPTPALS,  23, 130 };
+constexpr PalBg OptMap03 =           { OPTSHPS,  OPTPALS,  23, 131 };
+constexpr PalBg OptMap04 =           { OPTSHPS,  OPTPALS,  23, 132 };
+constexpr PalBg OptMap05 =           { OPTSHPS,  OPTPALS,  23, 133 };
+constexpr PalBg OptMap06 =           { OPTSHPS,  OPTPALS,  23, 134 };
 constexpr PalBg OptMountain	=        { OPTSHPS,  OPTPALS,  24,  44 };
-constexpr PalBg OptDesert =          { OPTSHPS,  OPTPALS,  25,  42 };
+constexpr PalBg OptDesert00 =        { OPTSHPS,  OPTPALS,  25,  42 };
+constexpr PalBg OptDesert01 =        { OPTSHPS,  OPTPALS,  25, 149 };
+constexpr PalBg OptDesert02 =        { OPTSHPS,  OPTPALS,  25, 168 };
+constexpr PalBg OptCitySky =         { OPTSHPS,  OPTPALS,  26,  23 };
 constexpr PalBg OptRegistration =    { OPTSHPS,  OPTPALS,  30, 160 };
 constexpr PalBg OptChangeRoomFg =    { OPTSHPS,  OPTPALS,  31,  26 };
 constexpr PalBg OptRoad00 =          { OPTSHPS,  OPTPALS,  32,  45 };
+constexpr PalBg OptRoadDesert =      { OPTSHPS,  OPTPALS,  33, 120 };
+constexpr PalBg OptJungle00 =        { OPTSHPS,  OPTPALS,  35, 169 };
+constexpr PalBg OptForest00 =        { OPTSHPS,  OPTPALS,  36, 170 };
+constexpr PalBg OptPlain00 =         { OPTSHPS,  OPTPALS,  36, 171 };
 constexpr PalBg OptPinupM =          { OPTSHPS,  OPTPALS,  40, 174 };
 
 constexpr PalBg ConvCamp =           { CONVSHPS, CONVPALS,  0,   0 };
 constexpr PalBg ConvHouse =          { CONVSHPS, CONVPALS,  1,   1 };
 constexpr PalBg ConvHangerInside0 =  { CONVSHPS, CONVPALS,  2,   7 };
 constexpr PalBg ConvTentInside0 =    { CONVSHPS, CONVPALS,  8,   9 };
-constexpr PalBg ConvPortraint =      { CONVSHPS, CONVPALS, 10,  12 };
+constexpr PalBg ConvPortrait =       { CONVSHPS, CONVPALS, 10,  12 };
 constexpr PalBg ConvWall =           { CONVSHPS, CONVPALS, 13,  13 };
 constexpr PalBg ConvDesk0 =          { CONVSHPS, CONVPALS, 14,  15 };
 constexpr PalBg ConvDesk1 =          { CONVSHPS, CONVPALS, 16,  16 };
@@ -353,7 +373,6 @@ constexpr PalBg ConvTentInside2 =    { CONVSHPS, CONVPALS, 22,  22 };
 constexpr PalBg ConvChair =          { CONVSHPS, CONVPALS, 23,  23 };
 constexpr PalBg ConvBooksStatue =    { CONVSHPS, CONVPALS, 24,  24 };
 
-//constexpr PalBg ShpClouds =          { MIDGAMES, MAINMENU,  2,  20 };
 constexpr PalBg ShpClouds =          { MIDGAMES, OPTPALS,  21,  20 };
 
 constexpr PalBg ShpBoard =           { MAINMENU, MAINMENU,  2,   1 };

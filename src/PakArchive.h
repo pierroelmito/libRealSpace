@@ -46,7 +46,7 @@ public:
 	void List(FILE* output);
 
 	void GuessContent(FILE* output);
-	void GuessPakEntryContent(PakEntry* entry);
+	void GuessPakEntryContent(PakEntry& entry);
 
 	const char* GetName(void) const { return path; }
 
@@ -63,7 +63,7 @@ private:
 	uint8_t* data;
 	size_t size;
 	char path[512] ;
-	std::vector<PakEntry*> entries;
+	std::vector<PakEntry> entries;
 
 	// allows to know if we should free the TRE data
 	bool initalizedFromFile{ false };

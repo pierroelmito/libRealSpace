@@ -19,11 +19,6 @@ RSArea::RSArea()
 RSArea::~RSArea()
 {
 	delete archive;
-	while(!textures.empty()){
-		RSMapTextureSet* set = textures.back();
-		textures.pop_back();
-		delete set;
-	}
 }
 
 void RSArea::ParseMetadata()
@@ -687,9 +682,9 @@ void RSArea::InitFromPAKFileName(const char* pakFilename)
 		TreEntry* treEntry = treArchive.GetEntryByName(txmPakName);
 		PakArchive txmPakArchive;
 		txmPakArchive.InitFromRAM(txmPakName,*treEntry);
-		RSMapTextureSet* set = new RSMapTextureSet();
+		auto set = std::make_unique<RSMapTextureSet>();
 		set->InitFromPAK(&txmPakArchive);
-		textures.push_back(set);
+		textures.push_back(std::move(set));
 	}
 
 	//Parse the meta datas.

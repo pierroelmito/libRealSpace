@@ -28,7 +28,7 @@ protected:
 	struct RSShowCase
 	{
 		float cameraDist;
-		RSEntity* entity;
+		std::unique_ptr<RSEntity> entity;
 		char displayName[20];
 	};
 	std::vector<RSShowCase> showCases;

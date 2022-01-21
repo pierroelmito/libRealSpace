@@ -152,7 +152,7 @@ sg_image_desc MakeImageDesc(int w, int h, sg_pixel_format fmt, sg_usage usage, u
 	idesc.num_mipmaps = mipcount;
 	idesc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
 	idesc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
-	idesc.max_anisotropy = rt ? 1 : 4;
+	idesc.max_anisotropy = rt ? 1 : 1;
 	idesc.sample_count = rt ? RSSampleCount: 1;
 
 	return idesc;
@@ -900,7 +900,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 			if (textInfo.textureID >= object->images.size())
 				continue;
 
-			RSImage* image = object->images[textInfo.textureID];
+			auto&& image = object->images[textInfo.textureID];
 			const RSTexture* texture = image->GetTexture();
 			auto& d = textureData[texture->id];
 			const Triangle& tri = object->triangles[textInfo.triangleID];
@@ -1081,7 +1081,7 @@ void SCRenderer::SetLight(const RSVector3& l)
 
 void SCRenderer::Prepare(RSEntity* object)
 {
-	for (RSImage* img : object->images)
+	for (auto&& img : object->images)
 		img->SyncTexture();
 	object->prepared = true;
 }

@@ -214,11 +214,6 @@ void GameEngine::Run()
 		//Swap GL buffer
 		Screen.Refresh();
 
-#if 0
-		//Flush all events since they should all have been interpreted.
-		SDL_FlushEvents(SDL_FIRSTEVENT,SDL_LASTEVENT);
-#endif
-
 		//Also clear the Mouse flags.
 		Mouse.FlushEvents();
 		Screen.EndFrame();

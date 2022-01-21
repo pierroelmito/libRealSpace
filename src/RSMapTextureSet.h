@@ -12,6 +12,7 @@
 #include <cstdio>
 
 #include <vector>
+#include <memory>
 
 class PakArchive;
 class RSImage;
@@ -44,5 +45,5 @@ public:
 private:
 	char name[512];
 	void Parse(PakArchive* archive);
-	std::vector<RSImage*> images;
+	std::vector<std::unique_ptr<RSImage>> images;
 };

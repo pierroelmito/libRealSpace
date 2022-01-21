@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "Matrix.h"
 #include "Quaternion.h"
@@ -72,13 +73,13 @@ public:
 	void InitFromRAM(const ByteSlice& bytes);
 	void InitFromIFF(IffLexer* lexer);
 
-	void AddImage(RSImage* image);
+	void AddImage(std::unique_ptr<RSImage>&& image);
 	void AddVertex(const RSVector3& vertex);
-	void AddUV(uvxyEntry* uv);
+	void AddUV(const uvxyEntry& uv);
 	void AddLod(Lod* lod);
 	void AddTriangle(Triangle* triangle);
 
-	std::vector<RSImage*> images;
+	std::vector<std::unique_ptr<RSImage>> images;
 	std::vector<RSVector3> vertices;
 	std::vector<uvxyEntry> uvs;
 	std::vector<Lod> lods;

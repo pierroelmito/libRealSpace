@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include <memory>
+#include <array>
+
 #include "Math.h"
 
 class RLEShape;
@@ -42,7 +45,7 @@ public:
 	SCMouseButton buttons[3];
 
 private:
-	RLEShape* appearances[4];
+	std::array<std::unique_ptr<RLEShape>, 4> appearances;
 	Mode mode{ CURSOR };
 
 	//The cursor position in VGA 320x200 coordinates.

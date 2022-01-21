@@ -24,6 +24,7 @@ enum class Scene {
 	Bar,
 	BarTables,
 	CutsceneMoveA,
+	CutsceneMoveB,
 	Exit,
 };
 
@@ -51,8 +52,9 @@ public:
 	virtual void RunFrame(const FrameParams& p) override;
 
 protected:
-	std::vector<std::pair<Area, std::function<void(SCGenericScene*)>>> _interactions;
-	std::optional<std::pair<double, std::function<void(SCGenericScene*)>>> _activated;
+	using AreaAction = std::function<void(SCGenericScene*)>;
+	std::vector<std::pair<Area, AreaAction>> _interactions;
+	std::optional<std::pair<double, AreaAction>> _activated;
 	std::optional<Scene> _next{};
 	RSFont* _font;
 };

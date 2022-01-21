@@ -6,26 +6,25 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__SCFontManager__
-#define __libRealSpace__SCFontManager__
+#pragma once
 
 #include <map>
+#include <string>
 
 #include "RSFont.h"
 #include "TreArchive.h"
 
-class RSFontManager{
+class RSFontManager
+{
 public:
-    RSFontManager();
-    ~RSFontManager();
-    
-    void Init(void);
-    RSFont* GetFont(const char* name);
-    
-protected:
+	RSFontManager();
+	~RSFontManager();
+
+	void Init(void);
+	RSFont* GetFont(const char* name);
+
 private:
-    RSFont font;
-    std::map<char*,RSFont*,Char_String_Comparator> fonts;
+	RSFont font;
+	std::map<std::string, RSFont*> fonts;
 };
 
-#endif /* defined(__libRealSpace__SCFontManager__) */

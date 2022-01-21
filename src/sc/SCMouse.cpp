@@ -25,9 +25,8 @@ void SCMouse::Init(void)
 	cursors.InitFromRAM("MOUSE.SHP",*cursorShape);
 
 	for (int i = 0 ; i < 4; i++) {
-		RLEShape* shape = new RLEShape();
-		shape->Init(cursors.GetEntry(i));
-		appearances[i] = shape;
+		appearances[i] = std::make_unique<RLEShape>();
+		appearances[i]->Init(cursors.GetEntry(i));
 	}
 }
 

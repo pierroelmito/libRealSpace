@@ -102,7 +102,7 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer)
 			continue;
 		}
 
-		showCase.entity = new RSEntity();
+		showCase.entity = std::make_unique<RSEntity>();
 		showCase.entity->InitFromRAM(*entry);
 
 		uint32_t fixedPointDist = stream.ReadInt32LE();
@@ -283,6 +283,6 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 
 	Renderer.SetLight(light);
 	Renderer.Draw3D({ R3Dp::CLEAR_COLORS }, [&] () {
-		Renderer.DrawModel(showCases[currentObject].entity, LOD_LEVEL_MAX, id);
+		Renderer.DrawModel(showCases[currentObject].entity.get(), LOD_LEVEL_MAX, id);
 	});
 }

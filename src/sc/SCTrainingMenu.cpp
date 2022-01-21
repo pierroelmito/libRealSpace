@@ -7,10 +7,10 @@
 //
 
 #include "SCTrainingMenu.h"
-#include "SCStrike.h"
-#include "SCSelectWeaponsF16.h"
 
 #include "precomp.h"
+
+#include "SCSelectWeaponsF16.h"
 
 SCTrainingMenu::SCTrainingMenu()
 {
@@ -48,8 +48,8 @@ void SCTrainingMenu::Init()
 	const Point2D exitDDimension = { 60, 15 } ;
 	const Point2D exitDPosition = { positionBoard.x + 155, positionBoard.y + 23 };
 
-	MakeButton(sanDPosition, sandDDimension, *trButtonsPack, 1, 2, [] {
-		Game.MakeActivity<SCStrike>();
+	MakeButton(sanDPosition, sandDDimension, *trButtonsPack, 1, 2, [&] {
+		Stop();
 		Game.MakeActivity<SCSelectWeaponF16>();
 	});
 

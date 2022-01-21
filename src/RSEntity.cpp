@@ -19,18 +19,13 @@ RSEntity::RSEntity()
 
 RSEntity::~RSEntity()
 {
-	while(!images.empty()) {
-		RSImage* image = images.back();
-		images.pop_back();
-		delete image;
-	}
 }
 
 void RSEntity::ParseTXMP(IffChunk* chunk)
 {
 	ByteStream stream(chunk->data);
 
-	RSImage* image = new RSImage();
+	auto image = std::make_unique<RSImage>();
 
 	char name[8];
 	for(int i=0; i < 8 ; i++)
@@ -42,7 +37,7 @@ void RSEntity::ParseTXMP(IffChunk* chunk)
 	image->Create(name, width, height, 0);
 	image->UpdateContent(stream.GetPosition());
 
-	AddImage(image);
+	AddImage(std::move(image));
 }
 
 void RSEntity::ParseTXMS(IffChunk* chunk)
@@ -152,7 +147,7 @@ void RSEntity::ParseUVXY(IffChunk* chunk)
 		uvEntry.uvs[2].u = stream.ReadByte();
 		uvEntry.uvs[2].v = stream.ReadByte();
 
-		AddUV(&uvEntry);
+		AddUV(uvEntry);
 	}
 }
 
@@ -228,9 +223,9 @@ void RSEntity::CalcBoundingBox(void)
 	}
 }
 
-void RSEntity::AddImage(RSImage* image)
+void RSEntity::AddImage(std::unique_ptr<RSImage>&& image)
 {
-	this->images.push_back(image);
+	this->images.push_back(std::move(image));
 }
 
 void RSEntity::AddVertex(const RSVector3& vertex)
@@ -238,9 +233,9 @@ void RSEntity::AddVertex(const RSVector3& vertex)
 	this->vertices.push_back(vertex);
 }
 
-void RSEntity::AddUV(uvxyEntry* uv)
+void RSEntity::AddUV(const uvxyEntry& uv)
 {
-	this->uvs.push_back(*uv);
+	this->uvs.push_back(uv);
 }
 
 void RSEntity::AddLod(Lod* lod)
