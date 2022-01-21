@@ -52,6 +52,7 @@ void GameEngine::Init()
 	ConvAssets.Init(); //Load assets needed for Conversations (char and background)
 	Screen.Init(3); //Load Main Palette and Initialize the GL
 	VGA.Init();
+	Audio.Init();
 	Renderer.Init(2);
 	Mouse.Init(); //Load the Mouse Cursor
 
@@ -197,6 +198,8 @@ void GameEngine::Run()
 	while (Screen.StartFrame() && activities.size() > 0) {
 		if (!PumpEvents())
 			break;
+
+		//Audio.Update();
 
 		//Allow the active activity to Run and Render
 		IActivity* currentActivity = activities.top();

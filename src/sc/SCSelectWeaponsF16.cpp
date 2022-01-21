@@ -20,6 +20,7 @@ SCSelectWeaponF16::~SCSelectWeaponF16()
 {
 }
 
+#if 0
 class RSVocSound
 {
 public:
@@ -109,21 +110,11 @@ bool RSVocSound::InitFromRAM(const ByteSlice& bs)
 
 	return true;
 }
+#endif
 
 void SCSelectWeaponF16::Init()
 {
 	_font = FontManager.GetFont("");
-
-	//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\RSOUNDFX.PAK";
-	const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
-	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-	auto pak = GetPak(pakPath, *treGameFlow.GetEntryByName(pakPath));
-	for (int i = 0; i < pak->GetNumEntries(); ++i) {
-		const PakEntry& pe = pak->GetEntry(i);
-		printf("==== %d ====\n", pe.size);
-		RSVocSound snd;
-		snd.InitFromRAM(pe);
-	}
 
 	wantedBg = OptHangarTruck;
 	wantedBg.am = AnimMode::Cutscene;
@@ -131,6 +122,28 @@ void SCSelectWeaponF16::Init()
 
 void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 {
+	if (soundIndex != soundWanted) {
+		soundIndex = soundWanted;
+		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\RSOUNDFX.PAK";
+		const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
+		auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+		//const char* pakPath = "..\\..\\DATA\\SOUND\\DSOUNDFX.PAK";
+		//auto& treGameFlow = Assets.tres[AssetManager::TRE_SOUND];
+		auto pak = GetPak(pakPath, *treGameFlow.GetEntryByName(pakPath));
+		testSound = {};
+		testSound.InitFromRAM(pak->GetEntry(std::min(pak->GetNumEntries() - 1, soundIndex)));
+	}
+
+	static int played = 0;
+	if (testSound.Data().data != nullptr) {
+		Audio.Update([&] (std::vector<float>& buffer) {
+			for (float& f : buffer) {
+				const uint8_t s = testSound.Data().data[((played++) / 4) % testSound.Data().sz];
+				f = (s / 255.0f) - 0.5f;
+			}
+		});
+	}
+
 	if (wantedBg != currentBg) {
 		currentBg = wantedBg;
 		printf("pal : %d / bg : %d\n", currentBg.pal, currentBg.shp);
@@ -165,10 +178,14 @@ void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 		colOfs += 1;
 	if (p.pressed.contains(GLFW_KEY_D))
 		colOfs = std::max(0, colOfs - 1);
+	if (p.pressed.contains(GLFW_KEY_R))
+		soundWanted += 1;
+	if (p.pressed.contains(GLFW_KEY_F))
+		soundWanted = soundWanted == 0 ? soundWanted : soundWanted - 1;
 
 	FrameParams np = p;
 	np.currentTime -= startTime;
 	Frame2D(np, shapes, [&] {
-		VGA.PrintText(_font, { 10, 10 }, uint8_t(p.currentTime * 40), 3, 5, "pal:%d - shp:%d - ofs:%d", currentBg.pal, currentBg.shp, colOfs);
+		VGA.PrintText(_font, { 10, 10 }, uint8_t(p.currentTime * 40), 3, 5, "pal:%d - shp:%d - ofs:%d - sound: %d", currentBg.pal, currentBg.shp, colOfs, soundIndex);
 	});
 }

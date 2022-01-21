@@ -14,6 +14,6 @@ target("sc")
 	if is_plat("mingw") then
 		add_links("opengl32", "glfw3")
 	else
-		add_links("GL", "glfw")
+		add_links("GL", "glfw", "pthread", "asound")
 	end
 

@@ -10,10 +10,37 @@
 
 #include <cstdint>
 
-class PakArchive;
+#include "ByteSlice.h"
 
-class RSSound
+class RSVocSoundData
 {
 public:
-	void InitFromPAK(PakArchive* archive, uint32_t index);
+	struct SoundData
+	{
+		uint32_t sampelRate{};
+		uint32_t sz{};
+		const uint8_t* data{};;
+	};
+	struct BlockType {
+		enum Type {
+			Terminator,
+			SoundData,
+			SoundContinue,
+			Silence,
+			Marker,
+			ASCII,
+			Repeat,
+			EndRepeat,
+			Extended
+		};
+	};
+	bool InitFromRAM(const ByteSlice& bs);
+	const SoundData& Data() const { return data; }
+protected:
+	SoundData data;
+};
+
+class RSSoundInstance
+{
+
 };

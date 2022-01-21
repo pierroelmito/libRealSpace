@@ -30,5 +30,8 @@ protected:
 	PalBg wantedBg{};
 	PalBg currentBg{};
 	int colOfs{ 0 };
+	size_t soundIndex{ ~0u };
+	size_t soundWanted{ 0 };
+	RSVocSoundData testSound;
 };
 

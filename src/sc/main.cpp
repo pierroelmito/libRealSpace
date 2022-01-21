@@ -10,12 +10,14 @@
 
 #include "SCMainMenu.h"
 #include "RSFontManager.h"
+#include "RSAudio.h"
 #include "UserProperties.h"
 
 //Here are all the mean subsystems interacting together
 GameEngine Game;
 RSScreen Screen;
 RSVGA VGA;
+RSAudio Audio;
 SCMouse Mouse;
 AssetManager Assets;
 SCRenderer Renderer;

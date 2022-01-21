@@ -20,9 +20,12 @@
 #include "PaletteIDs.h"
 #include "ShapeIDs.h"
 #include "RLEShape.h"
+#include "RSSound.h"
 #include "SCMouse.h"
 #include "SCButton.h"
+
 #include "ShapeIDs.h"
+#include "SoundIDs.h"
 
 class SCButton;
 

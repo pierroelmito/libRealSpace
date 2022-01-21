@@ -14,6 +14,7 @@
 #include "GameEngine.h"
 #include "RSScreen.h"
 #include "RSVGA.h"
+#include "RSAudio.h"
 #include "RSFontManager.h"
 #include "SCRenderer.h"
 
@@ -21,6 +22,7 @@ extern GameEngine Game;
 extern SCMouse Mouse;
 extern RSScreen Screen;
 extern RSVGA VGA;
+extern RSAudio Audio;
 extern AssetManager Assets;
 extern SCRenderer Renderer;
 extern ConvAssetManager ConvAssets;
