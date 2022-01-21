@@ -93,13 +93,13 @@ void TreArchive::Parse(void)
 {
 	ByteStream stream(this->data);
 
-	size_t numEntries = stream.ReadUInt32LE() ;
+	const size_t numEntries = stream.ReadUInt32LE() ;
 
 	//The pointer to the start of the data. We are not using it.
 	stream.ReadUInt32LE() ;
 
-
 	//Now read all entries
+	entries.reserve(numEntries);
 	for(size_t i =0; i < numEntries; i++){
 		TreEntry entry{};
 		ReadEntry(&stream, &entry);

@@ -118,20 +118,93 @@ void SCSelectWeaponF16::Init()
 
 	wantedBg = OptHangarTruck;
 	wantedBg.am = AnimMode::Cutscene;
+
+	//auto& tre = Assets.tres[AssetManager::TRE_SOUND];
+	//tre.Decompress("tre_sound/");
+
+#if 0
+	const std::vector<std::string> items = {
+	#if 1
+		"..\\..\\DATA\\GAMEFLOW\\CONV.PAK",
+		"..\\..\\DATA\\GAMEFLOW\\CONVPALS.PAK",
+		"..\\..\\DATA\\GAMEFLOW\\CONVSHPS.PAK",
+		"..\\..\\DATA\\GAMEFLOW\\MAINMENU.PAK",
+		"..\\..\\DATA\\GAMEFLOW\\OBJVIEW.PAK",
+		"..\\..\\DATA\\GAMEFLOW\\OPTPALS.PAK",
+		"..\\..\\DATA\\GAMEFLOW\\OPTSHPS.PAK",
+		"..\\..\\DATA\\MIDGAMES\AMUSIC.PAK",
+		"..\\..\\DATA\\MIDGAMES\\ASOUNDFX.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID1.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID12.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID14.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID15.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID16.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID17.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID2.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID20.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID3.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID36.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MID5.PAK",
+		"..\\..\\DATA\\MIDGAMES\\MIDGAMES.PAK",
+		"..\\..\\DATA\\MIDGAMES\\RMUSIC.PAK",
+		"..\\..\\DATA\\MIDGAMES\\RSOUNDFX.PAK",
+	#endif
+	#if 0
+		//"..\\..\\DATA\\FONTS\\NEWBUTNS.SHP",
+		//"..\\..\\DATA\\FONTS\\NODISK3.SHP",
+		  "..\\..\\DATA\\MIDGAMES\\MMUSIC.PAK",
+		//"..\\..\\DATA\\OBJECTS\\F-16DESH.IFF",
+		//"..\\..\\DATA\\SOUND\\ADLIB.DRV",
+		//"..\\..\\DATA\\SOUND\\COMBAT.ADL",
+		//"..\\..\\DATA\\SOUND\\COMBAT.DAT",
+		//"..\\..\\DATA\\SOUND\\COMBAT.MID",
+		//"..\\..\\DATA\\SOUND\\COMBAT.ROL",
+		  "..\\..\\DATA\\SOUND\\DSOUNDFX.PAK",
+		//"..\\..\\DATA\\SOUND\\GAMEFLOW.ADL",
+		//"..\\..\\DATA\\SOUND\\GAMEFLOW.DAT",
+		//"..\\..\\DATA\\SOUND\\GAMEFLOW.MID",
+		//"..\\..\\DATA\\SOUND\\GAMEFLOW.ROL",
+		//"..\\..\\DATA\\SOUND\\MIDI.DRV",
+		//"..\\..\\DATA\\SOUND\\PAS.DRV",
+		//"..\\..\\DATA\\SOUND\\ROLAND.DRV",
+		//"..\\..\\DATA\\SOUND\\SB.DRV",
+		//"..\\..\\DATA\\SOUND\\SOUNDFX.ADL",
+		//"..\\..\\DATA\\SOUND\\SOUNDFX.ROL",
+		//"..\\..\\DATA\\SOUND\\STRIKE.AD",
+		//"..\\..\\DATA\\SOUND\\STRIKE.MT",
+	#endif
+	};
+
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	for (const auto& i : items) {
+		auto* entry = treGameFlow.GetEntryByName(i.c_str());
+		if (entry) {
+			auto pak = GetPak(i.c_str(), *entry);
+		}
+	}
+#endif
 }
 
 void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 {
 	if (soundIndex != soundWanted) {
 		soundIndex = soundWanted;
+		testSound = {};
 		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\RSOUNDFX.PAK";
-		const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
-		auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
+		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1.PAK";
+		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
+		//auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 		//const char* pakPath = "..\\..\\DATA\\SOUND\\DSOUNDFX.PAK";
 		//auto& treGameFlow = Assets.tres[AssetManager::TRE_SOUND];
-		auto pak = GetPak(pakPath, *treGameFlow.GetEntryByName(pakPath));
-		testSound = {};
-		testSound.InitFromRAM(pak->GetEntry(std::min(pak->GetNumEntries() - 1, soundIndex)));
+		const char* pakPath = MID2VOC;
+		auto& treGameFlow = Assets.tres[AssetManager::TRE_MGSPEECH];
+		auto* entry = treGameFlow.GetEntryByName(pakPath);
+		if (entry) {
+			auto pak = GetPak(pakPath, *entry);
+			testSound.InitFromRAM(pak->GetEntry(std::min(pak->GetNumEntries() - 1, soundIndex)));
+		}
 	}
 
 	static int played = 0;

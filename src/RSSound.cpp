@@ -22,8 +22,6 @@ bool RSVocSoundData::InitFromRAM(const ByteSlice& bs)
 	if (sz != 26)
 		return false;
 
-	printf("VOC:\n");
-
 	while (true) {
 		const uint8_t bt = stream.ReadByte();
 		if (bt == BlockType::Terminator)
@@ -32,7 +30,7 @@ bool RSVocSoundData::InitFromRAM(const ByteSlice& bs)
 		const auto bsz = stream.ReadBytes<3>();
 		const uint32_t szBlock = (bsz[2] << 16) | (bsz[1] << 8) | (bsz[0] << 0);
 
-		printf("\t[%d] : %d bytes\n", bt, szBlock);
+		//printf("\t[%d] : %d bytes\n", bt, szBlock);
 
 		switch (bt) {
 		case BlockType::SoundData:

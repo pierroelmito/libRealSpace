@@ -28,7 +28,9 @@ void AssetManager::Init()
 		{AssetManager::TRE_MISC,"MISC.TRE"},
 		{AssetManager::TRE_SOUND,"SOUND.TRE"},
 		{AssetManager::TRE_MISSIONS,"MISSIONS.TRE"},
-		{AssetManager::TRE_TEXTURES,"TEXTURES.TRE"}
+		{AssetManager::TRE_TEXTURES,"TEXTURES.TRE"},
+		{AssetManager::TRE_MGSPEECH,"MGSPEECH.TRE"},
+		{AssetManager::TRE_MSSPEECH,"MSSPEECH.TRE"},
 	};
 
 	//Load all TRE in RAM and store them.

@@ -19,8 +19,18 @@ class PakArchive;
 class AssetManager
 {
 public:
-	enum TreID {TRE_GAMEFLOW, TRE_OBJECTS, TRE_MISC, TRE_SOUND, TRE_MISSIONS,TRE_TEXTURES, NUM_TRES } ;
-	static_assert(NUM_TRES == 6);
+	enum TreID {
+		TRE_GAMEFLOW,
+		TRE_OBJECTS,
+		TRE_MISC,
+		TRE_SOUND,
+		TRE_MISSIONS,
+		TRE_TEXTURES,
+		TRE_MGSPEECH,
+		TRE_MSSPEECH,
+		NUM_TRES
+	};
+	static_assert(NUM_TRES == 8);
 
 	AssetManager();
 	~AssetManager();

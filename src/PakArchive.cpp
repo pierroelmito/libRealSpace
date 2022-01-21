@@ -118,6 +118,14 @@ void PakArchive::InitFromRAM(const char* name,uint8_t* data, size_t size)
 void PakArchive::InitFromRAM(const char* name, const ByteSlice& bs)
 {
 	InitFromRAM(name, bs.data, bs.size);
+
+	int i = -1;
+	for (const auto& e : entries) {
+		++i;
+		RSVocSoundData snd;
+		if (snd.InitFromRAM(e))
+			printf("sound: %d\n", i);
+	}
 }
 
 bool PakArchive::Decompress(const char* dstDirectory,const char* extension)
