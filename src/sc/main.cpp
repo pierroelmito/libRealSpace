@@ -26,7 +26,7 @@ RSFontManager FontManager;
 
 int main(int argc, char* argv[])
 {
-	UserProperties::Get().ReadFromFile("../assets/properties.def");
+	UserProperties::Get().ReadFromFile("assets/properties.def");
 
 	Assets.SetBase("./");
 	Game.Init();

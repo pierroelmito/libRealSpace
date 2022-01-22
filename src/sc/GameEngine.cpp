@@ -47,10 +47,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 void GameEngine::Init()
 {
+	const int scale = UserProperties::Get().Ints.Get("WindowScale", 3);
+
 	Assets.Init(); //Load all TREs and PAKs
 	FontManager.Init();
 	ConvAssets.Init(); //Load assets needed for Conversations (char and background)
-	Screen.Init(1); //Load Main Palette and Initialize the GL
+	Screen.Init(scale); //Load Main Palette and Initialize the GL
 	VGA.Init();
 	Audio.Init();
 	Renderer.Init();

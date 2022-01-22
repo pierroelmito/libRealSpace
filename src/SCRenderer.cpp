@@ -573,8 +573,8 @@ void SCRenderer::Init()
 
 	std::vector<uint32_t> pixels = { 0xffffffffu };
 	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, 0, pixels);
-	noise = LoadDDS("../assets/noise.dds").value_or(white);
-	debugFont = LoadDDS("../assets/font.dds").value_or(white);
+	noise = LoadDDS("assets/noise.dds").value_or(white);
+	debugFont = LoadDDS("assets/font.dds").value_or(white);
 
 	std::array<hmm_vec2, 7> seeds;
 	for (hmm_vec2& v : seeds) {
