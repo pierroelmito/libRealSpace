@@ -36,6 +36,12 @@ Dependencies :
 - [HandmadeMath](https://github.com/HandmadeMath/Handmade-Math)
 - [TinyDDSLoader](https://github.com/benikabocha/tinyddsloader)
 
+Building :
+==============
+
+- MSYS2 and linux are both working. GLFW and xmake need to be installed first, then just run "xmake"
+- Copy or link the "assets" directory in the game directory.
+
 Eye Candies :
 =============
 
