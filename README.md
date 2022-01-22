@@ -31,10 +31,10 @@ The long term goal is to be able to play Strike Commander with a Virtual Reality
 Dependencies :
 ==============
 
-- GLFW
-- Sokol GFX
-- HandmadeMath
-- TinyDDSLoader
+- [GLFW](https://www.glfw.org/)
+- [Sokol GFX/Audio](https://github.com/floooh/sokol)
+- [HandmadeMath](https://github.com/HandmadeMath/Handmade-Math)
+- [TinyDDSLoader](https://github.com/benikabocha/tinyddsloader)
 
 Eye Candies :
 =============
