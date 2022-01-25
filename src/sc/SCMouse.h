@@ -28,7 +28,8 @@ public:
 	SCMouse();
 	~SCMouse();
 
-	void Init(void);
+	void Init();
+	void Release() {}
 
 	inline bool IsVisible(void){ return this->visible ; }
 	void SetVisible(bool visible){ this->visible = visible; }

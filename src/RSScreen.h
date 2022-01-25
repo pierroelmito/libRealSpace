@@ -17,6 +17,8 @@ public:
 	~RSScreen();
 
 	void Init(int32_t zoomFactor);
+	void Release();
+
 	void SetTitle(const char* title);
 	bool StartFrame();
 	void EndFrame();

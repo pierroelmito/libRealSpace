@@ -82,7 +82,7 @@ public:
 	std::vector<MapObject> objects[BLOCKS_PER_MAP];
 	float elevation[BLOCKS_PER_MAP];
 
-	const std::vector<RSEntity*>& GetJets() const { return jets; }
+	const std::vector<std::unique_ptr<RSEntity>>& GetJets() const { return jets; }
 
 private:
 
@@ -114,5 +114,6 @@ private:
 	void AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation, RSVector3* position);
 	void AddJets();
 
-	std::vector<RSEntity*> jets;
+	std::map<std::string, std::unique_ptr<RSEntity>> entities;
+	std::vector<std::unique_ptr<RSEntity>> jets;
 };

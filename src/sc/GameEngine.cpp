@@ -50,7 +50,7 @@ void GameEngine::Init()
 	const int scale = UserProperties::Get().Ints.Get("WindowScale", 3);
 
 	Assets.Init(); //Load all TREs and PAKs
-	FontManager.Init();
+	FontManager.Init(Assets.tres[AssetManager::TRE_MISC]);
 	ConvAssets.Init(); //Load assets needed for Conversations (char and background)
 	Screen.Init(scale); //Load Main Palette and Initialize the GL
 	VGA.Init();
@@ -63,49 +63,21 @@ void GameEngine::Init()
 	glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 }
 
-bool GameEngine::AnyInput()
+void GameEngine::Release()
 {
-#if 0
-	//Mouse
-	SDL_Event mouseEvents[5];
-	int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEBUTTONUP,SDL_MOUSEBUTTONUP);
-	for(int i= 0 ; i < numMouseEvents ; i++){
-		SDL_Event* event = &mouseEvents[i];
-		switch (event->type) {
-			case SDL_MOUSEBUTTONUP:
-				return true;
-			default:
-				break;
-		}
-	}
-
-	//Keyboard
-	SDL_Event keybEvents[5];
-	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYUP,SDL_KEYUP);
-	for(int i= 0 ; i < numKeybEvents ; i++){
-		SDL_Event* event = &keybEvents[i];
-		switch (event->type) {
-			default:
-				return true;
-		}
-	}
-#endif
-	return false;
+	Mouse.Release();
+	Renderer.Release();
+	Audio.Release();
+	VGA.Release();
+	Screen.Release();
+	ConvAssets.Release();
+	FontManager.Release();
+	Assets.Release();
 }
 
 bool GameEngine::IsKeyPressed(uint32_t keyCode)
 {
 	return glfwGetKey(win, keyCode) == GLFW_PRESS;
-#if 0
-	SDL_Event keybEvents[5];
-	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN);
-	for(int i= 0 ; i < numKeybEvents ; i++){
-		SDL_Event* event = &keybEvents[i];
-		if (event->key.keysym.sym == keyCode)
-			return true;
-	}
-	return false;
-#endif
 }
 
 bool GameEngine::PumpEvents(void)
@@ -120,33 +92,6 @@ bool GameEngine::PumpEvents(void)
 		int32_t(y)
 	});
 #else
-	SDL_PumpEvents();
-
-	//Mouse
-	SDL_Event mouseEvents[5];
-	int numMouseEvents= SDL_PeepEvents(mouseEvents,5,SDL_PEEKEVENT,SDL_MOUSEMOTION,SDL_MOUSEWHEEL);
-	for(int i= 0 ; i < numMouseEvents ; i++){
-		SDL_Event* event = &mouseEvents[i];
-		switch (event->type) {
-			case SDL_MOUSEMOTION:
-				Point2D newPosition;
-				newPosition.x = event->motion.x;
-				newPosition.y = event->motion.y;
-				newPosition.x *= 320.0f / Screen.width;
-				newPosition.y *= 200.0f / Screen.height;
-				Mouse.SetPosition(newPosition);
-				break;
-			case SDL_MOUSEBUTTONDOWN:
-				Mouse.buttons[event->button.button-1].event = SCMouseButton::PRESSED;
-				break;
-			case SDL_MOUSEBUTTONUP:
-				Mouse.buttons[event->button.button-1].event = SCMouseButton::RELEASED;
-				break;
-			default:
-				break;
-		}
-	}
-
 	//Joystick
 
 	//Keyboard

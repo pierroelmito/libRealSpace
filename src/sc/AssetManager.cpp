@@ -8,11 +8,13 @@
 
 #include "precomp.h"
 
-struct TreNameID
+AssetManager::AssetManager()
 {
-	AssetManager::TreID id;
-	const char* filename;
-};
+}
+
+AssetManager::~AssetManager()
+{
+}
 
 void AssetManager::SetBase(const char* newBase)
 {
@@ -21,8 +23,13 @@ void AssetManager::SetBase(const char* newBase)
 
 void AssetManager::Init()
 {
-	TreNameID nameIds[NUM_TRES] =
+	struct TreNameID
 	{
+		AssetManager::TreID id;
+		const char* filename;
+	};
+
+	TreNameID nameIds[NUM_TRES] = {
 		{AssetManager::TRE_GAMEFLOW,"GAMEFLOW.TRE"},
 		{AssetManager::TRE_OBJECTS,"OBJECTS.TRE"},
 		{AssetManager::TRE_MISC,"MISC.TRE"},
@@ -43,12 +50,9 @@ void AssetManager::Init()
 	}
 }
 
-AssetManager::AssetManager()
-{
-}
-
-AssetManager::~AssetManager()
+void AssetManager::Release()
 {
 	for (TreArchive& t : tres)
 		t.Release();
 }
+

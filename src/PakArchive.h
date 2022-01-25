@@ -35,7 +35,6 @@ public:
 	~PakArchive();
 
 	bool InitFromFile(const char* filepath);
-	void InitFromRAM(const char* name,uint8_t* data, size_t size);
 	void InitFromRAM(const char* name, const ByteSlice& bs);
 
 	bool Decompress(const char* dstDirectory, const char* extension);

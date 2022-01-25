@@ -234,6 +234,16 @@ struct ModelRenderData
 	};
 	using Mesh = std::vector<MeshItem>;
 
+	static void ReleaseMesh(Mesh& msh)
+	{
+		for (MeshItem& i : msh) {
+			sg_destroy_image(i.texture);
+			sg_destroy_buffer(i.vbuf);
+			sg_destroy_buffer(i.ibuf);
+		}
+		msh.clear();
+	}
+
 	bool Init()
 	{
 		shd = sg_make_shader(model_shader_desc(sg_query_backend()));
@@ -279,6 +289,13 @@ struct ModelRenderData
 
 		return true;
 	}
+
+	void Release()
+	{
+		sg_destroy_pipeline(pip_opaque);
+		sg_destroy_pipeline(pip_blend);
+		sg_destroy_shader(shd);
+	}
 };
 
 struct GroundRenderData
@@ -293,6 +310,15 @@ struct GroundRenderData
 		int pcount{};
 	};
 	using Mesh = std::vector<MeshItem>;
+
+	static void ReleaseMesh(Mesh& msh)
+	{
+		for (MeshItem& i : msh) {
+			sg_destroy_image(i.texture);
+			sg_destroy_buffer(i.vbuf);
+		}
+		msh.clear();
+	}
 
 	bool Init()
 	{
@@ -314,6 +340,12 @@ struct GroundRenderData
 		}
 
 		return true;
+	}
+
+	void Release()
+	{
+		sg_destroy_pipeline(pip);
+		sg_destroy_shader(shd);
 	}
 };
 
@@ -357,6 +389,13 @@ struct FullscreenSky
 		bind.vertex_buffers[0] = vbuf;
 
 		return true;
+	}
+
+	bool Release()
+	{
+		sg_destroy_buffer(vbuf);
+		sg_destroy_pipeline(pip);
+		sg_destroy_shader(shd);
 	}
 };
 
@@ -410,6 +449,13 @@ struct FullscreenClouds
 		bind.vertex_buffers[0] = vbuf;
 
 		return true;
+	}
+
+	void Release()
+	{
+		sg_destroy_buffer(vbuf);
+		sg_destroy_pipeline(pip);
+		sg_destroy_shader(shd);
 	}
 };
 
@@ -476,6 +522,13 @@ struct FullscreenBitmapData
 
 		sg_end_pass();
 	}
+
+	void Release()
+	{
+		sg_destroy_buffer(vbuf);
+		sg_destroy_pipeline(pip);
+		sg_destroy_shader(shd);
+	}
 };
 
 SgTexture debugFont{};
@@ -500,6 +553,12 @@ template <class K, class V>
 class ObjectCacheManager
 {
 public:
+	void Clear(const std::function<void(V&)>& fn)
+	{
+		for (V& v : allData)
+			fn(v);
+		allData.clear();
+	}
 	template <typename FN>
 	V& GetData(const K* ptr, FN&& fn)
 	{
@@ -604,6 +663,14 @@ void SCRenderer::Init()
 
 void SCRenderer::Release()
 {
+	cacheEntityToModel.Clear(&ModelRenderData::ReleaseMesh);
+	cacheBlockToModel.Clear(&GroundRenderData::ReleaseMesh);
+
+	FbdRender.Release();
+	GroundRender.Release();
+	FullscreenClouds.Release();
+	FullscreenSky.Release();
+	ModelRender.Release();
 }
 
 void
@@ -1251,12 +1318,12 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 
 void SCRenderer::RenderJets(const RSArea& area)
 {
-	for(RSEntity* entity : area.GetJets()) {
+	for(auto&& entity : area.GetJets()) {
 		RSMatrix world = HMM_QuaternionToMat4(entity->orientation) * HMM_Scale({ OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE });
 		world.Elements[3][0] = entity->position.X;
 		world.Elements[3][1] = entity->position.Y;
 		world.Elements[3][2] = entity->position.Z;
-		DrawModel(entity, LOD_LEVEL_MAX, world);
+		DrawModel(entity.get(), LOD_LEVEL_MAX, world);
 	}
 }
 

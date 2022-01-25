@@ -90,7 +90,7 @@ protected:
 	SceneSchapes shapes;
 
 	VGAPalette palette;
-	std::vector<SCButton*> buttons;
+	std::vector<std::unique_ptr<SCButton>> buttons;
 	GTime startTime{};
 
 private:

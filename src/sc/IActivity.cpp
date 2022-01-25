@@ -83,7 +83,7 @@ SCButton* IActivity::CheckButtons(void)
 	if (buttons.empty())
 		return nullptr;
 
-	for(SCButton* button : buttons) {
+	for(auto&& button : buttons) {
 		if (!button->IsEnabled())
 			continue;
 
@@ -110,7 +110,7 @@ SCButton* IActivity::CheckButtons(void)
 			button->OnAction();
 		}
 
-		return button;
+		return button.get();
 	}
 
 	Mouse.SetMode(SCMouse::CURSOR);
@@ -241,17 +241,16 @@ void IActivity::InitShapeAt(RLEShape& shp, const Point2D& position, const char* 
 
 SCButton* IActivity::MakeButton(Point2D pos, Point2D size, PakArchive& subPak, size_t upEntry, size_t downEntry, SCButton::ActionFunction&& fn)
 {
-	SCButton* button = new SCButton();
+	auto button = std::make_unique<SCButton>();
 	button->InitBehavior(pos, size, std::move(fn));
 	button->appearance[SCButton::APR_UP]  .InitWithPosition(subPak.GetEntry(upEntry), pos);
 	button->appearance[SCButton::APR_DOWN].InitWithPosition(subPak.GetEntry(downEntry), pos);
-	buttons.push_back(button);
-	return button;
+	return buttons.emplace_back(std::move(button)).get();
 }
 
 void IActivity::DrawButtons(void)
 {
-	for(SCButton* button : buttons) {
+	for(auto&& button : buttons) {
 		if (button->IsEnabled())
 			VGA.DrawShape(button->appearance[button->GetAppearance()]);
 		else

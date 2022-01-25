@@ -330,7 +330,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//00 nothing
 		//01 rest face
 		//02 hair
-		const auto& shapes = currentFrame.face->appearances->GetShapes();
+		const auto& shapes = currentFrame.face->appearances.GetShapes();
 
 		for (size_t i=1; i< 3; i++) {
 			RLEShape* s = shapes[i];

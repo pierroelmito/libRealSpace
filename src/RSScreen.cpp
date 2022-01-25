@@ -52,6 +52,12 @@ void RSScreen::Init(int32_t zoomFactor)
 	Renderer.MakeContext();
 }
 
+void RSScreen::Release()
+{
+	glfwDestroyWindow(win);
+	win = nullptr;
+}
+
 bool RSScreen::StartFrame()
 {
 	glfwGetFramebufferSize(win, &width, &height);

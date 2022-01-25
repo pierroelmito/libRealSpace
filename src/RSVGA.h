@@ -26,7 +26,9 @@ public:
 	uint8_t* GetFrameBuffer(void){ return frameBuffer;}
 	bool& ShowPalette() { return _showPalette; }
 
-	void Init(void);
+	void Init();
+	void Release() {}
+
 	void SetPalette(const VGAPalette& newPalette);
 	bool DrawShape(RLEShape& shape);
 	template <typename... T>

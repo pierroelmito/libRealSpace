@@ -22,8 +22,9 @@ public:
 	GameEngine();
 	~GameEngine();
 
-	void Init(void);
-	void Run(void);
+	void Init();
+	void Release();
+	void Run();
 
 	template <typename... T>
 	void Log(const char* text, const T&... ts)
@@ -57,7 +58,6 @@ public:
 	IActivity* GetCurrentActivity(void);
 
 	bool IsKeyPressed(uint32_t keyCode);
-	bool AnyInput();
 	bool PumpEvents(void);
 
 private:

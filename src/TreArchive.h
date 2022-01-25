@@ -21,14 +21,6 @@
 class PakArchive;
 class ByteStream;
 
-struct Char_String_Comparator
-{
-	bool operator()(char const *a, char const *b) const
-	{
-		return strcmp(a, b) < 0;
-	}
-};
-
 struct TreEntry : public ByteSlice
 {
 	uint8_t unknownFlag{ 0 };
@@ -42,7 +34,7 @@ public:
 	~TreArchive();
 
 	bool InitFromFile(const char* filepath);
-	void InitFromRAM(const char* name, uint8_t* data, size_t size);
+	void InitFromRAM(const char* name, const ByteSlice& bs);
 	void Release();
 
 	char* GetPath(void);
@@ -71,6 +63,8 @@ public:
 private:
 	void ReadEntry(ByteStream* stream, TreEntry* entry);
 	void Parse(void);
+
+	DataBufferPtr _dataBuffer;
 
 	char path[512];
 	std::vector<TreEntry> entries;

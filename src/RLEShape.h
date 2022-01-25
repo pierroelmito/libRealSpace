@@ -17,7 +17,7 @@
 class RLEShape
 {
 public:
-	 RLEShape();
+	RLEShape();
 	~RLEShape();
 
 	bool Init(const ByteSlice& bytes);
@@ -48,7 +48,7 @@ private:
 	size_t size;
 	Point2D position{ 0, 0 };
 
-	uint8_t* data;
+	uint8_t* data{ nullptr };
 
 	enum FragmentType {FRAG_END,FRAG_COMPOSITE,FRAG_RAW} ;
 	enum FragmentSubType {SUB_FRAG_RAW =0x0, SUB_FRAG_COMPRESSED=0x1} ;

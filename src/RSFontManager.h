@@ -20,7 +20,8 @@ public:
 	RSFontManager();
 	~RSFontManager();
 
-	void Init(void);
+	void Init(TreArchive& tre);
+	void Release() {}
 	RSFont* GetFont(const char* name);
 
 private:

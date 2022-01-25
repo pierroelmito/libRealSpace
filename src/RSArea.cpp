@@ -587,7 +587,7 @@ void RSArea::AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation
 	entity->orientation = *orientation;
 	entity->position = *position;
 
-	jets.push_back(entity);
+	jets.emplace_back(entity);
 }
 
 void RSArea::AddJets()
@@ -615,14 +615,13 @@ void RSArea::AddJets()
 	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG21.IFF";
 	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG29.IFF";
 
-	std::map<std::string, RSEntity*> entities;
 	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
 		std::vector<MapObject>& blockObjects = objects[id];
 		for (MapObject& object : blockObjects) {
 			if (object.entity == nullptr) {
-				RSEntity*& e = entities[object.name];
+				auto& e = entities[object.name];
 				if (e == nullptr) {
-					e = new RSEntity();
+					e = std::make_unique<RSEntity>();
 					char buffer[512];
 					snprintf(buffer, sizeof(buffer), "%s%s.IFF", TRE_DATA_OBJECTS, object.name);
 					TreEntry* entry = tre.GetEntryByName(buffer);
@@ -633,7 +632,7 @@ void RSArea::AddJets()
 				if (e == nullptr) {
 					printf("Unable to load area object '%s'\n", object.name);
 				}
-				object.entity = e;
+				object.entity = e.get();
 			}
 		}
 	}

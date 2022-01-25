@@ -18,7 +18,7 @@ SCMouse::~SCMouse()
 {
 }
 
-void SCMouse::Init(void)
+void SCMouse::Init()
 {
 	TreEntry* cursorShape = Assets.tres[AssetManager::TRE_MISC].GetEntryByName(TRE_DATA "MOUSE.SHP");
 	PakArchive cursors;

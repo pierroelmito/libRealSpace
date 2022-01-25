@@ -94,30 +94,25 @@ bool PakArchive::InitFromFile(const char* filepath)
 
 	initalizedFromFile = true;
 
-	InitFromRAM(filepath,fileData,fileSize);
+	InitFromRAM(filepath,{ fileData, fileSize });
 
 	fclose(file);
 
 	return true;
 }
 
-void PakArchive::InitFromRAM(const char* name,uint8_t* data, size_t size)
+void PakArchive::InitFromRAM(const char* name, const ByteSlice& bs)
 {
 	strcpy(this->path,name);
 
-	this->data = data;
-	this->size = size;
+	this->data = bs.data;
+	this->size = bs.size;
 
 	stream.Set(this->data);
 
 	ready = false;
 
 	Parse();
-}
-
-void PakArchive::InitFromRAM(const char* name, const ByteSlice& bs)
-{
-	InitFromRAM(name, bs.data, bs.size);
 
 	/*
 	int i = -1;
@@ -130,7 +125,7 @@ void PakArchive::InitFromRAM(const char* name, const ByteSlice& bs)
 	*/
 }
 
-bool PakArchive::Decompress(const char* dstDirectory,const char* extension)
+bool PakArchive::Decompress(const char* dstDirectory, const char* extension)
 {
 	const char* suffix = ".CONTENT/";
 	const char* filePattern = "FILE%d.%s";

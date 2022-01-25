@@ -19,43 +19,47 @@ ConvAssetManager::~ConvAssetManager()
 	Game.Log("We are not freeing the RAM from all the RLEs !!!\n");
 }
 
-void ConvAssetManager::Init(void)
+void ConvAssetManager::Init()
+{
+	BuildDB();
+}
+
+void ConvAssetManager::Release()
 {
 	BuildDB();
 }
 
 CharFace* ConvAssetManager::GetCharFace(char* name)
 {
-	CharFace* npc = this->faces[name];
+	const auto& npc = faces[name];
+	if (npc)
+		return npc.get();
 
-	if (npc == NULL){
-		static CharFace dummy;
-		RSImageSet* set = new RSImageSet();
-		set->Add(RLEShape::GetEmptyShape());
-		dummy.appearances = set;
-		npc = &dummy;
-		Game.Log("ConvAssetManager: Cannot find npc '%s', returning dummy npc instead.\n",name);
-		this->faces[name] = npc;
-	}
+	Game.Log("ConvAssetManager: Cannot find npc '%s', returning dummy npc instead.\n", name);
 
-	return npc;
+	static CharFace dummy;
+	if (dummy.appearances.GetShapes().empty())
+		dummy.appearances.Add(RLEShape::GetEmptyShape());
+
+	return &dummy;
 }
 
 ConvBackGround* ConvAssetManager::GetBackGround(char* name)
 {
-	ConvBackGround* shape = this->backgrounds[name];
+	const auto& shape = backgrounds[name];
+	if (shape)
+		return shape.get();
 
-	if (shape == NULL){
-		Game.Log("ConvAssetManager: Cannot find loc '%s', returning dummy loc instead.\n",name);
-		static ConvBackGround dummy;
-		uint8_t dummyPalettePatch[5] = { 0, 0, 0 ,0 , 0};
+	Game.Log("ConvAssetManager: Cannot find loc '%s', returning dummy loc instead.\n",name);
+
+	static ConvBackGround dummy;
+	static uint8_t dummyPalettePatch[5] = { 0, 0, 0 ,0 , 0};
+	if (dummy.palettes.empty())
 		dummy.palettes.push_back(dummyPalettePatch);
+	if (dummy.layers.empty())
 		dummy.layers.push_back(RLEShape::GetEmptyShape());
-		shape = &dummy;
-		this->backgrounds[name] = shape;
-	}
 
-	return shape;
+	return &dummy;
 }
 
 CharFigure* ConvAssetManager::GetFigure(char* name)
@@ -155,7 +159,7 @@ void ConvAssetManager::ReadBackGrounds(const IffChunk* chunkRoot)
 		for (size_t layerID=0; layerID < numLayers; layerID++)
 			ParseBGLayer(chunk->childs[1]->data,layerID,back);
 
-		this->backgrounds[back->name] = back;
+		this->backgrounds[back->name] = std::unique_ptr<ConvBackGround>(back);
 		//Game.Log("  Able to reach shape in CONVSHPS.PAK entry %d from background '%s'.\n",shapeID,back->name);
 	}
 }
@@ -174,11 +178,9 @@ void ConvAssetManager::ReadFaces(const IffChunk* root)
 
 		uint8_t pakID = s.ReadByte();
 
-		RSImageSet* imageSet = new RSImageSet();
-		imageSet->InitFromRAM(convShps.GetEntry(pakID));
-		face->appearances = imageSet;
+		face->appearances.InitFromRAM(convShps.GetEntry(pakID));
 
-		const auto& shapes = imageSet->GetShapes();
+		const auto& shapes = face->appearances.GetShapes();
 		for (size_t fid=0; fid < shapes.size(); fid++) {
 			RLEShape*s = shapes[fid];
 				Point2D pos = {0,CONV_TOP_BAR_HEIGHT+1}; //  to allow the black band on top of the screen
@@ -187,7 +189,7 @@ void ConvAssetManager::ReadFaces(const IffChunk* root)
 
 		//printf("Face '%s' features %lu images.\n",face->name,imageSet->GetNumImages());
 
-		this->faces[face->name] = face;
+		this->faces[face->name] = std::unique_ptr<CharFace>(face);
 	}
 }
 
@@ -211,7 +213,7 @@ void ConvAssetManager::ReadFCPL(const IffChunk* root)
 		memcpy(pal->name, root->childs[i]->data, 8);
 		pal->name[8] = '\0';
 		pal->index = *(root->childs[i]->data+8);
-		this->facePalettes[pal->name] = pal;
+		facePalettes[pal->name] = std::unique_ptr<FacePalette>(pal);
 	}
 }
 

@@ -19,8 +19,12 @@ TreArchive::~TreArchive()
 
 void TreArchive::Release()
 {
-	if (initalizedFromFile)
-		delete[] this->data;
+	_dataBuffer = nullptr;
+	initalizedFromFile = false;
+	data = nullptr;
+	size = 0;
+	entries.clear();
+	mappedEntries.clear();
 }
 
 bool TreArchive::InitFromFile(const char* filepath)
@@ -31,33 +35,21 @@ bool TreArchive::InitFromFile(const char* filepath)
 	strcat(fullPath, GetBase());
 	strcat(fullPath, filepath);
 
-	FILE* file = fopen(fullPath, "rb");
-
-	if (!file){
-		printf("Unable to open TRE archive: '%s'.\n",filepath);
+	_dataBuffer = ByteSlice::ReadFile(fullPath);
+	if (!_dataBuffer)
 		return false;
-	}
 
-	fseek(file, 0,SEEK_END);
-	size_t fileSize = ftell(file);
-	fseek(file,0 ,SEEK_SET);
-
-	uint8_t* fileData = new uint8_t[fileSize];
-	fread(fileData, 1, fileSize, file);
-
-	InitFromRAM(filepath,fileData,fileSize);
-
-	fclose(file);
+	InitFromRAM(filepath, ByteSlice::Get(_dataBuffer));
 
 	return true;
 }
 
-void TreArchive::InitFromRAM(const char* name,uint8_t* data, size_t size)
+void TreArchive::InitFromRAM(const char* name, const ByteSlice& bs)
 {
 	strcpy(this->path, name);
 
-	this->data = data;
-	this->size = size;
+	data = bs.data;
+	size = bs.size;
 
 	Parse();
 }

@@ -22,6 +22,11 @@ bool RSAudio::Init()
 	return true;
 }
 
+void RSAudio::Release()
+{
+	saudio_shutdown();
+}
+
 bool RSAudio::Update(const std::function<void(std::vector<float>&)>& cb)
 {
 	const int num_frames = saudio_expect();

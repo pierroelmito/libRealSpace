@@ -18,21 +18,10 @@ RSFontManager::~RSFontManager()
 {
 }
 
-void RSFontManager::Init(void)
+void RSFontManager::Init(TreArchive& tre)
 {
-	/*
-	const char* fontPath = "..\\..\\DATA\\GAMEFLOW\\BWFONT.SHP";
-	const char* trePath = "GAMEFLOW.TRE";
-	TreArchive GAMEFLOW;
-	GAMEFLOW.InitFromFile(trePath);
-	TreEntry* convFontEntry = GAMEFLOW.GetEntryByName(fontPath);
-	*/
-
 	const char* fontPath = "..\\..\\DATA\\FONTS\\CONVFONT.SHP";
-	const char* trePath = "MISC.TRE";
-	TreArchive MISC;
-	MISC.InitFromFile(trePath);
-	TreEntry* convFontEntry = MISC.GetEntryByName(fontPath);
+	TreEntry* convFontEntry = tre.GetEntryByName(fontPath);
 
 	PakArchive fontArch;
 	fontArch.InitFromRAM("CONVFONT.SHP", *convFontEntry);

@@ -20,12 +20,12 @@ RSFont::~RSFont()
 
 RLEShape* RSFont::GetShapeForChar(char c)
 {
-	return this->letters[c];
+	return letters[c];
 }
 
 void RSFont::InitFromPAK(const PakArchive& fontArchive)
 {
-	for (size_t i = 0 ; i < fontArchive.GetNumEntries(); i++) {
+	for (size_t i = 0; i < fontArchive.GetNumEntries(); i++) {
 		const PakEntry& entry = fontArchive.GetEntry(i);
 		RLEShape* s = new RLEShape();
 		s->Init(entry);

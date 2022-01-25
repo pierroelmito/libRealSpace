@@ -69,7 +69,6 @@ public:
 	RSEntity();
 	~RSEntity();
 
-	void InitFromRAM(uint8_t* data, size_t size);
 	void InitFromRAM(const ByteSlice& bytes);
 	void InitFromIFF(IffLexer* lexer);
 

@@ -95,18 +95,13 @@ bool IffLexer::InitFromFile(const char* filepath)
 
 	strcpy(this->path, filepath);
 
-	return InitFromRAM(fileData,fileSize);
+	return InitFromRAM({ fileData, fileSize });
 }
 
 bool IffLexer::InitFromRAM(const ByteSlice& bytes)
 {
-	return InitFromRAM(bytes.data, bytes.size);
-}
-
-bool IffLexer::InitFromRAM(uint8_t* data, size_t size)
-{
-	this->data = data;
-	this->size = size;
+	this->data = bytes.data;
+	this->size = bytes.size;
 
 	stream.Set(this->data);
 

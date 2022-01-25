@@ -33,6 +33,7 @@ int main(int argc, char* argv[])
 	//Add MainMenu activity on the game stack.
 	Game.MakeActivity<SCMainMenu>();
 	Game.Run();
+	Game.Release();
 
 	return EXIT_SUCCESS;
 }

@@ -9,6 +9,7 @@ public:
 	RSAudio();
 	~RSAudio();
 	bool Init();
+	void Release();
 	bool Update(const std::function<void(std::vector<float>&)>& cb);
 
 protected:

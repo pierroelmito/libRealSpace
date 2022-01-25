@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include "Texture.h"
+#include "ByteSlice.h"
 
 class IffLexer;
 class IffChunk;
@@ -33,6 +34,8 @@ private:
 	void ParsePALT(IffChunk* chunk);
 	void ParseBLWH(IffChunk* chunk);
 	void ParseCMAP(IffChunk* chunk);
+
+	DataBufferPtr _buffer;
 
 	uint32_t colorFlag;
 	VGAPalette colors;

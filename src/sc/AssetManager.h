@@ -37,6 +37,7 @@ public:
 
 	void SetBase(const char* base);
 	void Init(void);
+	void Release();
 
 	std::array<TreArchive, NUM_TRES> tres;
 
