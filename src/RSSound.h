@@ -42,5 +42,7 @@ protected:
 
 class RSSoundInstance
 {
-
+public:
+	RSVocSoundData* data{};
+	double startTime{};
 };

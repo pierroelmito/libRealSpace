@@ -45,7 +45,8 @@ public:
 	struct FrameParams
 	{
 		const std::set<int>& pressed;
-		GTime currentTime{};
+		GTime totalTime{};
+		GTime activityTime{};
 		float fade{};
 	};
 
@@ -62,6 +63,7 @@ public:
 	//virtual void Init() = 0;
 	virtual void RunFrame(const FrameParams& p) = 0;
 
+	GTime GetStartTime() const { return startTime; }
 	void Stop() { running = false;}
 	bool IsRunning() const { return running; }
 	void SetTitle(const char* title);
@@ -93,7 +95,9 @@ protected:
 	std::vector<std::unique_ptr<SCButton>> buttons;
 	GTime startTime{};
 
-private:
+	std::vector<RSSoundInstance> sounds;
+
+protected:
 	bool running;
 	bool focused;
 };

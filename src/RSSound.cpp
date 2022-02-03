@@ -37,7 +37,7 @@ bool RSVocSoundData::InitFromRAM(const ByteSlice& bs)
 			{
 				const uint8_t bsampleRate = stream.Cursor()[0];
 				const uint8_t compType = stream.Cursor()[1];
-				const uint32_t sampleRate = 256 - (1000000 / bsampleRate);
+				const uint32_t sampleRate = 2 * ((1000000 / bsampleRate) - 512);
 				data = {
 					sampleRate,
 					szBlock - 2,

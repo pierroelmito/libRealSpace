@@ -576,9 +576,9 @@ RSImage* RSArea::GetImageByID(size_t ID) const
 	return textures[0]->GetImageById(ID);
 }
 
-void RSArea::AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation, RSVector3* position)
+void RSArea::AddJet(TreArchive& tre, const char* name, RSQuaternion* orientation, RSVector3* position)
 {
-	TreEntry* jetEntry = tre->GetEntryByName(name);
+	TreEntry* jetEntry = tre.GetEntryByName(name);
 	RSEntity* entity = new RSEntity();
 	IffLexer lexer;
 	lexer.InitFromRAM(*jetEntry);
@@ -590,21 +590,18 @@ void RSArea::AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation
 	jets.emplace_back(entity);
 }
 
-void RSArea::AddJets()
+void RSArea::AddJets(TreArchive& treObjects)
 {
-	TreArchive tre;
-	tre.InitFromFile("OBJECTS.TRE");
-
 	const float angle = 25.0f;
 	const float mul = 1.0f;
 
 	RSQuaternion rot0 = HMM_Mat4ToQuaternion(HMM_Rotate(angle, { 1, 0, 0 }));
 	RSVector3 pos0 = { mul * 4016, mul * 95, mul * 2980};
-	AddJet(&tre, TRE_DATA_OBJECTS "F-16DES.IFF", &rot0, &pos0);
+	AddJet(treObjects, TRE_DATA_OBJECTS "F-16DES.IFF", &rot0, &pos0);
 
 	RSQuaternion rot1 = HMM_Mat4ToQuaternion(HMM_Rotate(-angle, { 1, 0, 0 }));
 	RSVector3 pos1 = { mul * 4010, mul * 95, mul * 2980};
-	AddJet(&tre, TRE_DATA_OBJECTS "F-22.IFF", &rot1, &pos1);
+	AddJet(treObjects, TRE_DATA_OBJECTS "F-22.IFF", &rot1, &pos1);
 
 	//pos = {3886,300,2886};
 	//AddJet(&tre,TRE_DATA_GAMEFLOW "MIG29.IFF",&rot,&pos);
@@ -624,7 +621,7 @@ void RSArea::AddJets()
 					e = std::make_unique<RSEntity>();
 					char buffer[512];
 					snprintf(buffer, sizeof(buffer), "%s%s.IFF", TRE_DATA_OBJECTS, object.name);
-					TreEntry* entry = tre.GetEntryByName(buffer);
+					TreEntry* entry = treObjects.GetEntryByName(buffer);
 					IffLexer lexer;
 					lexer.InitFromRAM(*entry);
 					e->InitFromIFF(&lexer);
@@ -638,7 +635,7 @@ void RSArea::AddJets()
 	}
 }
 
-void RSArea::InitFromPAKFileName(const char* pakFilename)
+void RSArea::InitFromPAKFileName(const char* pakFilename, TreArchive& treObjects, TreArchive& treTextures)
 {
 	strcpy(name,pakFilename);
 
@@ -668,9 +665,6 @@ void RSArea::InitFromPAKFileName(const char* pakFilename)
 				it on a machine with only 4MB of RAM.
 
 	*/
-	const char* trePath = "TEXTURES.TRE";
-	TreArchive treArchive;
-	treArchive.InitFromFile(trePath);
 
 	const char* pakNames[2] = {
 		TRE_DATA_TXM "TXMPACK.PAK",
@@ -678,7 +672,7 @@ void RSArea::InitFromPAKFileName(const char* pakFilename)
 	};
 	for (int i = 0; i < 2; ++i) {
 		const char* txmPakName = TRE_DATA_TXM "TXMPACK.PAK";
-		TreEntry* treEntry = treArchive.GetEntryByName(txmPakName);
+		TreEntry* treEntry = treTextures.GetEntryByName(txmPakName);
 		PakArchive txmPakArchive;
 		txmPakArchive.InitFromRAM(txmPakName,*treEntry);
 		auto set = std::make_unique<RSMapTextureSet>();
@@ -694,5 +688,5 @@ void RSArea::InitFromPAKFileName(const char* pakFilename)
 
 	ParseHeightMap();
 
-	AddJets();
+	AddJets(treObjects);
 }

@@ -11,6 +11,7 @@
 #include "precomp.h"
 
 #include "SCConvPlayer.h"
+#include "SCStrike.h"
 
 SCGenericScene::SCGenericScene()
 {
@@ -99,6 +100,7 @@ void SCGenericScene::Init(Scene sc, std::optional<Scene> next)
 			OptTentOutside00,
 		});
 		AddInteraction({ 203, 28, 268, 67 }, Scene::WildcatTentOutside);
+		AddInteraction({ 122, 73, 198, 111 }, Mission::M00);
 		break;
 	case Scene::Bar:
 		InitShapes({
@@ -151,9 +153,18 @@ void SCGenericScene::AddInteraction(Area area, Character ch)
 	});
 }
 
+void SCGenericScene::AddInteraction(Area area, Mission m)
+{
+	_interactions.emplace_back(area, [m] (SCGenericScene* current) {
+		current->Stop();
+		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar); // place to go after mission end
+		Game.MakeActivity<SCStrike>();
+	});
+}
+
 void SCGenericScene::RunFrame(const FrameParams& p)
 {
-	const double t = p.currentTime - startTime;
+	const double t = p.activityTime;
 	Mouse.SetMode(SCMouse::CURSOR);
 
 	const Point2D mpos = Mouse.GetPosition();
@@ -181,7 +192,6 @@ void SCGenericScene::RunFrame(const FrameParams& p)
 	}
 
 	FrameParams np = p;
-	np.currentTime = t;
 	np.fade = fade;
 	const bool running = Frame2D(np, shapes, [&] {
 		VGA.PrintText(_font, { 10, 10 }, 1, 3, 5, "%d,%d", mpos.x, mpos.y);

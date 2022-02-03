@@ -44,7 +44,7 @@ void SCConvPlayer::ReadNextFrame(const FrameParams& p)
 		return;
 	}
 
-	currentFrame.creationTime = p.currentTime;
+	currentFrame.creationTime = p.totalTime;
 
 	uint8_t type = conv.ReadByte();
 
@@ -212,7 +212,7 @@ void SCConvPlayer::Init( )
 void SCConvPlayer::CheckFrameExpired(const FrameParams& p)
 {
 	//A frame expires either after a player press a key, click or 6 seconds elapse.
-	if (!p.pressed.empty() || TimeToMSec * (p.currentTime - currentFrame.creationTime) > 5000)
+	if (!p.pressed.empty() || TimeToMSec * (p.totalTime - currentFrame.creationTime) > 5000)
 		this->currentFrame.SetExpired(true);
 }
 
@@ -350,7 +350,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//12 mouth something
 
 		for (size_t i = 3; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP; i++) {
-			RLEShape* s = shapes[3 + (int(TimeToMSec * (p.currentTime - startTime)) / 100) % 10];
+			RLEShape* s = shapes[3 + (int(TimeToMSec * (p.totalTime - startTime)) / 100) % 10];
 			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
 		}

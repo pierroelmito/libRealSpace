@@ -27,11 +27,11 @@ void RSAudio::Release()
 	saudio_shutdown();
 }
 
-bool RSAudio::Update(const std::function<void(std::vector<float>&)>& cb)
+bool RSAudio::Update(const SamplerCB& cb)
 {
 	const int num_frames = saudio_expect();
 	std::vector<float> buffer(num_frames, 0.0f);
-	cb(buffer);
+	cb(saudio_sample_rate(), saudio_channels(), buffer);
 	for (int i = 0; i < num_frames; i++) {
 		// simple square wave generator
 		//const float volume = 0.1f;

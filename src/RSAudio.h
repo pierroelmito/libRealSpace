@@ -6,11 +6,13 @@
 class RSAudio
 {
 public:
+	using SamplerCB = std::function<void(int, int, std::vector<float>&)>;
+
 	RSAudio();
 	~RSAudio();
 	bool Init();
 	void Release();
-	bool Update(const std::function<void(std::vector<float>&)>& cb);
+	bool Update(const SamplerCB& cb);
 
 protected:
 	static constexpr int BufSize = 128;

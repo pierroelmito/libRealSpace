@@ -119,9 +119,6 @@ void SCSelectWeaponF16::Init()
 	wantedBg = OptHangarTruck;
 	wantedBg.am = AnimMode::Cutscene;
 
-	//auto& tre = Assets.tres[AssetManager::TRE_SOUND];
-	//tre.Decompress("tre_sound/");
-
 #if 0
 	const std::vector<std::string> items = {
 	#if 1
@@ -209,9 +206,9 @@ void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 
 	static int played = 0;
 	if (testSound.Data().data != nullptr) {
-		Audio.Update([&] (std::vector<float>& buffer) {
+		Audio.Update([&] (int sr, int chan, std::vector<float>& buffer) {
 			for (float& f : buffer) {
-				const uint8_t s = testSound.Data().data[((played++) / 4) % testSound.Data().sz];
+				const uint8_t s = testSound.Data().data[(testSound.Data().sampelRate * ((played++)) / sr) % testSound.Data().sz];
 				f = (s / 255.0f) - 0.5f;
 			}
 		});
@@ -222,7 +219,7 @@ void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 		printf("pal : %d / bg : %d\n", currentBg.pal, currentBg.shp);
 		for (int i = 0; i < 256; ++i)
 			palette.SetColor(i, { 255u, 0, 255u, 255u });
-		startTime = p.currentTime;
+		startTime = p.totalTime;
 		InitShapes({ currentBg });
 	}
 
@@ -256,9 +253,7 @@ void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 	if (p.pressed.contains(GLFW_KEY_F))
 		soundWanted = soundWanted == 0 ? soundWanted : soundWanted - 1;
 
-	FrameParams np = p;
-	np.currentTime -= startTime;
-	Frame2D(np, shapes, [&] {
-		VGA.PrintText(_font, { 10, 10 }, uint8_t(p.currentTime * 40), 3, 5, "pal:%d - shp:%d - ofs:%d - sound: %d", currentBg.pal, currentBg.shp, colOfs, soundIndex);
+	Frame2D(p, shapes, [&] {
+		VGA.PrintText(_font, { 10, 10 }, uint8_t(p.activityTime * 40), 3, 5, "pal:%d - shp:%d - ofs:%d - sound: %d", currentBg.pal, currentBg.shp, colOfs, soundIndex);
 	});
 }

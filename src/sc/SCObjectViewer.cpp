@@ -62,8 +62,7 @@ void ConvertToUpperCase(char *sPtr)
 void SCObjectViewer::ParseObjList(IffLexer* lexer)
 {
 	//The objects referenced are within this TRE archive
-	TreArchive tre ;
-	tre.InitFromFile("OBJECTS.TRE");
+	TreArchive& tre = Assets.tres[AssetManager::TRE_OBJECTS];
 
 	//The object all follow the same path:
 	const char* OBJ_PATH = TRE_DATA_OBJECTS;
@@ -262,7 +261,7 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 
 	const RSShowCase& showCase = showCases[currentObject];
 
-	const double totalTime = TimeToMSec * (p.currentTime - startTime);
+	const double totalTime = TimeToMSec * p.activityTime ;
 	const double camTime = totalTime / 2000.0;
 	const double lightTime = totalTime / 8000.0;
 
@@ -285,4 +284,7 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	Renderer.Draw3D({ R3Dp::CLEAR_COLORS }, [&] () {
 		Renderer.DrawModel(showCases[currentObject].entity.get(), LOD_LEVEL_MAX, id);
 	});
+
+	if (!running)
+		Renderer.ClearCache();
 }

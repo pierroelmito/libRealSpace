@@ -155,7 +155,8 @@ void GameEngine::Run()
 		IActivity* currentActivity = activities.top();
 		if (currentActivity->IsRunning()) {
 			currentActivity->Focus();
-			currentActivity->RunFrame({ JustPressed, glfwGetTime() });
+			const GTime t = glfwGetTime();
+			currentActivity->RunFrame({ JustPressed, t, t - currentActivity->GetStartTime() });
 			currentActivity->UnFocus();
 		} else{
 			activities.pop();

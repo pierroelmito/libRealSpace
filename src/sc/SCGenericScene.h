@@ -32,6 +32,10 @@ enum class Character {
 	Janet,
 };
 
+enum class Mission {
+	M00,
+};
+
 class RSFont;
 
 class SCGenericScene : public IActivity
@@ -47,6 +51,7 @@ public:
 
 	void AddInteraction(Area area, Scene sc, std::optional<Scene> next = {});
 	void AddInteraction(Area area, Character ch);
+	void AddInteraction(Area area, Mission m);
 
 	virtual void Init(Scene sc, std::optional<Scene> next = {});
 	virtual void RunFrame(const FrameParams& p) override;

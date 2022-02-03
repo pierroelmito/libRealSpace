@@ -22,7 +22,7 @@ SCStrike::~SCStrike()
 
 void SCStrike::Init(void )
 {
-	area.InitFromPAKFileName("ARENA.PAK");
+	area.InitFromPAKFileName("ARENA.PAK", Assets.tres[AssetManager::TRE_OBJECTS], Assets.tres[AssetManager::TRE_TEXTURES]);
 
 	camPos = { 4100, 100, 3000 };
 	angleV = 0.0f;
@@ -31,9 +31,6 @@ void SCStrike::Init(void )
 
 void SCStrike::RunFrame(const FrameParams& p)
 {
-	if (p.pressed.contains(GLFW_KEY_ESCAPE))
-		Stop();
-
 #if 0
 	auto& cam = Renderer.GetCamera();
 	GTime currentTime = p.currentTime * TimeToMSec;
@@ -76,6 +73,11 @@ void SCStrike::RunFrame(const FrameParams& p)
 
 	Renderer.SetLight(light);
 	Renderer.Draw3D({ R3Dp::SKY | R3Dp::CLOUDS }, [&] () {
-		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.currentTime);
+		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.totalTime);
 	});
+
+	if (p.pressed.contains(GLFW_KEY_ESCAPE)) {
+		Renderer.ClearCache();
+		Stop();
+	}
 }

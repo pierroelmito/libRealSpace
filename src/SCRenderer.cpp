@@ -36,6 +36,18 @@ struct SgTexture
 	sg_image img{ 0 };
 };
 
+SgTexture debugFont{};
+SgTexture noise{};
+SgTexture white{};
+SgTexture skydome{};
+SgTexture screen{};
+SgTexture renderTargetColor{};
+SgTexture renderTargetGDepth{};
+SgTexture renderTargetZBuffer{};
+sg_pass renderPassScene0{};
+sg_pass renderPassScene1{};
+sg_pass renderPassScreen{};
+
 RSVector3 DecodeColor(const std::string& col)
 {
 	if (col.size() != 6)
@@ -237,7 +249,8 @@ struct ModelRenderData
 	static void ReleaseMesh(Mesh& msh)
 	{
 		for (MeshItem& i : msh) {
-			sg_destroy_image(i.texture);
+			if (i.texture.id != white.img.id)
+				sg_destroy_image(i.texture);
 			sg_destroy_buffer(i.vbuf);
 			sg_destroy_buffer(i.ibuf);
 		}
@@ -314,7 +327,8 @@ struct GroundRenderData
 	static void ReleaseMesh(Mesh& msh)
 	{
 		for (MeshItem& i : msh) {
-			sg_destroy_image(i.texture);
+			if (i.texture.id != white.img.id)
+				sg_destroy_image(i.texture);
 			sg_destroy_buffer(i.vbuf);
 		}
 		msh.clear();
@@ -531,18 +545,6 @@ struct FullscreenBitmapData
 	}
 };
 
-SgTexture debugFont{};
-SgTexture noise{};
-SgTexture white{};
-SgTexture skydome{};
-SgTexture screen{};
-SgTexture renderTargetColor{};
-SgTexture renderTargetGDepth{};
-SgTexture renderTargetZBuffer{};
-sg_pass renderPassScene0{};
-sg_pass renderPassScene1{};
-sg_pass renderPassScreen{};
-
 FullscreenBitmapData FbdRender;
 FullscreenSky FullscreenSky;
 FullscreenClouds FullscreenClouds;
@@ -661,10 +663,15 @@ void SCRenderer::Init()
 	initialized = true;
 }
 
-void SCRenderer::Release()
+void SCRenderer::ClearCache()
 {
 	cacheEntityToModel.Clear(&ModelRenderData::ReleaseMesh);
 	cacheBlockToModel.Clear(&GroundRenderData::ReleaseMesh);
+}
+
+void SCRenderer::Release()
+{
+	ClearCache();
 
 	FbdRender.Release();
 	GroundRender.Release();

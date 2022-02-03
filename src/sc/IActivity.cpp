@@ -35,6 +35,7 @@ bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::functio
 
 	bool running = false;
 
+	const GTime t = p.activityTime;
 	for (auto& shape : shapes) {
 		if (shape.frames.empty())
 			continue;
@@ -43,14 +44,14 @@ bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::functio
 			case AnimMode::Character:
 				{
 					VGA.DrawShape(*shape.frames[0]);
-					uint32_t idx = uint32_t(p.currentTime * 15) % (shape.frames.size() - 1);
+					uint32_t idx = uint32_t(t * 15) % (shape.frames.size() - 1);
 					VGA.DrawShape(*shape.frames[1 + idx]);
 				}
 				break;
 			case AnimMode::Cutscene:
 				{
 					uint32_t maxIdx = shape.frames.size() - 1;
-					uint32_t idx = std::min(maxIdx, uint32_t(p.currentTime * 15));
+					uint32_t idx = std::min(maxIdx, uint32_t(t * 15));
 					if (idx != maxIdx)
 						running = true;
 					VGA.DrawShape(*shape.frames[idx]);

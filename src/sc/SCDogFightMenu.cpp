@@ -25,8 +25,7 @@ SCDogFightMenu::~SCDogFightMenu()
 
 void SCDogFightMenu::Init()
 {
-	TreArchive tre ;
-	tre.InitFromFile("GAMEFLOW.TRE");
+	TreArchive& tre = Assets.tres[AssetManager::TRE_GAMEFLOW];
 
 	TreEntry* objViewIFF = NULL;//Assets.tres[]->GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
 	TreEntry* objViewPAK = NULL;//tre.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");

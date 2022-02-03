@@ -70,7 +70,7 @@ public:
 	RSArea();
 	~RSArea();
 
-	void InitFromPAKFileName(const char* pakFilename);
+	void InitFromPAKFileName(const char* pakFilename, TreArchive& treObjects, TreArchive& treTextures);
 
 	inline const AreaBlock& GetAreaBlockByID(int lod,int blockID) const {
 		return this->blocks[lod][blockID];
@@ -111,8 +111,8 @@ private:
 
 	char name[16];
 
-	void AddJet(TreArchive* tre, const char* name, RSQuaternion* orientation, RSVector3* position);
-	void AddJets();
+	void AddJet(TreArchive& tre, const char* name, RSQuaternion* orientation, RSVector3* position);
+	void AddJets(TreArchive& treObjects);
 
 	std::map<std::string, std::unique_ptr<RSEntity>> entities;
 	std::vector<std::unique_ptr<RSEntity>> jets;

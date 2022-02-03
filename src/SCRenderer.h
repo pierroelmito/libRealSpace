@@ -35,6 +35,7 @@ public:
 	void Prepare();
 	void Init();
 	void Release();
+	void ClearCache();
 	void MakeContext();
 	void DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix& world);
 	bool CreateTextureInGPU(RSTexture* texture);
