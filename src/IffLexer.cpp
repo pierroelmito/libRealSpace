@@ -113,6 +113,13 @@ bool IffLexer::InitFromRAM(const ByteSlice& bytes)
 	return true;
 }
 
+void IffLexer::Release()
+{
+	delete[] data;
+	data = nullptr;
+	size = {};
+}
+
 size_t IffLexer::ParseFORM(IffChunk* chunk)
 {
 	//FORM id

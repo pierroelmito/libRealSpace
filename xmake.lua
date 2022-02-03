@@ -6,6 +6,7 @@ target("sc")
 		-- uncomment do rebuild shaders from glsl:
 		--os.exec("sokol-shdc --input src/shaders/shaders.glsl --output src/shaders/shaders.h --slang glsl330", sourcefile, np)
 	end)
+	--set_optimize("fast")
 	set_kind("binary")
 	add_includedirs("src", "src/sc", "src/ext")
 	--add_cxxflags("-Wall")

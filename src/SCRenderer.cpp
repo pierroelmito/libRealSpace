@@ -620,13 +620,15 @@ void SCRenderer::Init()
 	int32_t height = 200;
 
 	//Load the default palette
-	IffLexer lexer;
-	lexer.InitFromFile("PALETTE.IFF");
-	//lexer.List(stdout);
-
-	RSPalette palette;
-	palette.InitFromIFF(&lexer);
-	this->palette = *palette.GetColorPalette();
+	{
+		IffLexer lexer;
+		lexer.InitFromFile("PALETTE.IFF");
+		//lexer.List(stdout);
+		RSPalette palette;
+		palette.InitFromIFF(&lexer);
+		this->palette = *palette.GetColorPalette();
+		lexer.Release();
+	}
 
 	camera.SetPersective(50.0f, width / (float)height, 0.1f, 20000.0f);
 

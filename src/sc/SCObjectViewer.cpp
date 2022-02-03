@@ -231,10 +231,10 @@ void SCObjectViewer::ParseAssets()
 	IffLexer lexer ;
 	lexer.InitFromFile("PALETTE.IFF");
 	//lexer.List(stdout);
-
 	RSPalette palette;
 	palette.InitFromIFF(&lexer);
 	this->palette = *palette.GetColorPalette();
+	lexer.Release();
 }
 
 void SCObjectViewer::Init(void)

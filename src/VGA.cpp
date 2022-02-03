@@ -37,10 +37,10 @@ void RSVGA::Init(void)
 	IffLexer lexer;
 	lexer.InitFromFile("PALETTE.IFF");
 	//lexer.List(stdout);
-
 	RSPalette palette;
 	palette.InitFromIFF(&lexer);
 	SetPalette(*palette.GetColorPalette());
+	lexer.Release();
 }
 
 void RSVGA::SetPalette(const VGAPalette& newPalette)

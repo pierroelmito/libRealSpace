@@ -161,6 +161,8 @@ void GameEngine::Run()
 		} else{
 			activities.pop();
 			delete currentActivity;
+			if (!activities.empty())
+				activities.top()->SetStartTime(glfwGetTime());
 		}
 
 		JustPressed.clear();

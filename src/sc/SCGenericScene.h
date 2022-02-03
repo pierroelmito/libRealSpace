@@ -38,6 +38,18 @@ enum class Mission {
 
 class RSFont;
 
+class SCCutScene : public IActivity
+{
+public:
+	SCCutScene();
+	virtual ~SCCutScene();
+
+	static void PushAll();
+
+	virtual void Init(int id);
+	virtual void RunFrame(const FrameParams& p) override;
+};
+
 class SCGenericScene : public IActivity
 {
 public:

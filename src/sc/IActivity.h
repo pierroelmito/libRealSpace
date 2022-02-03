@@ -64,6 +64,7 @@ public:
 	virtual void RunFrame(const FrameParams& p) = 0;
 
 	GTime GetStartTime() const { return startTime; }
+	void SetStartTime(GTime t) { startTime = t; }
 	void Stop() { running = false;}
 	bool IsRunning() const { return running; }
 	void SetTitle(const char* title);

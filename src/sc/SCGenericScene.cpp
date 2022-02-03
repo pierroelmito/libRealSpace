@@ -13,6 +13,111 @@
 #include "SCConvPlayer.h"
 #include "SCStrike.h"
 
+class SceneData
+{
+public:
+	struct Shot {
+		std::vector<int> pals;
+		std::vector<int> shps;
+	};
+	std::vector<Shot> shots;
+	static SceneData& Get()
+	{
+		static SceneData v;
+		return v;
+	}
+protected:
+	SceneData()
+	{
+		ReadScenes();
+	}
+	void ReadScenes()
+	{
+		auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+		TreEntry* scenes = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTIONS.IFF");
+		IffLexer lexer;
+		lexer.InitFromRAM(*scenes);
+		lexer.List(stdout);
+
+		{
+			IffChunk* chkScenes = lexer.GetChunkByID("OPTS");
+			for (IffChunk* child : chkScenes->childs) {
+				if (child->childs.size() != 5)
+					continue;
+				auto& info = *child->childs[0];
+				auto& colr = *child->childs[1];
+				auto& tune = *child->childs[2];
+				auto& back = *child->childs[3];
+				auto& fore = *child->childs[4];
+				printf("scene...\n");
+			}
+		}
+
+		{
+			IffChunk* chkShots = lexer.GetChunkByID("ESTB");
+			for (IffChunk* child : chkShots->childs) {
+				if (child->childs.size() != 3)
+					continue;
+				Shot& shot = shots.emplace_back();
+				auto& info = *child->childs[0];
+				auto& shapes = *child->childs[1];
+				auto& pals = *child->childs[2];
+				for (IffChunk* shp : shapes.childs) {
+					shot.shps.push_back(shp->data[0]);
+				}
+				for (IffChunk* pal : pals.childs) {
+					shot.pals.push_back(pal->data[0]);
+				}
+			}
+		}
+	}
+};
+
+SCCutScene::SCCutScene()
+{
+}
+
+SCCutScene::~SCCutScene()
+{
+}
+
+void SCCutScene::PushAll()
+{
+	const auto& sd = SceneData::Get();
+	for (int i = 0; i < sd.shots.size(); ++i)
+		Game.MakeActivity<SCCutScene>(i);
+}
+
+void SCCutScene::Init(int id)
+{
+	const auto& sd = SceneData::Get();
+	const auto& shot = sd.shots[id];
+
+	shapes.clear();
+
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	auto pakShps = GetPak(OPTSHPS, *treGameFlow.GetEntryByName(OPTSHPS));
+	auto pakPals = GetPak(OPTPALS, *treGameFlow.GetEntryByName(OPTPALS));
+
+	for (const auto& palId : shot.pals) {
+		ReadPatch(pakPals->GetEntry(palId));
+	}
+
+	for (const auto& shpId : shot.shps) {
+		auto& shp = AddShape();
+		if (!InitShape(shp, "", pakShps->GetEntry(shpId)))
+			printf("titi\n");
+	}
+}
+
+void SCCutScene::RunFrame(const FrameParams& p)
+{
+	const bool running = Frame2D(p, shapes, [&] {});
+	if (!running || p.pressed.contains(GLFW_KEY_ESCAPE)) {
+		Stop();
+	}
+}
+
 SCGenericScene::SCGenericScene()
 {
 }
@@ -23,6 +128,8 @@ SCGenericScene::~SCGenericScene()
 
 void SCGenericScene::Init(Scene sc, std::optional<Scene> next)
 {
+	auto& sd = SceneData::Get();
+
 	_next = next;
 	_font = FontManager.GetFont("");
 

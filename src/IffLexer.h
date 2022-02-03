@@ -37,6 +37,10 @@ public:
 	uint8_t* data;
 	size_t size;
 
+	std::vector<uint8_t> MakeVector() const {
+		return std::vector<uint8_t>(data, data + size);
+	}
+
 	//In the case of FORM,CAT  and LIST
 	uint32_t subId;
 	std::vector<IffChunk*> childs;
@@ -61,6 +65,7 @@ public:
 
 	bool InitFromFile(const char* filepath);
 	bool InitFromRAM(const ByteSlice& bytes);
+	void Release();
 
 	void List(FILE* output);
 
@@ -81,8 +86,8 @@ private:
 
 	DataBufferPtr _buffer;
 	ByteStream stream;
-	uint8_t* data;
-	size_t size;
+	uint8_t* data{ nullptr };
+	size_t size{};
 
 	IffChunk topChunk;
 
