@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cctype>
 #include <cstddef>
 #include <cstdio>
 #include <vector>
@@ -26,36 +27,23 @@ constexpr uint32_t IdToUInt(const char id[5])
 	return (a << 24) | (b << 16) | (c << 8) | d;
 }
 
-class IffChunk{
-
+class IffChunk
+{
 public:
-
 	IffChunk();
 	~IffChunk();
 
-	uint32_t id;
-	uint8_t* data;
-	size_t size;
-
-	std::vector<uint8_t> MakeVector() const {
-		return std::vector<uint8_t>(data, data + size);
-	}
-
-	//In the case of FORM,CAT  and LIST
-	uint32_t subId;
-	std::vector<IffChunk*> childs;
-
+	uint32_t id{};
+	uint8_t* data{};
+	size_t size{};
+	uint32_t subId{}; //In the case of FORM,CAT  and LIST
+	std::vector<IffChunk*> children;
 	char name[5];
-	char* GetName(void){
-		name[0] = (id & 0xFF000000) >> 24;
-		name[1] = (id & 0x00FF0000) >> 16;
-		name[2] = (id & 0x0000FF00) >> 8;
-		name[3] = (id & 0x000000FF) >> 0;
-		name[4] = 0;
 
-		return name;
-	};
-} ;
+	char* GetName();
+	char* GetChunkTextID(uint32_t id);
+	void List(FILE* output, int level = 0);
+};
 
 class IffLexer
 {
@@ -68,11 +56,8 @@ public:
 	void Release();
 
 	void List(FILE* output);
-
 	IffChunk* GetChunkByID(const char id[5]);
-
-	inline const char* GetName(void){ return this->path;}
-
+	inline const char* GetName(){ return this->path;}
 	DataBufferPtr Buffer() { return _buffer; }
 
 private:

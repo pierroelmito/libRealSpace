@@ -20,56 +20,127 @@ public:
 		std::vector<int> pals;
 		std::vector<int> shps;
 	};
+
 	std::vector<Shot> shots;
+
+	struct Spr {
+		int shp{};
+		int target{};
+		std::string label;
+		std::vector<Area> rects;
+		std::vector<Quad> quads;
+	};
+
+	struct Scene {
+		uint16_t info{};
+		uint16_t colr{};
+		uint16_t tune{};
+		std::vector<int> bgPals;
+		std::vector<int> fgPals;
+		std::vector<int> bgShps;
+		std::vector<Spr> sprs;
+	};
+
+	std::vector<Scene> scenes;
+	std::map<int, int> sceneIdToIndex;
+
 	static SceneData& Get()
 	{
 		static SceneData v;
 		return v;
 	}
+
 protected:
 	SceneData()
 	{
 		ReadScenes();
 	}
+	void ReadShots(IffChunk* chkShots)
+	{
+		for (IffChunk* child : chkShots->children) {
+			if (child->children.size() != 3)
+				continue;
+			Shot& shot = shots.emplace_back();
+			auto& info = *child->children[0];
+			auto& shapes = *child->children[1];
+			auto& pals = *child->children[2];
+			for (IffChunk* shp : shapes.children) {
+				shot.shps.push_back(shp->data[0]);
+			}
+			for (IffChunk* pal : pals.children) {
+				shot.pals.push_back(pal->data[0]);
+			}
+		}
+	}
+	void ReadSceneSprite(IffChunk* chk, Spr& spr)
+	{
+		for (IffChunk* i : chk->children) {
+			ByteStream bs(i->data);
+			if (i->id == IdToUInt("LABL")) {
+				spr.label = (const char*)i->data;
+			} else if (i->id == IdToUInt("SHAP")) {
+				const uint8_t b0 = bs.ReadByte();
+				const uint8_t b1 = bs.ReadByte();
+				spr.target = b0;
+				spr.shp = b1;
+			} else if (i->id == IdToUInt("RECT")) {
+				const auto x0 = bs.ReadShort();
+				const auto y0 = bs.ReadShort();
+				const auto x1 = bs.ReadShort();
+				const auto y1 = bs.ReadShort();
+				spr.rects.push_back({ x0, y0, x1, y1 });
+			} else if (i->id == IdToUInt("QUAD")) {
+				auto& quad = spr.quads.emplace_back();
+				for (int q = 0; q < 4; ++q)
+					quad[q] = { bs.ReadShort(), bs.ReadShort() };
+				std::swap(quad[2], quad[3]); // ABDC --> ABCD
+			}
+		}
+	}
+	void ReadScenes(IffChunk* chkScenes)
+	{
+		for (IffChunk* child : chkScenes->children) {
+			Scene& sc = scenes.emplace_back();
+			for (IffChunk* i : child->children) {
+				ByteStream bs(i->data);
+				if (i->id == IdToUInt("INFO")) {
+					sc.info = bs.ReadShort();
+				} else if (i->id == IdToUInt("COLR")) {
+					sc.colr = bs.ReadShort();
+				} else if (i->id == IdToUInt("TUNE")) {
+					sc.tune = bs.ReadShort();
+				} else if (i->subId == IdToUInt("BACK")) {
+					for (IffChunk* j : i->children) {
+						if (j->id == IdToUInt("PALT")) {
+							sc.bgPals.push_back(j->data[0]);
+						} else if (j->id == IdToUInt("SHAP")) {
+							sc.bgShps.push_back(j->data[0]);
+						}
+					}
+				} else if (i->subId == IdToUInt("FORE")) {
+					for (IffChunk* j : i->children) {
+						if (j->id == IdToUInt("PALT")) {
+							sc.fgPals.push_back(j->data[0]);
+						} else if (j->subId == IdToUInt("SPRT")) {
+							Spr& spr = sc.sprs.emplace_back();
+							ReadSceneSprite(j, spr);
+						}
+					}
+				}
+			}
+		}
+	}
 	void ReadScenes()
 	{
 		auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-		TreEntry* scenes = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTIONS.IFF");
+		TreEntry* iffScenes = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTIONS.IFF");
 		IffLexer lexer;
-		lexer.InitFromRAM(*scenes);
+		lexer.InitFromRAM(*iffScenes);
 		lexer.List(stdout);
-
-		{
-			IffChunk* chkScenes = lexer.GetChunkByID("OPTS");
-			for (IffChunk* child : chkScenes->childs) {
-				if (child->childs.size() != 5)
-					continue;
-				auto& info = *child->childs[0];
-				auto& colr = *child->childs[1];
-				auto& tune = *child->childs[2];
-				auto& back = *child->childs[3];
-				auto& fore = *child->childs[4];
-				printf("scene...\n");
-			}
-		}
-
-		{
-			IffChunk* chkShots = lexer.GetChunkByID("ESTB");
-			for (IffChunk* child : chkShots->childs) {
-				if (child->childs.size() != 3)
-					continue;
-				Shot& shot = shots.emplace_back();
-				auto& info = *child->childs[0];
-				auto& shapes = *child->childs[1];
-				auto& pals = *child->childs[2];
-				for (IffChunk* shp : shapes.childs) {
-					shot.shps.push_back(shp->data[0]);
-				}
-				for (IffChunk* pal : pals.childs) {
-					shot.pals.push_back(pal->data[0]);
-				}
-			}
-		}
+		ReadScenes(lexer.GetChunkByID("OPTS"));
+		ReadShots(lexer.GetChunkByID("ESTB"));
+		for (int i = 0; i < scenes.size(); ++i)
+			sceneIdToIndex[scenes[i].info] = i;
 	}
 };
 
@@ -126,167 +197,224 @@ SCGenericScene::~SCGenericScene()
 {
 }
 
-void SCGenericScene::Init(Scene sc, std::optional<Scene> next)
+void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 {
-	auto& sd = SceneData::Get();
+	printf("init scene 0x%02d\n", id);
 
-	_next = next;
-	_font = FontManager.GetFont("");
+	const auto& sd = SceneData::Get();
+	auto itf = sd.sceneIdToIndex.find(id.id);
+	if (itf == sd.sceneIdToIndex.end())
+		return;
 
-	switch (sc) {
-	case Scene::WildcatBaseHangar:
-		InitShapes({
-			OptHangar,
-			OptHangarDoor0,
-			OptHangarDoor1,
-			//OptF16,
-			OptHangarTruck,
-			//OptHangarJeep,
-			OptHangarChar0,
-			OptHangarChar2,
-			OptHangarChar3,
-		});
-		AddInteraction({ 17, 78, 54, 110 }, Scene::WildcatBaseOffice);
-		//AddInteraction({ 17, 78, 54, 110 }, Scene::Bar);
-		AddInteraction({ 275, 84, 307, 137 }, Scene::WildcatBaseChangeroom);
-		AddInteraction({ 103, 21, 237, 76 }, Scene::CutsceneMoveA, Scene::WildcatTentInside);
-		AddInteraction({ 189, 102, 198, 124 }, Character::Janet);
-		break;
-	case Scene::WildcatBaseOffice:
-		InitShapes({
-			OptDesk,
-			OptHangarChar1,
-		});
-		AddInteraction({ 0, 180, 320, 200 }, Scene::WildcatBaseHangar);
-		AddInteraction({ 74, 75, 122, 110 }, Character::Janet);
-		break;
-	case Scene::WildcatBaseChangeroom:
-		InitShapes({
-			OptChangeRoomBg,
-			OptChangeRoomFg,
-		});
-		AddInteraction({ 56, 75, 92, 135 }, Scene::WildcatBaseHangar);
-		AddInteraction({ 274, 85, 289, 107 }, Scene::WildcatBasePinupF);
-		AddInteraction({ 143, 88, 156, 106 }, Scene::WildcatBasePinupM);
-		AddInteraction({ 99, 123, 170, 145 }, Scene::Exit);
-		break;
-	case Scene::WildcatBasePinupF:
-		InitShapes({
-			OptPinupF,
-		});
-		AddInteraction({ 0, 0, 320, 200 }, Scene::WildcatBaseChangeroom);
-		break;
-	case Scene::WildcatBasePinupM:
-		InitShapes({
-			OptPinupM,
-		});
-		AddInteraction({ 0, 0, 320, 200 }, Scene::WildcatBaseChangeroom);
-		break;
-	case Scene::WildcatTentInside:
-		InitShapes({
-			OptTentInsideBg,
-			OptTentInsideFg,
-			OptTentInsideChar0,
-			//OptTentInsideChar1,
-		});
-		AddInteraction({ 86, 95, 117, 131 }, Scene::WildcatTentOutside);
-		AddInteraction({ 4, 129, 94, 159 }, Scene::Exit);
-		AddInteraction({ 230, 92, 282, 126 }, Scene::CutsceneMoveB, Scene::WildcatBaseHangar);
-		break;
-	case Scene::WildcatTentOutside:
-		InitShapes({
-			OptTentOutsideBg,
-			OptTentOutPlane00,
-		});
-		AddInteraction({ 6, 120, 190, 200 }, Scene::WildcatTentInside);
-		AddInteraction({ 110, 0, 320, 107 }, Scene::WildcatTentWeapons);
-		break;
-	case Scene::WildcatTentWeapons:
-		InitShapes({
-			OptOutsideHanger,
-			OptTentOutside00,
-		});
-		AddInteraction({ 203, 28, 268, 67 }, Scene::WildcatTentOutside);
-		AddInteraction({ 122, 73, 198, 111 }, Mission::M00);
-		break;
-	case Scene::Bar:
-		InitShapes({
-			OptBarBg,
-			OptBarFg,
-			OptBarChar0,
-			OptBarChar1,
-			OptBarChar2,
-		});
-		AddInteraction({ 0, 0, 320, 200 }, Scene::WildcatBaseHangar);
-		break;
-	case Scene::BarTables:
-		InitShapes({
-			OptBarTables,
-			OptBarTablesChar0,
-			OptBarTablesChar1,
-			OptBarTablesChar2,
-		});
-		AddInteraction({ 0, 0, 320, 200 }, Scene::WildcatBaseHangar);
-		break;
-	case Scene::CutsceneMoveA:
-		InitShapes({
-			OptCutsceneMoveA0,
-			OptCutsceneMoveA1,
-		});
-		break;
-	case Scene::CutsceneMoveB:
-		InitShapes({
-			OptLookOutside,
-			OptJeep01,
-		});
-		break;
+	const auto& sc = sd.scenes[itf->second];
+	_textColor = sc.colr;
+
+	shapes.clear();
+
+	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+	auto pakShps = GetPak(OPTSHPS, *treGameFlow.GetEntryByName(OPTSHPS));
+	auto pakPals = GetPak(OPTPALS, *treGameFlow.GetEntryByName(OPTPALS));
+
+	for (const auto& palId : sc.bgPals) {
+		ReadPatch(pakPals->GetEntry(palId));
+	}
+
+	for (const auto& palId : sc.fgPals) {
+		ReadPatch(pakPals->GetEntry(palId));
+	}
+
+	for (const auto& shpId : sc.bgShps) {
+		if (shpId < pakShps->GetNumEntries()) {
+			auto& shp = AddShape();
+			shp.am = AnimMode::Character;
+			if (!InitShape(shp, "", pakShps->GetEntry(shpId)))
+				printf("titi\n");
+		}
+	}
+
+	for (const auto& spr : sc.sprs) {
+		const bool use = sprMask & 1;
+		sprMask >>= 1;
+
+		const bool isScene = sd.sceneIdToIndex.contains(spr.target);
+		const char* vl = use ? "[x] " : "[ ] ";
+		if (isScene) {
+			printf("\t%sinteraction - got to scene 0x%02d '%s'\n", vl, spr.target, spr.label.c_str());
+		} else {
+			printf("\t%snot in declared scenes: 0x%02d '%s'\n", vl, spr.target, spr.label.c_str());
+		}
+
+		if (!use)
+			continue;
+
+		Interaction& interaction = _interactions.emplace_back();
+		interaction.label = spr.label;
+		interaction.areas = spr.rects;
+		interaction.quads = spr.quads;
+
+		if (isScene) {
+			const SceneID target{ spr.target };
+			interaction.action = [target] (SCGenericScene* current) {
+				current->Stop();
+				Game.MakeActivity<SCGenericScene>(target);
+			};
+		} else if (spr.target == 0x12 || spr.target == 0x129) {
+			interaction.action = [] (SCGenericScene* current) {
+				Game.MakeActivity<SCStrike>();
+			};
+		} else if (spr.target == 0x18) {
+			interaction.action = [] (SCGenericScene* current) {
+				current->Stop();
+				Game.MakeActivity<SCGenericScene>(Scene::WildcatTentInside);
+			};
+		}
+
+		if (spr.shp < pakShps->GetNumEntries()) {
+			auto& shp = AddShape();
+			shp.am = AnimMode::Character;
+			if (!InitShape(shp, "", pakShps->GetEntry(spr.shp)))
+				printf("titi\n");
+		}
 	}
 }
 
-void SCGenericScene::AddInteraction(Area area, Scene sc, std::optional<Scene> next)
+void SCGenericScene::Init(SceneID sc)
 {
-	_interactions.emplace_back(area, [sc, next] (SCGenericScene* current) {
+	auto& sd = SceneData::Get();
+
+	_font = FontManager.GetFont("");
+
+	uint32_t targetMask = ~0u;
+
+	switch (sc.id) {
+	case Scene::WildcatBaseHangar.id:
+		targetMask = 0b10010100111100u;
+		//AddInteraction({ 103, 21, 237, 76 }, Scene::WildcatTentInside);
+		//AddInteraction({ 189, 102, 198, 124 }, Character::Janet);
+		break;
+	case Scene::WildcatBaseChangeroom.id:
+		targetMask = 0b1101111u;
+		AddInteraction({ 99, 123, 170, 145 }, Scene::Exit);
+		break;
+	case Scene::WildcatTentInside.id:
+		targetMask = 0b11010100000111u;
+		AddInteraction({ 4, 129, 94, 159 }, Scene::Exit);
+		break;
+	case Scene::WildcatTentOutside.id:
+		targetMask = 0b1111110u;
+		//AddInteraction({ 110, 0, 320, 107 }, Scene::WildcatTentWeapons);
+		break;
+	case Scene::WildcatTentWeapons.id:
+		//InitShapes({
+		//	OptOutsideHanger,
+		//	OptTentOutside00,
+		//});
+		//AddInteraction({ 203, 28, 268, 67 }, Scene::WildcatTentOutside);
+		//AddInteraction({ 122, 73, 198, 111 }, Mission::M00);
+		break;
+	case Scene::Bar.id:
+		targetMask = 0b10111u;
+		break;
+	case Scene::BarTables.id:
+		targetMask = 0b10111u;
+		break;
+	default:
+		break;
+	}
+
+	InitFromScene(sc, targetMask);
+}
+
+void SCGenericScene::AddInteraction(Area area, SceneID sc, std::optional<int> cutscene)
+{
+	Interaction& interaction = _interactions.emplace_back();
+	interaction.areas = { area };
+	interaction.action = [sc, cutscene] (SCGenericScene* current) {
 		current->Stop();
-		if (sc != Scene::Exit)
-			Game.MakeActivity<SCGenericScene>(sc, next);
-	});
+		if (sc.id != Scene::Exit.id) {
+			Game.MakeActivity<SCGenericScene>(sc);
+			if (cutscene)
+				Game.MakeActivity<SCCutScene>(*cutscene);
+		}
+	};
 }
 
 void SCGenericScene::AddInteraction(Area area, Character ch)
 {
-	_interactions.emplace_back(area, [ch] (SCGenericScene* current) {
+	Interaction& interaction = _interactions.emplace_back();
+	interaction.areas = { area };
+	interaction.action = [ch] (SCGenericScene* current) {
 		current->Stop();
 		Game.MakeActivity<SCConvPlayer>().SetID(14);
-	});
+	};
 }
 
 void SCGenericScene::AddInteraction(Area area, Mission m)
 {
-	_interactions.emplace_back(area, [m] (SCGenericScene* current) {
+	Interaction& interaction = _interactions.emplace_back();
+	interaction.areas = { area };
+	interaction.action = [m] (SCGenericScene* current) {
 		current->Stop();
 		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar); // place to go after mission end
 		Game.MakeActivity<SCStrike>();
-	});
+	};
+}
+
+bool InsideQuad(Point2D p, const std::array<Point2D, 4>& quad)
+{
+	int pos = 0;
+	int neg = 0;
+	for (int i = 0; i < 4; ++i) {
+		const Point2D a = quad[i];
+		const Point2D b = quad[(i + 1) % 4];
+		const auto d  = (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
+		if (d > 0)
+			pos++;
+		if (d < 0)
+			neg++;
+		if (pos > 0 && neg > 0)
+			return false;
+	}
+	return true;
+}
+
+bool SCGenericScene::IsHovered(const Interaction& interaction) const
+{
+	const Point2D mpos = Mouse.GetPosition();
+	for (const auto& area : interaction.areas) {
+		if (mpos.x >= area.x0 && mpos.x <= area.x1 && mpos.y >= area.y0 && mpos.y <= area.y1)
+			return true;
+	}
+	for (const auto& quad : interaction.quads) {
+		if (InsideQuad(mpos, quad))
+			return true;
+	}
+	return false;
 }
 
 void SCGenericScene::RunFrame(const FrameParams& p)
 {
+	if (p.pressed.contains(GLFW_KEY_F1))
+		VGA.ShowPalette() = !VGA.ShowPalette();
+
 	const double t = p.activityTime;
 	Mouse.SetMode(SCMouse::CURSOR);
 
 	const Point2D mpos = Mouse.GetPosition();
 
+	std::optional<std::string> hoveredAction;
+
 	const double fspeed = 3.0;
 	double fade = 0.0;
 	if (!_activated) {
 		fade = 1.0 - std::min(1.0, fspeed * t);
-		for (const auto& interation : _interactions) {
-			const auto area = interation.first;
-			if (mpos.x < area.x0 || mpos.x > area.x1 || mpos.y < area.y0 || mpos.y > area.y1)
-				continue;
-			Mouse.SetMode(SCMouse::VISOR);
-			if (Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::RELEASED) {
-				_activated = { t, interation.second };
+		for (const auto& interaction : _interactions) {
+			if (IsHovered(interaction)) {
+				Mouse.SetMode(SCMouse::VISOR);
+				hoveredAction = interaction.label;
+				if (interaction.action && Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::RELEASED) {
+					_activated = { t, interaction.action };
+				}
 			}
 		}
 	} else {
@@ -301,15 +429,6 @@ void SCGenericScene::RunFrame(const FrameParams& p)
 	FrameParams np = p;
 	np.fade = fade;
 	const bool running = Frame2D(np, shapes, [&] {
-		VGA.PrintText(_font, { 10, 10 }, 1, 3, 5, "%d,%d", mpos.x, mpos.y);
+		VGA.PrintText(_font, { 10, 10 }, _textColor, 3, 5, "%d,%d %s", mpos.x, mpos.y, hoveredAction.value_or("").c_str());
 	});
-
-	if (_next && !_activated) {
-		if (!running || p.pressed.contains(GLFW_KEY_ESCAPE)) {
-			_activated = { t, [&] (SCGenericScene*) {
-				Stop();
-				Game.MakeActivity<SCGenericScene>(*_next);
-			}};
-		}
-	}
 }

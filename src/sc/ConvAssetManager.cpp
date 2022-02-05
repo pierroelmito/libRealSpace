@@ -86,14 +86,14 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 
 	if (type == 0x00){
 		// RLEShape is in CONVSHPS.PAK and Palette is in CONVPALS.PAK
-		shapeArchive = & this->convShps;
-		paletteArchive = &this->convPals;
+		shapeArchive = & this->_convShps;
+		paletteArchive = &this->_convPals;
 	}
 
 	if (type == 0x01){
 		// RLEShape is in OPTSHPS.PAK and Palette is in OPTPALS.PAK
-		shapeArchive = & this->optShps;
-		paletteArchive = &this->optPals;
+		shapeArchive = & this->_optShps;
+		paletteArchive = &this->_optPals;
 	}
 
 	//Debug Display
@@ -139,14 +139,14 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 
 void ConvAssetManager::ReadBackGrounds(const IffChunk* chunkRoot)
 {
-	for(size_t i = 0 ; i < chunkRoot->childs.size() ; i ++){
-		IffChunk* chunk = chunkRoot->childs[i];
+	for(size_t i = 0 ; i < chunkRoot->children.size() ; i ++){
+		IffChunk* chunk = chunkRoot->children[i];
 		if (chunk->id != IdToUInt("FORM")){
 			Game.Log("ConvAssetManager::ReadBackGrounds => Unexpected chunk (%s).\n",chunk->GetName());
 			Game.Terminate("Unable to build CONV database.\n");
 		}
 
-		IffChunk* info = chunk->childs[0];
+		IffChunk* info = chunk->children[0];
 
 		ConvBackGround* back = new ConvBackGround();
 
@@ -155,9 +155,9 @@ void ConvAssetManager::ReadBackGrounds(const IffChunk* chunkRoot)
 		memcpy(back->name, info->data, info->size);
 
 		//Parse layers and associated bgs.
-		size_t numLayers = chunk->childs[1]->size / 5 ; //A layer entry is 5 bytes wide
+		size_t numLayers = chunk->children[1]->size / 5 ; //A layer entry is 5 bytes wide
 		for (size_t layerID=0; layerID < numLayers; layerID++)
-			ParseBGLayer(chunk->childs[1]->data,layerID,back);
+			ParseBGLayer(chunk->children[1]->data,layerID,back);
 
 		this->backgrounds[back->name] = std::unique_ptr<ConvBackGround>(back);
 		//Game.Log("  Able to reach shape in CONVSHPS.PAK entry %d from background '%s'.\n",shapeID,back->name);
@@ -166,8 +166,8 @@ void ConvAssetManager::ReadBackGrounds(const IffChunk* chunkRoot)
 
 void ConvAssetManager::ReadFaces(const IffChunk* root)
 {
-	for(size_t i=0 ; i < root->childs.size() ; i ++){
-		IffChunk* chunk = root->childs[i];
+	for(size_t i=0 ; i < root->children.size() ; i ++){
+		IffChunk* chunk = root->children[i];
 		ByteStream s(chunk->data);
 
 		CharFace* face = new CharFace();
@@ -178,7 +178,7 @@ void ConvAssetManager::ReadFaces(const IffChunk* root)
 
 		uint8_t pakID = s.ReadByte();
 
-		face->appearances.InitFromRAM(convShps.GetEntry(pakID));
+		face->appearances.InitFromRAM(_convShps.GetEntry(pakID));
 
 		const auto& shapes = face->appearances.GetShapes();
 		for (size_t fid=0; fid < shapes.size(); fid++) {
@@ -195,7 +195,7 @@ void ConvAssetManager::ReadFaces(const IffChunk* root)
 
 //FIGR
 void ConvAssetManager::ReadFigures(const IffChunk* root){
-	for(size_t i=0 ; i < root->childs.size() ; i ++){
+	for(size_t i=0 ; i < root->children.size() ; i ++){
 	}
 }
 
@@ -207,12 +207,12 @@ void ConvAssetManager::ReadPFigures(const IffChunk* root)
 //Face palettes FCPL
 void ConvAssetManager::ReadFCPL(const IffChunk* root)
 {
-	for(size_t i=0 ; i < root->childs.size() ; i ++){
+	for(size_t i=0 ; i < root->children.size() ; i ++){
 		//Game.Log("FCPL %lu: %s %2X\n",root->childs[i]->size,root->childs[i]->data,*(root->childs[i]->data+8));
 		FacePalette* pal = new FacePalette();
-		memcpy(pal->name, root->childs[i]->data, 8);
+		memcpy(pal->name, root->children[i]->data, 8);
 		pal->name[8] = '\0';
-		pal->index = *(root->childs[i]->data+8);
+		pal->index = *(root->children[i]->data+8);
 		facePalettes[pal->name] = std::unique_ptr<FacePalette>(pal);
 	}
 }
@@ -228,22 +228,22 @@ void ConvAssetManager::BuildDB()
 
 	//This is were the background shapes are stored.
 	TreEntry* convShapEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "CONVSHPS.PAK");
-	convShps.InitFromRAM("CONVSHPS.PAK", *convShapEntry);
+	_convShps.InitFromRAM("CONVSHPS.PAK", *convShapEntry);
 	//convShapeArchive.List(stdout);
 
 	//This is were the palette patches are stored
 	TreEntry* convPalettesEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "CONVPALS.PAK");
-	convPals.InitFromRAM("CONVPALS.PAK", *convPalettesEntry);
+	_convPals.InitFromRAM("CONVPALS.PAK", *convPalettesEntry);
 	//convPalettePak.List(stdout);
 
 	//This is were the background shapes are stored.
 	TreEntry* optShapEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTSHPS.PAK");
-	optShps.InitFromRAM("OPTSHPS.PAK", *optShapEntry);
+	_optShps.InitFromRAM("OPTSHPS.PAK", *optShapEntry);
 	//optShps(stdout);
 
 	//This is were the palette patches are stored
 	TreEntry* optPalettesEntry = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OPTPALS.PAK");
-	optPals.InitFromRAM("OPTPALS.PAK", *optPalettesEntry);
+	_optPals.InitFromRAM("OPTPALS.PAK", *optPalettesEntry);
 	//optPals(stdout);
 
 	//Open the metadata

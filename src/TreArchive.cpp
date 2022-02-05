@@ -184,9 +184,19 @@ bool TreArchive::Decompress(const char* dstDirectory)
 
 		//Write file !
 		printf("Decompressing TRE file: %lu '%s' %lu (bytes).\n",i,fullPath,entry.size);
-		FILE* file = fopen(fullPath,"w");
+		FILE* file = fopen(fullPath,"wb");
 		fwrite(entry.data, 1, entry.size, file);
 		fclose(file);
+
+		const char* ext = fullPath + strlen(fullPath) - 4;
+		if (strcmp(ext, ".IFF") == 0) {
+			strcat(fullPath, ".dump");
+			FILE* iffFile = fopen(fullPath,"w");
+			IffLexer lexer;
+			lexer.InitFromRAM(entry);
+			lexer.List(iffFile);
+			fclose(iffFile);
+		}
 	}
 
 	return true;

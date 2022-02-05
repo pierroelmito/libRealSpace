@@ -12,39 +12,79 @@
 
 #include "Base.h"
 
-char textIDs[5];
-char* GetChunkTextID(uint32_t id){
+IffChunk::IffChunk()
+: subId(0)
+{
+}
+
+IffChunk::~IffChunk()
+{
+	while (!children.empty()){
+		IffChunk* chunk = children.back();
+		children.pop_back();
+		delete chunk;
+	}
+}
+
+char* IffChunk::GetName()
+{
+	name[0] = (id & 0xFF000000) >> 24;
+	name[1] = (id & 0x00FF0000) >> 16;
+	name[2] = (id & 0x0000FF00) >> 8;
+	name[3] = (id & 0x000000FF) >> 0;
+	name[4] = 0;
+	return name;
+}
+
+char* IffChunk::GetChunkTextID(uint32_t id)
+{
+	static char textIDs[5];
 	char* cursor = (char*)&id;
 	for (int i=3 ; i >=0 ; i--)
 		textIDs[i] = cursor[3-i];
-
-
 	return textIDs;
 }
 
-IffChunk::IffChunk() :
-	subId(0){
-
-
-}
-
-IffChunk::~IffChunk(){
-	while (!childs.empty()){
-		IffChunk* chunk = childs.back();
-		childs.pop_back();
-		delete chunk;
+void IffChunk::List(FILE* output, int level)
+{
+	if (level >= 0) {
+		const std::string tabs(level * 4, ' ');
+		const std::string prefix = subId != 0 ? " " : tabs;
+		if (subId != 0) {
+			fprintf(output, "%s[%s]", tabs.c_str(), GetChunkTextID(subId));
+		}
+		if (size != 0) {
+			const char eol = '\n';
+			if (data != nullptr) {
+				fprintf(output, "%s%s %d -", prefix.c_str(), GetChunkTextID(id), size);
+				for (int i = 0; i < std::min(16, int(size)); ++i)
+					fprintf(output, " %02x", data[i]);
+				fprintf(output, " - ");
+				for (int i = 0; i < std::min(16, int(size)); ++i) {
+					uint8_t c = isprint(data[i]) ? data[i] : '?';
+					fprintf(output, "%c", c);
+				}
+				fprintf(output, "\n");
+			} else {
+				fprintf(output, "%s%s %d\n", prefix.c_str(), GetChunkTextID(id), size);
+			}
+		}
+	}
+	for(IffChunk* child : children) {
+		child->List(output, level + 1);
 	}
 }
 
 //A CHUNK_HEADER_SIZE features a 4 bytes ID and a 4 bytes size;
 #define CHUNK_HEADER_SIZE 8
 
-IffLexer::IffLexer(){
+IffLexer::IffLexer()
+{
 	this->path[0] = '\0';
 }
 
-IffLexer::~IffLexer(){
-
+IffLexer::~IffLexer()
+{
 	/*
 	for(std::vector<IffChunk*>::iterator i = topChunk.childs.begin();
 		i != topChunk.childs.end();
@@ -52,13 +92,11 @@ IffLexer::~IffLexer(){
 		delete *i;
 	*/
 
-
-	while (!topChunk.childs.empty()){
-		IffChunk* chunk = topChunk.childs.back();
-		topChunk.childs.pop_back();
+	while (!topChunk.children.empty()){
+		IffChunk* chunk = topChunk.children.back();
+		topChunk.children.pop_back();
 		delete chunk;
 	}
-
 
 	/*
 	for(int i=0 ; i < this->topChunk.childs.size() ; i++){
@@ -68,7 +106,6 @@ IffLexer::~IffLexer(){
 		delete chunk;
 	}
 	 */
-
 }
 
 bool IffLexer::InitFromFile(const char* filepath)
@@ -140,7 +177,7 @@ size_t IffLexer::ParseFORM(IffChunk* chunk)
 	while (bytesToParse > 0) {
 		IffChunk* child = new IffChunk();
 		size_t byteParsed = ParseChunk(child);
-		chunk->childs.push_back(child);
+		chunk->children.push_back(child);
 		chunksHashTable[child->id] = child;
 		bytesToParse -= byteParsed;
 	}
@@ -211,7 +248,7 @@ void IffLexer::Parse(void)
 	while(bytesToParse > 0) {
 		IffChunk* child = new IffChunk();
 		size_t byteParsed =ParseChunk(child);
-		topChunk.childs.push_back(child);
+		topChunk.children.push_back(child);
 		chunksHashTable[child->id] = child;
 		bytesToParse -= byteParsed;
 	}
@@ -225,36 +262,7 @@ IffChunk* IffLexer::GetChunkByID(const char id[5])
 	return it->second;
 }
 
-void Tab(int tab)
-{
-	for(int i=0 ; i <tab*2 ;i++)
-		putchar(' ');
-}
-
-void ListChunkContent(uint32_t level,IffChunk* chunk)
-{
-	Tab(level);
-	printf("%s\n",GetChunkTextID(chunk->id));
-
-	Tab(level);
-	printf("%lu\n",chunk->size);
-
-	if (chunk->subId != 0){
-		Tab(level);
-		printf("%s\n",GetChunkTextID(chunk->subId));
-	}
-
-	for(size_t i = 0 ; i < chunk->childs.size() ; i++){
-		IffChunk* child =  chunk->childs[i];
-		ListChunkContent(level+1,child);
-	}
-}
-
 void IffLexer::List(FILE* output)
 {
-	uint32_t level = 0;
-	for(size_t i = 0 ; i < topChunk.childs.size() ; i++) {
-		IffChunk* child =  topChunk.childs[i];
-		ListChunkContent(level,child);
-	}
+	topChunk.List(output, -1);
 }

@@ -25,8 +25,8 @@ void PakArchive::Parse(void)
 	uint32_t advertisedSize = stream.ReadUInt32LE();
 
 	//if (advertisedSize != this->size) {
-	if (advertisedSize != this->size)
-		printf("expected size: %d instead of %d\n", this->size, advertisedSize);
+	//if (advertisedSize != this->size)
+	//	printf("expected size: %d instead of %d\n", this->size, advertisedSize);
 	if (advertisedSize > this->size)
 		return;
 

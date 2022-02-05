@@ -124,13 +124,13 @@ void RSArea::ParseMetadata()
 		return;
 	}
 
-	IffChunk* txmsInfo = txms->childs[0];
+	IffChunk* txmsInfo = txms->children[0];
 	if (txmsInfo->id != IdToUInt("INFO")) {
 		printf("Error: First child in TXMS is not an INFO chunk ?!\n");
 		return;
 	}
 
-	IffChunk* txmsMaps = txms->childs[1];
+	IffChunk* txmsMaps = txms->children[1];
 	if (txmsMaps->id != IdToUInt("MAPS")) {
 		printf("Error: Second child in TXMS is not an MAP chunk ?!\n");
 		return;

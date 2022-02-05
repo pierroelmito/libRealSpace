@@ -45,18 +45,18 @@ void RSEntity::ParseTXMS(IffChunk* chunk)
 	if (chunk==NULL)
 		return;
 
-	if (chunk->childs.size() <1 ){
+	if (chunk->children.size() <1 ){
 		//That is not expected, at minimun we should have an INFO chunk.
 		printf("Error: This TXMS doesn't even have an INFO chunk.");
 		return;
 	}
 
-	ByteStream stream(chunk->childs[0]->data);
+	ByteStream stream(chunk->children[0]->data);
 	/*uint32_t version =*/ stream.ReadUInt32LE();
 	//printf("TXMS Version: %u.\n",);
 
-	for(int i =1; i < chunk->childs.size() ; i++) {
-		IffChunk* maybeTXMS = chunk->childs[i];
+	for(int i =1; i < chunk->children.size() ; i++) {
+		IffChunk* maybeTXMS = chunk->children[i];
 		if (maybeTXMS->id == IdToUInt("TXMP"))
 			ParseTXMP(maybeTXMS);
 	}

@@ -116,7 +116,7 @@ void SCSelectWeaponF16::Init()
 {
 	_font = FontManager.GetFont("");
 
-	wantedBg = OptHangarTruck;
+	wantedBg = { OPTSHPS,  OPTPALS, 5, 20, AnimMode::First };
 	wantedBg.am = AnimMode::Cutscene;
 
 #if 0

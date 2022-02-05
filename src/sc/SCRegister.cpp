@@ -31,7 +31,8 @@ void SCRegister::RunFrame(const FrameParams& p)
 {
 	if (p.pressed.contains(GLFW_KEY_ENTER)) {
 		Stop();
-		Game.MakeActivity<SCGenericScene>(Scene::CutsceneMoveA, Scene::WildcatBaseHangar);
+		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar);
+		Game.MakeActivity<SCCutScene>(0);
 	}
 
 	Frame2D(p, shapes);

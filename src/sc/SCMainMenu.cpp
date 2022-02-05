@@ -53,7 +53,7 @@ void SCMainMenu::Init(void)
 		MakeButton(loadGamePosition, buttonDimension, *subPak, 1, 6, [] {})->SetEnable(false);
 		MakeButton(startNewGamePosition, buttonDimension, *subPak, 2, 7, [this] {
 			Game.MakeActivity<SCRegister>();
-			SCCutScene::PushAll();
+			//SCCutScene::PushAll();
 		});
 		MakeButton(trainingPosition, buttonDimension, *subPak, 3, 8, [] { Game.MakeActivity<SCTrainingMenu>(); });
 		MakeButton(viewObjectPosition, buttonDimension, *subPak, 4, 9, [] { Game.MakeActivity<SCObjectViewer>(); });

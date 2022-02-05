@@ -8,14 +8,3 @@
 
 #pragma once
 
-#include "IActivity.h"
-
-class SCWildCatBase : public IActivity
-{
-public:
-	SCWildCatBase();
-	~SCWildCatBase();
-
-	void Init();
-	void RunFrame(const FrameParams& p) override;
-};

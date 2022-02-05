@@ -83,10 +83,10 @@ private:
 	std::map<std::string, std::unique_ptr<ConvBackGround>> backgrounds;
 	std::map<std::string, std::unique_ptr<CharFigure>> figures;
 
-	PakArchive convShps;
-	PakArchive convPals;
-	PakArchive optShps;
-	PakArchive optPals;
+	PakArchive _convShps;
+	PakArchive _convPals;
+	PakArchive _optShps;
+	PakArchive _optPals;
 
 	void ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround* back);
 };
