@@ -27,6 +27,7 @@ public:
 		int shp{};
 		int target{};
 		std::string label;
+		std::vector<uint16_t> seq;
 		std::vector<Area> rects;
 		std::vector<Quad> quads;
 	};
@@ -83,6 +84,11 @@ protected:
 				const uint8_t b1 = bs.ReadByte();
 				spr.target = b0;
 				spr.shp = b1;
+			} else if (i->id == IdToUInt("SEQU")) {
+				const int count = i->size / 2;
+				spr.seq.reserve(count);
+				for (int s = 0; s < count; ++s)
+					spr.seq.push_back(bs.ReadShort());
 			} else if (i->id == IdToUInt("RECT")) {
 				const auto x0 = bs.ReadShort();
 				const auto y0 = bs.ReadShort();
@@ -239,7 +245,7 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 		const bool isScene = sd.sceneIdToIndex.contains(spr.target);
 		const char* vl = use ? "[x] " : "[ ] ";
 		if (isScene) {
-			printf("\t%sinteraction - got to scene 0x%02d '%s'\n", vl, spr.target, spr.label.c_str());
+			printf("\t%sinteraction - go to scene 0x%02d '%s'\n", vl, spr.target, spr.label.c_str());
 		} else {
 			printf("\t%snot in declared scenes: 0x%02d '%s'\n", vl, spr.target, spr.label.c_str());
 		}
@@ -272,6 +278,8 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 		if (spr.shp < pakShps->GetNumEntries()) {
 			auto& shp = AddShape();
 			shp.am = AnimMode::Character;
+			if (!spr.seq.empty())
+				shp.anim = &spr.seq;
 			if (!InitShape(shp, "", pakShps->GetEntry(spr.shp)))
 				printf("titi\n");
 		}
@@ -429,6 +437,7 @@ void SCGenericScene::RunFrame(const FrameParams& p)
 	FrameParams np = p;
 	np.fade = fade;
 	const bool running = Frame2D(np, shapes, [&] {
-		VGA.PrintText(_font, { 10, 10 }, _textColor, 3, 5, "%d,%d %s", mpos.x, mpos.y, hoveredAction.value_or("").c_str());
+		VGA.PrintText(_font, { 10, 10 }, _textColor, 3, 5, "%d,%d", mpos.x, mpos.y);
+		VGA.PrintText(_font, { 10, 190 }, _textColor, 3, 5, "%s", hoveredAction.value_or("").c_str());
 	});
 }

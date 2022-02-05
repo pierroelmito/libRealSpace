@@ -47,8 +47,7 @@ void AssetManager::Init()
 		if (!tre.IsValid())
 			Game.Terminate("Unable to load asset '%s' (Did you set the SC base folder ?).", nameIds[i].filename);
 		tre.List(stdout);
-		//const std::string dn = std::string("extracted_") + nameIds[i].filename;
-		//tre.Decompress(dn.c_str());
+		//tre.Decompress((std::string("extracted_") + nameIds[i].filename).c_str());
 	}
 }
 

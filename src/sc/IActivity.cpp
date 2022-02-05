@@ -40,29 +40,36 @@ bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::functio
 		if (shape.frames.empty())
 			continue;
 		if (shape.frames.size() > 1) {
-			switch (shape.am) {
-			case AnimMode::Character:
-				{
-					VGA.DrawShape(*shape.frames[0]);
-					uint32_t idx = uint32_t(t * 15) % (shape.frames.size() - 1);
-					VGA.DrawShape(*shape.frames[1 + idx]);
+			if (shape.anim != nullptr) {
+				VGA.DrawShape(*shape.frames[0]);
+				const GTime speed = 8;
+				const uint32_t idx = uint32_t(t * speed) % shape.anim->size();
+				VGA.DrawShape(*shape.frames[1 + (*shape.anim)[idx]]);
+			} else {
+				switch (shape.am) {
+				case AnimMode::Character:
+					{
+						VGA.DrawShape(*shape.frames[0]);
+						uint32_t idx = uint32_t(t * 15) % (shape.frames.size() - 1);
+						VGA.DrawShape(*shape.frames[1 + idx]);
+					}
+					break;
+				case AnimMode::Cutscene:
+					{
+						uint32_t maxIdx = shape.frames.size() - 1;
+						uint32_t idx = std::min(maxIdx, uint32_t(t * 15));
+						if (idx != maxIdx)
+							running = true;
+						VGA.DrawShape(*shape.frames[idx]);
+					}
+					break;
+				case AnimMode::First:
+					{
+						uint32_t idx = 0;
+						VGA.DrawShape(*shape.frames[idx]);
+					}
+					break;
 				}
-				break;
-			case AnimMode::Cutscene:
-				{
-					uint32_t maxIdx = shape.frames.size() - 1;
-					uint32_t idx = std::min(maxIdx, uint32_t(t * 15));
-					if (idx != maxIdx)
-						running = true;
-					VGA.DrawShape(*shape.frames[idx]);
-				}
-				break;
-			case AnimMode::First:
-				{
-					uint32_t idx = 0;
-					VGA.DrawShape(*shape.frames[idx]);
-				}
-				break;
 			}
 		} else {
 			VGA.DrawShape(*shape.frames[0]);

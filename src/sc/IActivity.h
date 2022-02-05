@@ -39,6 +39,7 @@ public:
 	{
 		std::vector<std::unique_ptr<RLEShape>> frames;
 		AnimMode am{ AnimMode::Cutscene };
+		const std::vector<uint16_t>* anim{ nullptr };
 	};
 	using SceneSchapes = std::vector<SceneSchape>;
 
