@@ -125,19 +125,30 @@ void PakArchive::InitFromRAM(const char* name, const ByteSlice& bs)
 	*/
 }
 
-bool PakArchive::Decompress(const char* dstDirectory, const char* extension)
+bool PakArchive::Decompress(const char* dstDirectory, const char* unkExtension)
 {
 	const char* suffix = ".CONTENT/";
-	const char* filePattern = "FILE%d.%s";
+	const char* filePattern = "FILE%04d.%s";
 	char fullDstPath[512];
 
 	printf("Decompressing PAK %s (size: %lu bytes)\n.",this->path,this->size);
 
 	for( size_t idx = 0 ; idx < this->entries.size(); idx++) {
 		const PakEntry& entry = entries[idx];
+		const char* data = (const char*)entry.data;
 
 		if(entry.size == 0)
 			continue;
+
+		const char vocHeader[] = "Creative Voice File";
+		const int szVoc = sizeof(vocHeader) - 1;
+		const bool isVoc = entry.size > sizeof(vocHeader) && strncmp(data, vocHeader, szVoc) == 0;
+		const bool isIff = entry.size > 4 && strncmp(data, "FORM", 4) == 0;
+		const char* extension = isVoc ? "voc" : (isIff ? "iff" : unkExtension);
+		if (isVoc)
+			printf("voc found!\n");
+		else if (isIff)
+			printf("iff found!\n");
 
 		//Build dst path
 		fullDstPath[0] = '\0';
@@ -199,10 +210,13 @@ void PakArchive::List(FILE* output)
 	fprintf(output,"Listing content of PAK archives '%s'\n",this->path);
 	for(size_t i =0; i < GetNumEntries() ; i++){
 		PakEntry& entry = entries[i];
-		if (entry.size != 0)
-			fprintf(output,"    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X.\n",i,entry.data-this->data, entry.size,entry.type);
-		else
-			fprintf(output,"    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X (DUPLICATE).\n",i,entry.data-this->data, entry.size,entry.type);
+		if (entry.size != 0) {
+			fprintf(output,"    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X.",i,entry.data-this->data, entry.size,entry.type);
+			ByteStream::PrintBufStart(output, entry.data, entry.size, 16);
+		} else {
+			fprintf(output,"    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X (DUPLICATE).",i,entry.data-this->data, entry.size,entry.type);
+		}
+		fprintf(output, "\n");
 	}
 }
 

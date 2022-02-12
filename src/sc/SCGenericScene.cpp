@@ -10,6 +10,9 @@
 
 #include "precomp.h"
 
+#include <sstream>
+#include <iomanip>
+
 #include "SCConvPlayer.h"
 #include "SCStrike.h"
 
@@ -150,6 +153,43 @@ protected:
 	}
 };
 
+class GameFlow
+{
+public:
+	void ApplyInteraction(IActivity& activity, SceneID from, int to);
+};
+
+void GameFlow::ApplyInteraction(IActivity& activity, SceneID from, int to)
+{
+	const std::map<std::pair<int, int>, int> cinematics = {
+		{ { 0xb, 0x6 }, 0 },
+		{ { 0x6, 0xb }, 1 },
+	};
+
+	const auto& sd = SceneData::Get();
+	const bool isScene = sd.sceneIdToIndex.find(to) != sd.sceneIdToIndex.end();
+	if (isScene) {
+		activity.Stop();
+		Game.MakeActivity<SCGenericScene>(SceneID{ to });
+	} else if (to == 0x129) {
+		Game.MakeActivity<SCStrike>();
+	} else if (to == 0x67 || to == 0x68) {
+		activity.Stop();
+	} else if (to == 0x12) {
+		activity.Stop();
+		Game.MakeActivity<SCGenericScene>(Scene::WildcatTentInside);
+	} else if (to == 0xc || to == 0x81) {
+		activity.Stop();
+		Game.MakeActivity<SCStrike>();
+	} else if (to == 0x1c) {
+		Game.MakeActivity<SCConvPlayer>().SetID(14);
+	};
+
+	const auto itf = cinematics.find({ from.id, to });
+	if (itf != cinematics.end())
+		Game.MakeActivity<SCCutScene>(itf->second);
+}
+
 SCCutScene::SCCutScene()
 {
 }
@@ -245,35 +285,28 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 		const bool isScene = sd.sceneIdToIndex.contains(spr.target);
 		const char* vl = use ? "[x] " : "[ ] ";
 		if (isScene) {
-			printf("\t%sinteraction - go to scene 0x%02d '%s'\n", vl, spr.target, spr.label.c_str());
+			printf("\t%sinteraction - go to scene 0x%02x '%s'\n", vl, spr.target, spr.label.c_str());
 		} else {
-			printf("\t%snot in declared scenes: 0x%02d '%s'\n", vl, spr.target, spr.label.c_str());
+			printf("\t%snot in declared scenes: 0x%02x '%s'\n", vl, spr.target, spr.label.c_str());
 		}
 
 		if (!use)
 			continue;
 
+		std::stringstream stream;
+		stream << std::hex << spr.target;
+		std::string result( stream.str() );
+
 		Interaction& interaction = _interactions.emplace_back();
-		interaction.label = spr.label;
+		interaction.label = spr.label + (isScene ? " - scene" : " - ??") + " - 0x" + stream.str();
 		interaction.areas = spr.rects;
 		interaction.quads = spr.quads;
 
-		if (isScene) {
-			const SceneID target{ spr.target };
-			interaction.action = [target] (SCGenericScene* current) {
-				current->Stop();
-				Game.MakeActivity<SCGenericScene>(target);
-			};
-		} else if (spr.target == 0x12 || spr.target == 0x129) {
-			interaction.action = [] (SCGenericScene* current) {
-				Game.MakeActivity<SCStrike>();
-			};
-		} else if (spr.target == 0x18) {
-			interaction.action = [] (SCGenericScene* current) {
-				current->Stop();
-				Game.MakeActivity<SCGenericScene>(Scene::WildcatTentInside);
-			};
-		}
+		const int target{ spr.target };
+		interaction.action = [target] (SCGenericScene* current) {
+			GameFlow flow;
+			flow.ApplyInteraction(*current, current->_currentScene, target);
+		};
 
 		if (spr.shp < pakShps->GetNumEntries()) {
 			auto& shp = AddShape();
@@ -288,6 +321,7 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 
 void SCGenericScene::Init(SceneID sc)
 {
+	_currentScene = sc;
 	auto& sd = SceneData::Get();
 
 	_font = FontManager.GetFont("");
@@ -309,7 +343,7 @@ void SCGenericScene::Init(SceneID sc)
 		AddInteraction({ 4, 129, 94, 159 }, Scene::Exit);
 		break;
 	case Scene::WildcatTentOutside.id:
-		targetMask = 0b1111110u;
+		targetMask = 0b1110010u;
 		//AddInteraction({ 110, 0, 320, 107 }, Scene::WildcatTentWeapons);
 		break;
 	case Scene::WildcatTentWeapons.id:

@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 #include <array>
 
@@ -27,6 +28,8 @@ public:
 	ByteStream(ByteStream& stream);
 	ByteStream();
 	~ByteStream();
+
+	static void PrintBufStart(FILE* output, const uint8_t* buffer, int sz, int max);
 
 	inline void Set(uint8_t* cursor)
 	{

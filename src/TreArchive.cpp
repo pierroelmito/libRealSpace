@@ -196,6 +196,11 @@ bool TreArchive::Decompress(const char* dstDirectory)
 			lexer.InitFromRAM(entry);
 			lexer.List(iffFile);
 			fclose(iffFile);
+		} else if (strcmp(ext, ".PAK") == 0) {
+			PakArchive pak;
+			pak.InitFromRAM(fullPath, entry);
+			strcat(fullPath, ".dump");
+			pak.Decompress(fullPath, "bin");
 		}
 	}
 

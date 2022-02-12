@@ -9,7 +9,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cctype>
 #include <cstddef>
 #include <cstdio>
 #include <vector>

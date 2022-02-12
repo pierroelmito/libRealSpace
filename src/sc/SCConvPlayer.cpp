@@ -192,7 +192,7 @@ void SCConvPlayer::SetID(int32_t id)
 	this->conversationID = id;
 
 	auto convPak = GetPak("CONV.PAK", *Assets.tres[AssetManager::TRE_GAMEFLOW].GetEntryByName(TRE_DATA_GAMEFLOW "CONV.PAK"));
-	//convPak->List(stdout);
+	convPak->List(stdout);
 
 	if (convPak->GetNumEntries() <= id){
 		Stop();

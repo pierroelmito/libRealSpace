@@ -57,13 +57,7 @@ void IffChunk::List(FILE* output, int level)
 			const char eol = '\n';
 			if (data != nullptr) {
 				fprintf(output, "%s%s %d -", prefix.c_str(), GetChunkTextID(id), size);
-				for (int i = 0; i < std::min(16, int(size)); ++i)
-					fprintf(output, " %02x", data[i]);
-				fprintf(output, " - ");
-				for (int i = 0; i < std::min(16, int(size)); ++i) {
-					uint8_t c = isprint(data[i]) ? data[i] : '?';
-					fprintf(output, "%c", c);
-				}
+				ByteStream::PrintBufStart(output, data, int(size), 16);
 				fprintf(output, "\n");
 			} else {
 				fprintf(output, "%s%s %d\n", prefix.c_str(), GetChunkTextID(id), size);
