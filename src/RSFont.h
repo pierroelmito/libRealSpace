@@ -23,6 +23,6 @@ public:
 	void InitFromPAK(const PakArchive& fontArchive);
 
 private:
-	std::vector<RLEShape*> letters;
+	std::vector<std::unique_ptr<RLEShape>> letters;
 };
 

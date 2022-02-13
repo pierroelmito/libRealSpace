@@ -31,6 +31,7 @@ class SCButton;
 
 using GTime = double;
 constexpr GTime TimeToMSec = 1000.0;
+constexpr GTime FrameMul = 15.0;
 
 class IActivity
 {
@@ -39,6 +40,7 @@ public:
 	{
 		std::vector<std::unique_ptr<RLEShape>> frames;
 		AnimMode am{ AnimMode::Cutscene };
+		GTime timeOffset{};
 		const std::vector<uint16_t>* anim{ nullptr };
 	};
 	using SceneSchapes = std::vector<SceneSchape>;

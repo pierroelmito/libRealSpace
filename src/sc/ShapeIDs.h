@@ -256,6 +256,7 @@ enum OptionShapeID{
 enum class AnimMode
 {
 	First, // display only first frame animation
+	Second, // display only second frame animation
 	Character, //display frame 0 + loop over remaining frames
 	Cutscene, // display each frame sequentially
 };

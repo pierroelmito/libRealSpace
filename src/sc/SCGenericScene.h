@@ -93,6 +93,8 @@ protected:
 		std::vector<Quad> quads{};
 		std::string label{};
 		AreaAction action{};
+		std::optional<size_t> shpIndex;
+		AnimMode am{};
 	};
 	std::vector<Interaction> _interactions;
 	std::optional<std::pair<double, AreaAction>> _activated;

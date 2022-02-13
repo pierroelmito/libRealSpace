@@ -145,18 +145,30 @@ bool RLEShape::Expand(uint8_t* dst, size_t* byteRead)
 
 bool RLEShape::WriteColor(uint8_t* dst,int16_t dx, int16_t dy, uint8_t color)
 {
-	uint8_t* finalDest = dst + leftDist + topDist * 320 + dx + dy * 320 +position.x + position.y * 320;
+	const int16_t fx = leftDist + dx + position.x;
+	const int16_t fy = topDist + dy + position.y;
+	uint8_t* const finalDest = dst + 320 * fy + fx;
 	if (finalDest < dst || finalDest >= dst+(320 * 200))
 		return true;
-	color+= colorOffset;
-	*finalDest = color;
+	if (fx < 320) {
+		color+= colorOffset;
+		*finalDest = color;
+	}
 	return false;
 }
 
-RLEShape* RLEShape::GetEmptyShape(void)
+RLEShape* RLEShape::GetStaticEmptyShape()
 {
 	static uint8_t data[9] = {0,0,0,0,0,0,0,0,0};
 	static RLEShape shape;
 	shape.Init(data, 9);
 	return &shape;
+}
+
+RLEShape* RLEShape::GetNewEmptyShape()
+{
+	static uint8_t data[9] = {0,0,0,0,0,0,0,0,0};
+	auto* shape = new RLEShape();
+	shape->Init(data, 9);
+	return shape;
 }

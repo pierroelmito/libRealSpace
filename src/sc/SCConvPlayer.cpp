@@ -298,7 +298,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 
 	//Draw static
 	for (size_t i = 0; i < currentFrame.bgLayers->size(); i++) {
-		RLEShape* shape = (*currentFrame.bgLayers)[i];
+		auto& shape = (*currentFrame.bgLayers)[i];
 		VGA.DrawShape(*shape);
 	}
 
@@ -333,7 +333,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		const auto& shapes = currentFrame.face->appearances.GetShapes();
 
 		for (size_t i=1; i< 3; i++) {
-			RLEShape* s = shapes[i];
+			auto& s = shapes[i];
 			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
 		}
@@ -350,7 +350,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//12 mouth something
 
 		for (size_t i = 3; i< 11 && currentFrame.mode == ConvFrame::CONV_CLOSEUP; i++) {
-			RLEShape* s = shapes[3 + (int(TimeToMSec * (p.totalTime - startTime)) / 100) % 10];
+			auto& s = shapes[3 + (int(TimeToMSec * (p.totalTime - startTime)) / 100) % 10];
 			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
 		}
@@ -373,7 +373,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//25 right eye brows semi-raised
 		//26 eye brows something
 		for (size_t i=13; i< 14; i++) {
-			RLEShape* s = shapes[i];
+			auto& s = shapes[i];
 			s->SetPositionX(pos);
 			//VGA.DrawShape();
 		}
@@ -389,7 +389,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//34 seducing face
 		//35 look of desaproval face
 		for (size_t i=29; i< 30; i++) {
-			RLEShape* s = shapes[i];
+			auto& s = shapes[i];
 			s->SetPositionX(pos);
 			//VGA.DrawShape();
 		}
@@ -399,16 +399,17 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		//36 pilot clothes
 		//37 pilot clothes 2
 		//for (size_t i=36; i< 37; i++) {
-			RLEShape* s = shapes[35];
+		{
+			auto& s = shapes[35];
 			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
-		//}
+		}
 
 		//38 sunglasses
 		//39 pilot helmet (if drawing this, don't draw hairs
 		//40 pilot helmet visor (if drawing this draw 39 too
 		for (size_t i=41; i< 40; i++) {
-			RLEShape* s = shapes[i];
+			auto& s = shapes[i];
 			s->SetPositionX(pos);
 			VGA.DrawShape(*s);
 		}
@@ -417,7 +418,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 
 		//54 hand extension
 		if (currentFrame.mode == ConvFrame::CONV_CONTRACT_CHOICE){
-			RLEShape* s = shapes[54];
+			auto& s = shapes[54];
 			s->SetPositionX(pos);
 			//VGA.DrawShape();
 		}
@@ -427,7 +428,7 @@ void SCConvPlayer::RunFrame(const FrameParams& p)
 		// 62 look left
 		for (size_t i=55; i< 63; i++) {
 			//What is there ?
-			RLEShape* s = shapes[i];
+			auto& s = shapes[i];
 			s->SetPositionX(pos);
 			//VGA.DrawShape();
 		}

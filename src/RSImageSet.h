@@ -22,9 +22,9 @@ public:
 	~RSImageSet();
 
 	void InitFromRAM(const ByteSlice& entry);
-	const std::vector<RLEShape*>& GetShapes() const { return shapes; }
+	const std::vector<std::unique_ptr<RLEShape>>& GetShapes() const { return shapes; }
 	void Add(RLEShape* shape);
 
 private:
-	std::vector<RLEShape*> shapes;
+	std::vector<std::unique_ptr<RLEShape>> shapes;
 };

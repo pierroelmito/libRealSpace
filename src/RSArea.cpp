@@ -675,9 +675,8 @@ void RSArea::InitFromPAKFileName(const char* pakFilename, TreArchive& treObjects
 		TreEntry* treEntry = treTextures.GetEntryByName(txmPakName);
 		PakArchive txmPakArchive;
 		txmPakArchive.InitFromRAM(txmPakName,*treEntry);
-		auto set = std::make_unique<RSMapTextureSet>();
+		auto& set = textures.emplace_back(std::make_unique<RSMapTextureSet>());
 		set->InitFromPAK(&txmPakArchive);
-		textures.push_back(std::move(set));
 	}
 
 	//Parse the meta datas.

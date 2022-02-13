@@ -47,7 +47,7 @@ struct CharFigure
 
 struct ConvBackGround
 {
-	std::vector<RLEShape*> layers;
+	std::vector<std::unique_ptr<RLEShape>> layers;
 	std::vector<uint8_t*> palettes;
 	char name[9];
 };

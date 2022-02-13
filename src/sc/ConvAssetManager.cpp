@@ -16,7 +16,6 @@ ConvAssetManager::ConvAssetManager()
 
 ConvAssetManager::~ConvAssetManager()
 {
-	Game.Log("We are not freeing the RAM from all the RLEs !!!\n");
 }
 
 void ConvAssetManager::Init()
@@ -39,7 +38,7 @@ CharFace* ConvAssetManager::GetCharFace(char* name)
 
 	static CharFace dummy;
 	if (dummy.appearances.GetShapes().empty())
-		dummy.appearances.Add(RLEShape::GetEmptyShape());
+		dummy.appearances.Add(RLEShape::GetNewEmptyShape());
 
 	return &dummy;
 }
@@ -57,7 +56,7 @@ ConvBackGround* ConvAssetManager::GetBackGround(char* name)
 	if (dummy.palettes.empty())
 		dummy.palettes.push_back(dummyPalettePatch);
 	if (dummy.layers.empty())
-		dummy.layers.push_back(RLEShape::GetEmptyShape());
+		dummy.layers.emplace_back(RLEShape::GetNewEmptyShape());
 
 	return &dummy;
 }
@@ -77,12 +76,12 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 	ByteStream dataReader ;
 	dataReader.Set(data + 5 * layerID);
 
-	uint8_t type = dataReader.ReadByte();
-	uint8_t shapeID = dataReader.ReadByte();
-	uint8_t paletteID = dataReader.ReadByte();
+	const uint8_t type = dataReader.ReadByte();
+	const uint8_t shapeID = dataReader.ReadByte();
+	const uint8_t paletteID = dataReader.ReadByte();
 
-	PakArchive* shapeArchive = NULL;
-	PakArchive* paletteArchive = NULL;
+	PakArchive* shapeArchive = nullptr;
+	PakArchive* paletteArchive = nullptr;
 
 	if (type == 0x00){
 		// RLEShape is in CONVSHPS.PAK and Palette is in CONVPALS.PAK
@@ -110,30 +109,23 @@ void ConvAssetManager::ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround
 		shapeID--;
 	*/
 
-	RLEShape* s = new RLEShape();
-
 	const PakEntry& shapeEntry = shapeArchive->GetEntry(shapeID);
 	PakArchive subPAK;
 	subPAK.InitFromRAM("", shapeEntry);
-
-	if (!subPAK.IsReady()){
-
+	if (!subPAK.IsReady()) {
 		//Sometimes the image is not in a PAK but as raw data.
-		Game.Log("Error on Pak %d for layer %d in loc %8s => Using dummy instead\n",shapeID,layerID,back->name);
-
+		Game.Log("Error on Pak %d for layer %d in loc %8s => Using dummy instead\n", shapeID, layerID, back->name);
 		//Using an empty shape for now...
-		*s = *RLEShape::GetEmptyShape();
+		//*s = *RLEShape::GetNewEmptyShape();
 		return;
 	}
-	else{
-		s->Init(subPAK.GetEntry(0));
-		if (s->GetHeight() < 199){                  //  If this is not a background, we need to move down
-			Point2D pos = {0,CONV_TOP_BAR_HEIGHT+1};  //  to allow the black band on top of the screen
-			s->SetPosition(pos);
-		}
-	}
 
-	back->layers.push_back(s);
+	auto& s = back->layers.emplace_back(new RLEShape());
+	s->Init(subPAK.GetEntry(0));
+	// If this is not a background, we need to move down
+	// to allow the black band on top of the screen
+	if (s->GetHeight() < 199)
+		s->SetPosition({ 0, CONV_TOP_BAR_HEIGHT + 1 });
 	back->palettes.push_back(paletteArchive->GetEntry(paletteID).data);
 }
 
@@ -182,9 +174,9 @@ void ConvAssetManager::ReadFaces(const IffChunk* root)
 
 		const auto& shapes = face->appearances.GetShapes();
 		for (size_t fid=0; fid < shapes.size(); fid++) {
-			RLEShape*s = shapes[fid];
-				Point2D pos = {0,CONV_TOP_BAR_HEIGHT+1}; //  to allow the black band on top of the screen
-				s->SetPosition(pos);
+			//  to allow the black band on top of the screen
+			auto& s = shapes[fid];
+			s->SetPosition({ 0, CONV_TOP_BAR_HEIGHT + 1 });
 		}
 
 		//printf("Face '%s' features %lu images.\n",face->name,imageSet->GetNumImages());

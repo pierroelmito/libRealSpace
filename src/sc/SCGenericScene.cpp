@@ -278,6 +278,11 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 		}
 	}
 
+	const std::map<int, std::pair<AnimMode, AnimMode>> specialAnimModes = {
+		{ 0x14, { AnimMode::First, AnimMode::Character } },
+		{ 0x11,  { AnimMode::Second, AnimMode::Character } },
+	};
+
 	for (const auto& spr : sc.sprs) {
 		const bool use = sprMask & 1;
 		sprMask >>= 1;
@@ -293,12 +298,11 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 		if (!use)
 			continue;
 
-		std::stringstream stream;
-		stream << std::hex << spr.target;
-		std::string result( stream.str() );
+		char buffer[512]{};
+		sprintf(buffer, "0x%02x - %s - %s - 0x%02x", spr.shp, spr.label.c_str(), isScene ? "scene" : "??", spr.target);
 
 		Interaction& interaction = _interactions.emplace_back();
-		interaction.label = spr.label + (isScene ? " - scene" : " - ??") + " - 0x" + stream.str();
+		interaction.label = buffer;
 		interaction.areas = spr.rects;
 		interaction.quads = spr.quads;
 
@@ -308,9 +312,15 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 			flow.ApplyInteraction(*current, current->_currentScene, target);
 		};
 
+		auto itf = specialAnimModes.find(spr.shp);
+		const AnimMode amIdle = itf != specialAnimModes.end() ? itf->second.first : AnimMode::Character;
+		const AnimMode amClick = itf != specialAnimModes.end() ? itf->second.second : AnimMode::Character;
+		interaction.am = amClick;
+
 		if (spr.shp < pakShps->GetNumEntries()) {
+			interaction.shpIndex = shapes.size();
 			auto& shp = AddShape();
-			shp.am = AnimMode::Character;
+			shp.am = amIdle;
 			if (!spr.seq.empty())
 				shp.anim = &spr.seq;
 			if (!InitShape(shp, "", pakShps->GetEntry(spr.shp)))
@@ -446,21 +456,28 @@ void SCGenericScene::RunFrame(const FrameParams& p)
 
 	std::optional<std::string> hoveredAction;
 
-	const double fspeed = 3.0;
+	const double fadeSpeed = 2.0;
 	double fade = 0.0;
 	if (!_activated) {
-		fade = 1.0 - std::min(1.0, fspeed * t);
+		fade = 1.0 - std::min(1.0, fadeSpeed * t);
 		for (const auto& interaction : _interactions) {
 			if (IsHovered(interaction)) {
 				Mouse.SetMode(SCMouse::VISOR);
 				hoveredAction = interaction.label;
 				if (interaction.action && Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::RELEASED) {
+					if (interaction.shpIndex) {
+						auto& shape = shapes[*interaction.shpIndex];
+						if (shape.am != AnimMode::Character) {
+							shape.timeOffset = p.activityTime - 1.0001 / FrameMul;
+							shape.am = interaction.am;
+						}
+					}
 					_activated = { t, interaction.action };
 				}
 			}
 		}
 	} else {
-		fade = std::min(1.0, fspeed * (t - _activated->first));
+		fade = std::min(1.0, fadeSpeed * (t - _activated->first));
 		if (fade == 1.0) {
 			auto action = std::move(_activated->second);
 			_activated = {};

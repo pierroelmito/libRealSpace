@@ -58,10 +58,9 @@ void RSMapTextureSet::Parse(PakArchive* archive)
 
 		if (entry.size-4 == size){
 			//That does look like a map texture !
-			auto image = std::make_unique<RSImage>();
+			auto& image = images.emplace_back(std::make_unique<RSImage>());
 			image->Create("MAP_TEXTURE",width,height, 0 /*IMAGE_FLAG_COPY_PALINDEX_TO_ALPHA*/);
 			image->UpdateContent(stream.GetPosition());
-			images.push_back(std::move(image));
 			//printf("RSMapTextureSet img [%3zu] is %lux%lu.\n",i,image->width,image->height);
 		} else {
 			printf("Cannot make sense of entry %lu:\n REASON: (entry size is %lu but advertised is %d).\n",i,entry.size,size);

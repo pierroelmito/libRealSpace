@@ -34,7 +34,7 @@ public:
 	CharFace* face;
 	int8_t facePaletteID;
 
-	std::vector<RLEShape*>* bgLayers;
+	std::vector<std::unique_ptr<RLEShape>>* bgLayers;
 	std::vector<uint8_t*> * bgPalettes;
 
 	GTime creationTime; // Used to check when a frame expires.

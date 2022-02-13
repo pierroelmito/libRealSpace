@@ -72,7 +72,6 @@ public:
 	void InitFromRAM(const ByteSlice& bytes);
 	void InitFromIFF(IffLexer* lexer);
 
-	void AddImage(std::unique_ptr<RSImage>&& image);
 	void AddVertex(const RSVector3& vertex);
 	void AddUV(const uvxyEntry& uv);
 	void AddLod(Lod* lod);

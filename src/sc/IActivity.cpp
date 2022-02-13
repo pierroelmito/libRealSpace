@@ -35,10 +35,10 @@ bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::functio
 
 	bool running = false;
 
-	const GTime t = p.activityTime;
 	for (auto& shape : shapes) {
 		if (shape.frames.empty())
 			continue;
+		const GTime t = p.activityTime - shape.timeOffset;
 		if (shape.frames.size() > 1) {
 			if (shape.anim != nullptr) {
 				VGA.DrawShape(*shape.frames[0]);
@@ -50,14 +50,14 @@ bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::functio
 				case AnimMode::Character:
 					{
 						VGA.DrawShape(*shape.frames[0]);
-						uint32_t idx = uint32_t(t * 15) % (shape.frames.size() - 1);
+						uint32_t idx = uint32_t(t * FrameMul) % (shape.frames.size() - 1);
 						VGA.DrawShape(*shape.frames[1 + idx]);
 					}
 					break;
 				case AnimMode::Cutscene:
 					{
 						uint32_t maxIdx = shape.frames.size() - 1;
-						uint32_t idx = std::min(maxIdx, uint32_t(t * 15));
+						uint32_t idx = std::min(maxIdx, uint32_t(t * FrameMul));
 						if (idx != maxIdx)
 							running = true;
 						VGA.DrawShape(*shape.frames[idx]);
@@ -66,6 +66,12 @@ bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::functio
 				case AnimMode::First:
 					{
 						uint32_t idx = 0;
+						VGA.DrawShape(*shape.frames[idx]);
+					}
+					break;
+				case AnimMode::Second:
+					{
+						uint32_t idx = 1;
 						VGA.DrawShape(*shape.frames[idx]);
 					}
 					break;
@@ -158,7 +164,7 @@ IActivity::SceneSchape& IActivity::AddShape()
 RLEShape& IActivity::AddSingleShape()
 {
 	auto& v = shapes.emplace_back();
-	return *v.frames.emplace_back(new RLEShape());
+	return *v.frames.emplace_back(std::make_unique<RLEShape>());
 }
 
 bool IActivity::InitShapes(std::initializer_list<PalBg> ids)
@@ -234,7 +240,7 @@ bool IActivity::InitShape(SceneSchape& shp, const char* label, const ByteSlice& 
 	pak.InitFromRAM(label, entry);
 	const int entries = pak.GetNumEntries();
 	for (int i = 0; i < entries; ++i) {
-		auto& s = shp.frames.emplace_back(new RLEShape());
+		auto& s = shp.frames.emplace_back(std::make_unique<RLEShape>());
 		s->Init(pak.GetEntry(i));
 	}
 	return entries != 0;
@@ -249,11 +255,11 @@ void IActivity::InitShapeAt(RLEShape& shp, const Point2D& position, const char* 
 
 SCButton* IActivity::MakeButton(Point2D pos, Point2D size, PakArchive& subPak, size_t upEntry, size_t downEntry, SCButton::ActionFunction&& fn)
 {
-	auto button = std::make_unique<SCButton>();
+	auto& button = buttons.emplace_back(std::make_unique<SCButton>());
 	button->InitBehavior(pos, size, std::move(fn));
 	button->appearance[SCButton::APR_UP]  .InitWithPosition(subPak.GetEntry(upEntry), pos);
 	button->appearance[SCButton::APR_DOWN].InitWithPosition(subPak.GetEntry(downEntry), pos);
-	return buttons.emplace_back(std::move(button)).get();
+	return button.get();
 }
 
 void IActivity::DrawButtons(void)

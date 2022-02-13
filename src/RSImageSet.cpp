@@ -42,13 +42,12 @@ void RSImageSet::InitFromRAM(const ByteSlice& entry)
 		} else {
 		}
 
-		RLEShape* shape = new RLEShape();
+		auto& shape = shapes.emplace_back(std::make_unique<RLEShape>());
 		shape->Init(currImage, size);
-		shapes.push_back(shape);
 	}
 }
 
 void RSImageSet::Add(RLEShape* shape)
 {
-	this->shapes.push_back(shape);
+	shapes.emplace_back(shape);
 }

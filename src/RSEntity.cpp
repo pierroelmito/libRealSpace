@@ -25,7 +25,7 @@ void RSEntity::ParseTXMP(IffChunk* chunk)
 {
 	ByteStream stream(chunk->data);
 
-	auto image = std::make_unique<RSImage>();
+	auto& image = images.emplace_back(std::make_unique<RSImage>());
 
 	char name[8];
 	for(int i=0; i < 8 ; i++)
@@ -36,8 +36,6 @@ void RSEntity::ParseTXMP(IffChunk* chunk)
 
 	image->Create(name, width, height, 0);
 	image->UpdateContent(stream.GetPosition());
-
-	AddImage(std::move(image));
 }
 
 void RSEntity::ParseTXMS(IffChunk* chunk)
@@ -216,11 +214,6 @@ void RSEntity::CalcBoundingBox(void)
 		if (bb.max.Z < vertex.Z)
 			bb.max.Z = vertex.Z;
 	}
-}
-
-void RSEntity::AddImage(std::unique_ptr<RSImage>&& image)
-{
-	this->images.push_back(std::move(image));
 }
 
 void RSEntity::AddVertex(const RSVector3& vertex)

@@ -34,7 +34,8 @@ public:
 		this->position.x = x;
 	}
 
-	static RLEShape* GetEmptyShape(void);
+	static RLEShape* GetStaticEmptyShape();
+	static RLEShape* GetNewEmptyShape();
 
 	int32_t GetWidth(void){ return leftDist + this->rightDist;}
 	int32_t GetHeight(void){ return topDist+botDist;}
