@@ -22,6 +22,8 @@ public:
 	RSPalette();
 	~RSPalette();
 
+	static RSPalette LoadFromFile(const char* file);
+
 	void InitFromIFF(IffLexer* lexer);
 
 	VGAPalette* GetColorPalette(void);

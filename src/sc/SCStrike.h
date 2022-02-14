@@ -21,10 +21,12 @@ public:
 	void RunFrame(const FrameParams& p) override;
 
 protected:
-	RSVector3 camPos;
-	float angleV;
-	float angleH;
+	RSVector3 camPos{};
+	float angleV{};
+	float angleH{};
 
-	RSArea area;
+	RSArea area{};
+	std::unique_ptr<RSEntity> _cockpit{};
+	std::vector<std::unique_ptr<RSEntity>> jets;
 };
 

@@ -22,11 +22,42 @@ SCStrike::~SCStrike()
 
 void SCStrike::Init(void )
 {
-	area.InitFromPAKFileName("ARENA.PAK", Assets.tres[AssetManager::TRE_OBJECTS], Assets.tres[AssetManager::TRE_TEXTURES]);
+	auto AddJet = [&] (TreArchive& tre, const char* name, RSQuaternion* orientation, RSVector3* position)
+	{
+		TreEntry* jetEntry = tre.GetEntryByName(name);
+		auto entity = RSEntity::LoadFromRAM(*jetEntry);
+		entity->orientation = *orientation;
+		entity->position = *position;
+		jets.emplace_back(std::move(entity));
+	};
+
+	auto& treObjects = Assets.tres[AssetManager::TRE_OBJECTS];
+	area.InitFromPAKFileName("ARENA.PAK", treObjects, Assets.tres[AssetManager::TRE_TEXTURES]);
+
+	TreEntry* cockpit = Assets.tres[AssetManager::TRE_OBJECTS].GetEntryByName(TRE_DATA_OBJECTS "F16PITXP.IFF");
+	_cockpit = RSEntity::LoadFromRAM(*cockpit);
 
 	camPos = { 4100, 100, 3000 };
 	angleV = 0.0f;
 	angleH = 0.0f;
+
+	const float angle = 25.0f;
+	const float mul = 1.0f;
+
+	//TRE_DATA_GAMEFLOW "MIG29.IFF
+	//TRE_DATA_GAMEFLOW "F-22.IFF"
+	//TRE_DATA_GAMEFLOW "F-15.IFF"
+	//TRE_DATA_GAMEFLOW "YF23.IFF"
+	//TRE_DATA_GAMEFLOW "MIG21.IFF"
+	//TRE_DATA_GAMEFLOW "MIG29.IFF"
+
+	RSQuaternion rot0 = HMM_Mat4ToQuaternion(HMM_Rotate(angle, { 1, 0, 0 }));
+	RSVector3 pos0 = { mul * 4016, mul * 95, mul * 2980};
+	AddJet(treObjects, TRE_DATA_OBJECTS "F-16DES.IFF", &rot0, &pos0);
+
+	RSQuaternion rot1 = HMM_Mat4ToQuaternion(HMM_Rotate(-angle, { 1, 0, 0 }));
+	RSVector3 pos1 = { mul * 4010, mul * 95, mul * 2980};
+	AddJet(treObjects, TRE_DATA_OBJECTS "F-22.IFF", &rot1, &pos1);
 }
 
 void SCStrike::RunFrame(const FrameParams& p)
@@ -74,6 +105,14 @@ void SCStrike::RunFrame(const FrameParams& p)
 	Renderer.SetLight(light);
 	Renderer.Draw3D({ R3Dp::SKY | R3Dp::CLOUDS }, [&] () {
 		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.totalTime);
+		Renderer.RenderEntities(jets);
+		const float sc = 0.1f;
+		const RSVector3 headPos = { 0, sc * 3.3f / 1.2f, 0 };
+		cam.SetPosition(headPos);
+		cam.LookAt(headPos + RSVector3{ 1, 0, 0 });
+		Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, HMM_Scale({ sc, sc, sc }));
+		cam.SetPosition(camPos);
+		cam.LookAt(camPos + camDir);
 	});
 
 	if (p.pressed.contains(GLFW_KEY_ESCAPE)) {

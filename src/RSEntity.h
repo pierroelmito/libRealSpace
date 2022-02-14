@@ -69,7 +69,8 @@ public:
 	RSEntity();
 	~RSEntity();
 
-	void InitFromRAM(const ByteSlice& bytes);
+	static std::unique_ptr<RSEntity> LoadFromRAM(const ByteSlice& bytes);
+
 	void InitFromIFF(IffLexer* lexer);
 
 	void AddVertex(const RSVector3& vertex);
@@ -96,6 +97,9 @@ public:
 
 	bool IsPrepared() const { return prepared; }
 	bool prepared{ false };
+
+protected:
+	void InitFromRAM(const ByteSlice& bytes);
 
 private:
 	BoudingBox bb;

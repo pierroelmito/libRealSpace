@@ -15,6 +15,7 @@
 #include <optional>
 #include <map>
 #include <string>
+#include <memory>
 
 #include "Matrix.h"
 #include "Quaternion.h"
@@ -64,7 +65,7 @@ public:
 	void RenderWorldSolid(const RSArea& area, int LOD, double gtime);
 	void RenderWorldGround(const RSArea& area, int LOD, double gtime);
 	void RenderWorldModels(const RSArea& area, int LOD, double gtime);
-	void RenderJets(const RSArea& area);
+	void RenderEntities(const std::vector<std::unique_ptr<RSEntity>>& entities);
 	void RenderSky();
 	void RenderClouds();
 

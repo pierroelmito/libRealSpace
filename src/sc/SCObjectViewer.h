@@ -11,6 +11,8 @@
 #include "IActivity.h"
 #include "RSEntity.h"
 
+class RSFont;
+
 class SCObjectViewer : public IActivity
 {
 public:
@@ -22,6 +24,7 @@ public:
 	void NextObject();
 
 protected:
+	void InitFromExtractedFiles();
 	void ParseObjList(IffLexer* lexer);
 	void ParseAssets();
 
@@ -33,4 +36,5 @@ protected:
 	};
 	std::vector<RSShowCase> showCases;
 	uint32_t currentObject;
+	RSFont* _font;
 };

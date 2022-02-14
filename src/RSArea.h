@@ -82,26 +82,16 @@ public:
 	std::vector<MapObject> objects[BLOCKS_PER_MAP];
 	float elevation[BLOCKS_PER_MAP];
 
-	const std::vector<std::unique_ptr<RSEntity>>& GetJets() const { return jets; }
-
 private:
-
 	void ParseMetadata(void );
 	void ParseObjects(void );
-
-#if USE_SHADER_PIPELINE != 1
-	void ParseTrigo(void );
-	void ParseTriFile(const PakEntry* entry);
-#endif
-
 	//Temporary name: I don't know yet what is in there.
 	void ParseHeightMap(void);
 	void ParseBlocks(size_t lod,const PakEntry* entry,size_t verticePerBlock);
-
 	void ParseElevations();
 
 	std::vector<std::unique_ptr<RSMapTextureSet>> textures;
-	PakArchive* archive;
+	PakArchive* archive{};
 
 	// An area is made of 18*18 (324) blocks each block has 3 levels of details
 	// Level 0 blocks are 20*20;
@@ -111,9 +101,7 @@ private:
 
 	char name[16];
 
-	void AddJet(TreArchive& tre, const char* name, RSQuaternion* orientation, RSVector3* position);
-	void AddJets(TreArchive& treObjects);
+	void AddEntities(TreArchive& treObjects);
 
 	std::map<std::string, std::unique_ptr<RSEntity>> entities;
-	std::vector<std::unique_ptr<RSEntity>> jets;
 };

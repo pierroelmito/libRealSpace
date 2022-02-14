@@ -621,6 +621,7 @@ void SCRenderer::Init()
 
 	//Load the default palette
 	{
+#if 0
 		IffLexer lexer;
 		lexer.InitFromFile("PALETTE.IFF");
 		//lexer.List(stdout);
@@ -628,6 +629,9 @@ void SCRenderer::Init()
 		palette.InitFromIFF(&lexer);
 		this->palette = *palette.GetColorPalette();
 		lexer.Release();
+#else
+	palette = *RSPalette::LoadFromFile("PALETTE.IFF").GetColorPalette();
+#endif
 	}
 
 	camera.SetPersective(50.0f, width / (float)height, 0.1f, 20000.0f);
@@ -1106,13 +1110,16 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const RSMatr
 		PrepareModel(*this, o, lodLevel, tmp);
 	});
 
+	bool viewChanged = false;
+	const auto view = camera.getView(&viewChanged);
+
 	// update global constants only once per frame...
-	if (ModelRender.dirtyGlobals) {
+	if (ModelRender.dirtyGlobals || viewChanged) {
 		ModelRender.dirtyGlobals = false;
 
 		model_vs_global_params_t gparams;
 		gparams.proj = camera.getProj();
-		gparams.view = camera.getView();
+		gparams.view = view;
 		gparams.pcampos = camera.getPosition();
 		gparams.lightDir = lightDir;
 
@@ -1325,9 +1332,9 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 	}
 }
 
-void SCRenderer::RenderJets(const RSArea& area)
+void SCRenderer::RenderEntities(const std::vector<std::unique_ptr<RSEntity>>& entities)
 {
-	for(auto&& entity : area.GetJets()) {
+	for(auto&& entity : entities) {
 		RSMatrix world = HMM_QuaternionToMat4(entity->orientation) * HMM_Scale({ OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE });
 		world.Elements[3][0] = entity->position.X;
 		world.Elements[3][1] = entity->position.Y;
@@ -1506,8 +1513,6 @@ void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)
 			DrawModel(object.entity, LOD_LEVEL_MAX, mworld);
 		}
 	}
-
-	RenderJets(area);
 }
 
 #if USE_SHADER_PIPELINE != 1

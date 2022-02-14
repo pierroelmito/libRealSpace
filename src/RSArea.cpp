@@ -576,55 +576,18 @@ RSImage* RSArea::GetImageByID(size_t ID) const
 	return textures[0]->GetImageById(ID);
 }
 
-void RSArea::AddJet(TreArchive& tre, const char* name, RSQuaternion* orientation, RSVector3* position)
+void RSArea::AddEntities(TreArchive& treObjects)
 {
-	TreEntry* jetEntry = tre.GetEntryByName(name);
-	RSEntity* entity = new RSEntity();
-	IffLexer lexer;
-	lexer.InitFromRAM(*jetEntry);
-	entity->InitFromIFF(&lexer);
-
-	entity->orientation = *orientation;
-	entity->position = *position;
-
-	jets.emplace_back(entity);
-}
-
-void RSArea::AddJets(TreArchive& treObjects)
-{
-	const float angle = 25.0f;
-	const float mul = 1.0f;
-
-	RSQuaternion rot0 = HMM_Mat4ToQuaternion(HMM_Rotate(angle, { 1, 0, 0 }));
-	RSVector3 pos0 = { mul * 4016, mul * 95, mul * 2980};
-	AddJet(treObjects, TRE_DATA_OBJECTS "F-16DES.IFF", &rot0, &pos0);
-
-	RSQuaternion rot1 = HMM_Mat4ToQuaternion(HMM_Rotate(-angle, { 1, 0, 0 }));
-	RSVector3 pos1 = { mul * 4010, mul * 95, mul * 2980};
-	AddJet(treObjects, TRE_DATA_OBJECTS "F-22.IFF", &rot1, &pos1);
-
-	//pos = {3886,300,2886};
-	//AddJet(&tre,TRE_DATA_GAMEFLOW "MIG29.IFF",&rot,&pos);
-
-	//const char* jetPath = TRE_DATA_GAMEFLOW "F-22.IFF";
-	//const char* jetPath = TRE_DATA_GAMEFLOW "F-15.IFF";
-	//const char* jetPath = TRE_DATA_GAMEFLOW "YF23.IFF";
-	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG21.IFF";
-	//const char* jetPath = TRE_DATA_GAMEFLOW "MIG29.IFF";
-
 	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
 		std::vector<MapObject>& blockObjects = objects[id];
 		for (MapObject& object : blockObjects) {
 			if (object.entity == nullptr) {
 				auto& e = entities[object.name];
 				if (e == nullptr) {
-					e = std::make_unique<RSEntity>();
 					char buffer[512];
 					snprintf(buffer, sizeof(buffer), "%s%s.IFF", TRE_DATA_OBJECTS, object.name);
 					TreEntry* entry = treObjects.GetEntryByName(buffer);
-					IffLexer lexer;
-					lexer.InitFromRAM(*entry);
-					e->InitFromIFF(&lexer);
+					e = RSEntity::LoadFromRAM(*entry);
 				}
 				if (e == nullptr) {
 					printf("Unable to load area object '%s'\n", object.name);
@@ -687,5 +650,5 @@ void RSArea::InitFromPAKFileName(const char* pakFilename, TreArchive& treObjects
 
 	ParseHeightMap();
 
-	AddJets(treObjects);
+	AddEntities(treObjects);
 }

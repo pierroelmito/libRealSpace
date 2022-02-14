@@ -33,6 +33,7 @@ bool RSVGA::DrawShape(RLEShape& shape)
 
 void RSVGA::Init(void)
 {
+#if 0
 	//Load the default palette
 	IffLexer lexer;
 	lexer.InitFromFile("PALETTE.IFF");
@@ -41,6 +42,9 @@ void RSVGA::Init(void)
 	palette.InitFromIFF(&lexer);
 	SetPalette(*palette.GetColorPalette());
 	lexer.Release();
+#else
+	SetPalette(*RSPalette::LoadFromFile("PALETTE.IFF").GetColorPalette());
+#endif
 }
 
 void RSVGA::SetPalette(const VGAPalette& newPalette)

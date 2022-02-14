@@ -17,6 +17,16 @@ RSPalette::~RSPalette()
 {
 }
 
+RSPalette RSPalette::LoadFromFile(const char* file)
+{
+	IffLexer lexer;
+	lexer.InitFromFile(file);
+	RSPalette palette;
+	palette.InitFromIFF(&lexer);
+	lexer.Release();
+	return palette;
+}
+
 VGAPalette* RSPalette::GetColorPalette(void){
 	return &this->colors;
 }

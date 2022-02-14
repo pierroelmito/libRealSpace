@@ -21,6 +21,13 @@ RSEntity::~RSEntity()
 {
 }
 
+std::unique_ptr<RSEntity> RSEntity::LoadFromRAM(const ByteSlice& bytes)
+{
+	auto entity = std::make_unique<RSEntity>();
+	entity->InitFromRAM(bytes);
+	return entity;
+}
+
 void RSEntity::ParseTXMP(IffChunk* chunk)
 {
 	ByteStream stream(chunk->data);

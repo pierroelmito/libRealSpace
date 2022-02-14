@@ -20,7 +20,7 @@ public:
 	void SetPersective(float fovy, float aspect, float zNear, float zFar);
 	void SetPosition(const RSVector3& position);
 	void LookAt(const RSVector3& lookAt);
-	const RSMatrix& getView();
+	const RSMatrix& getView(bool* updated = nullptr);
 	const RSMatrix& getProj() const { return proj; };
 	const RSVector3& getPosition() const { return position; }
 	const RSVector3& getLookAt() const { return lookAt; }
