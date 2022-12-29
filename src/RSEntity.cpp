@@ -47,7 +47,7 @@ void RSEntity::ParseTXMP(IffChunk* chunk)
 
 void RSEntity::ParseTXMS(IffChunk* chunk)
 {
-	if (chunk==NULL)
+	if (chunk == nullptr)
 		return;
 
 	if (chunk->children.size() <1 ){
@@ -69,7 +69,7 @@ void RSEntity::ParseTXMS(IffChunk* chunk)
 
 void RSEntity::ParseVERT(IffChunk* chunk)
 {
-	if (chunk==NULL)
+	if (chunk == nullptr)
 		return;
 
 	const auto readCoord = [] (int32_t coo) -> float {
@@ -88,7 +88,7 @@ void RSEntity::ParseVERT(IffChunk* chunk)
 
 void RSEntity::ParseLVL(IffChunk* chunk)
 {
-	if (chunk==NULL)
+	if (chunk == nullptr)
 		return;
 
 	ByteStream stream(chunk->data);
@@ -105,7 +105,7 @@ void RSEntity::ParseLVL(IffChunk* chunk)
 
 void RSEntity::ParseVTRI(IffChunk* chunk)
 {
-	if (chunk==NULL)
+	if (chunk == nullptr)
 		return;
 
 	size_t numTriangle= chunk->size / 8;
@@ -114,24 +114,16 @@ void RSEntity::ParseVTRI(IffChunk* chunk)
 	Triangle triangle ;
 	for (int i = 0; i < numTriangle ; i++) {
 		triangle.property = stream.ReadByte();
-
-		triangle.ids[0] = stream.ReadByte();
-		triangle.ids[1] = stream.ReadByte();
-		triangle.ids[2] = stream.ReadByte();
-
+		triangle.ids = stream.ReadBytes<3>();
 		triangle.color = stream.ReadByte();
-
-		triangle.flags[0] = stream.ReadByte();
-		triangle.flags[1] = stream.ReadByte();
-		triangle.flags[2] = stream.ReadByte();
-
+		triangle.flags = stream.ReadBytes<3>();
 		AddTriangle(&triangle);
 	}
 }
 
 void RSEntity::ParseUVXY(IffChunk* chunk)
 {
-	if (chunk==NULL)
+	if (chunk == nullptr)
 		return;
 
 	ByteStream stream(chunk->data);

@@ -13,25 +13,17 @@ void RSCamera::SetPersective(float fovy, float aspect, float zNear, float zFar)
 	proj = HMM_Perspective(fovy, aspect, zNear, zFar);
 }
 
-void RSCamera::SetPosition(const RSVector3& position)
+void RSCamera::SetCam(const RSVector3& position, const RSVector3& lookAt)
 {
-	this->position = position;
-	dirtyView = true;
+	viewChanged = true;
+	view = HMM_LookAt(position, lookAt, { 0, 1, 0 });
 }
 
-void RSCamera::LookAt(const RSVector3& lookAt)
+const RSMatrix&
+RSCamera::getView(bool* changed) const
 {
-	this->lookAt = lookAt;
-	dirtyView = true;
-}
-
-const RSMatrix& RSCamera::getView(bool* updated)
-{
-	if (dirtyView) {
-		view = HMM_LookAt(position, lookAt, { 0, 1, 0 });
-		if (updated)
-			*updated = true;
-	}
-	dirtyView = false;
+	if (changed && viewChanged)
+		*changed = true;
+	viewChanged = false;
 	return view;
-};
+}

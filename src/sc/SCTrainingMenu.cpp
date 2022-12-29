@@ -6,10 +6,10 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "SCTrainingMenu.h"
-
 #include "precomp.h"
 
+#include "SCTrainingMenu.h"
+#include "SCStrike.h"
 #include "SCSelectWeaponsF16.h"
 
 SCTrainingMenu::SCTrainingMenu()
@@ -50,7 +50,8 @@ void SCTrainingMenu::Init()
 
 	MakeButton(sanDPosition, sandDDimension, *trButtonsPack, 1, 2, [&] {
 		Stop();
-		Game.MakeActivity<SCSelectWeaponF16>();
+		//Game.MakeActivity<SCSelectWeaponF16>();
+		Game.MakeActivity<SCStrike>();
 	});
 
 	MakeButton(dogDPosition, dogDDimension, *trButtonsPack, 3, 4, [] {

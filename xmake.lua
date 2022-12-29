@@ -4,7 +4,7 @@ add_rules("mode.debug", "mode.release")
 target("sc")
 	before_build(function (target)
 		-- uncomment do rebuild shaders from glsl:
-		--os.exec("sokol-shdc --input src/shaders/shaders.glsl --output src/shaders/shaders.h --slang glsl330", sourcefile, np)
+		os.exec("sokol-shdc --input src/shaders/shaders.glsl --output src/shaders/shaders.h --slang glsl330", sourcefile, np)
 	end)
 	--set_optimize("fast")
 	set_kind("binary")

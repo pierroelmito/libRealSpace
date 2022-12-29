@@ -1,0 +1,5 @@
+-std=c++17
+-I./src
+-I./src/ext
+-I./src/sc
+-I..

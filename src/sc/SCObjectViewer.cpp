@@ -461,7 +461,7 @@ void SCObjectViewer::Init(void)
 
 	ParseAssets();
 
-#if 0
+#if 1
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 	TreEntry* objViewIFF = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
 	IffLexer objToDisplay;
@@ -500,8 +500,7 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	};
 
 	auto& cam = Renderer.GetCamera();
-	cam.SetPosition(newPosition);
-	cam.LookAt({ 0, 0.2f * (bbox.min.Y + bbox.max.Y), 0 });
+	cam.SetCam(newPosition, { 0, 0.2f * (bbox.min.Y + bbox.max.Y), 0 });
 
 	const RSVector3 light = HMM_NormalizeVec3({ 4.0f * cosf(lightTime), 4.0f, 4.0f * sinf(lightTime) });
 	const RSMatrix id = HMM_Mat4d(1);

@@ -57,6 +57,7 @@ public:
 	void StopTopActivity(void);
 	IActivity* GetCurrentActivity(void);
 
+	void SetMouseLock(bool lock);
 	bool IsKeyPressed(uint32_t keyCode);
 	bool PumpEvents(void);
 

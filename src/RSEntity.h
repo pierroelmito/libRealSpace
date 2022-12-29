@@ -51,9 +51,9 @@ struct uvxyEntry
 struct Triangle
 {
 	uint8_t property;
-	uint8_t ids[3];
+	std::array<uint8_t, 3> ids;
 	uint8_t color;
-	uint8_t flags[3];
+	std::array<uint8_t, 3> flags;
 };
 
 struct Lod
@@ -91,10 +91,7 @@ public:
 
 	const BoudingBox& GetBoudingBpx() const { return bb; }
 
-	//For rendering
-	RSVector3 position;
-	RSQuaternion orientation;
-
+	//Has the entity been sent to te GPU and is ready to be renderer.
 	bool IsPrepared() const { return prepared; }
 	bool prepared{ false };
 
@@ -104,8 +101,6 @@ protected:
 private:
 	BoudingBox bb;
 	void CalcBoundingBox(void);
-
-	//Has the entity been sent to te GPU and is ready to be renderer.
 
 	void ParseVERT(IffChunk* chunk);
 	void ParseLVL(IffChunk* chunk);

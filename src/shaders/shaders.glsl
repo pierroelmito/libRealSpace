@@ -66,10 +66,13 @@ out vec4 frag_color;
 
 vec3 vignetting(vec3 color, float p, float b)
 {
+#if 0
 	return color;
-	//float bf = (1 - mypow(abs(uv.z), p)) * (1 - mypow(abs(uv.w), p));
-	//float f = (b + bf) / (b + 1);
-	//return f * color;
+#else
+	float bf = (1 - mypow(abs(uv.z), p)) * (1 - mypow(abs(uv.w), p));
+	float f = (b + bf) / (b + 1);
+	return f * color;
+#endif
 }
 
 void main() {
@@ -253,7 +256,9 @@ void main() {
 
 	float si = 0.299 * frag_color.x + 0.587 * frag_color.y + 0.114 * frag_color.z;
 
-	frag_color.xyz = computeLight(frag_color.xyz, -normalize(n), l, normalize(worldpos - campos), si * 0.3);
+	vec3 pn = -normalize(n);
+	frag_color.xyz = computeLight(frag_color.xyz, pn, l, normalize(worldpos - campos), si * 0.3);
+	//frag_color.xyz = 0.000001 * frag_color.xyz + 0.5 * (1 + pn);
 	frag_depth = vec4(depth.xxx, 1);
 }
 
@@ -357,7 +362,6 @@ void main() {
 		vec4 gc2 = 0.2 * (2 * texture(water, 0.0007 * worldpos.xz) - 1);
 		vec4 gc3 = 0.2 * (2 * texture(water, 0.0008 * worldpos.zx) - 1);
 		vec4 gc = gc0 + gc1  + gc2 + gc3;
-		//frag_color = computeFog(vec4(tc.xyz * color.xyz + gc.xyz, 1) + gc.xyz, depth);
 		frag_color = tc * vec4(color.rgb + 0.5 * gc.rgb, 1);
 	} else if (idx == 0xA * 16) {
 		// water!!
@@ -372,10 +376,6 @@ void main() {
 		frag_color = tc * vec4(color.rgb, 1);
 	}
 
-	// lighting + fog
-	//vec3 normal = normalize(n);
-	//float ndotl = dot(lightdir, -normal);
-	//float diffuse = max(ndotl, 0.5);
 	frag_color.xyz = computeLight(frag_color.xyz, normalize(n), lightdir, normalize(worldpos - campos), spec);
 	frag_depth = vec4(depth.xxx, 1);
 }

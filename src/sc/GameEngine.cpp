@@ -75,6 +75,12 @@ void GameEngine::Release()
 	Assets.Release();
 }
 
+void GameEngine::SetMouseLock(bool lock)
+{
+	if (glfwRawMouseMotionSupported())
+		glfwSetInputMode(win, GLFW_RAW_MOUSE_MOTION, lock);
+}
+
 bool GameEngine::IsKeyPressed(uint32_t keyCode)
 {
 	return glfwGetKey(win, keyCode) == GLFW_PRESS;
@@ -145,6 +151,8 @@ bool GameEngine::PumpEvents(void)
 
 void GameEngine::Run()
 {
+	GTime pt = glfwGetTime();
+
 	while (Screen.StartFrame() && activities.size() > 0) {
 		if (!PumpEvents())
 			break;
@@ -156,7 +164,9 @@ void GameEngine::Run()
 		if (currentActivity->IsRunning()) {
 			currentActivity->Focus();
 			const GTime t = glfwGetTime();
-			currentActivity->RunFrame({ JustPressed, t, t - currentActivity->GetStartTime() });
+			const GTime dt = t - pt;
+			pt = t;
+			currentActivity->RunFrame({ JustPressed, t, t - currentActivity->GetStartTime(), dt });
 			currentActivity->UnFocus();
 		} else{
 			activities.pop();

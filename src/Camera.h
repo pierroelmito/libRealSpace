@@ -18,17 +18,14 @@ class RSCamera
 {
 public:
 	void SetPersective(float fovy, float aspect, float zNear, float zFar);
-	void SetPosition(const RSVector3& position);
-	void LookAt(const RSVector3& lookAt);
-	const RSMatrix& getView(bool* updated = nullptr);
-	const RSMatrix& getProj() const { return proj; };
-	const RSVector3& getPosition() const { return position; }
-	const RSVector3& getLookAt() const { return lookAt; }
+	void SetCam(const RSVector3& position, const RSVector3& lookAtv);
+	void SetView(const RSMatrix& view) { viewChanged = true; this->view = view; }
+	const RSMatrix& getView(bool* changed = nullptr) const;
+	const RSMatrix& getProj() const { return proj; }
+	const RSVector3 getPosition() const { return { view.Elements[3][0], view.Elements[3][1], view.Elements[3][2] }; }
 
 protected:
 	RSMatrix view;
 	RSMatrix proj;
-	RSVector3 position;
-	RSVector3 lookAt;
-	bool dirtyView{ true };
+	mutable bool viewChanged{ false };
 };

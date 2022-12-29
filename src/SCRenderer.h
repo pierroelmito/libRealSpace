@@ -65,7 +65,6 @@ public:
 	void RenderWorldSolid(const RSArea& area, int LOD, double gtime);
 	void RenderWorldGround(const RSArea& area, int LOD, double gtime);
 	void RenderWorldModels(const RSArea& area, int LOD, double gtime);
-	void RenderEntities(const std::vector<std::unique_ptr<RSEntity>>& entities);
 	void RenderSky();
 	void RenderClouds();
 

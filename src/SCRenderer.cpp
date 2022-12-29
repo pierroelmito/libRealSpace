@@ -787,7 +787,7 @@ bool SCRenderer::CreateTextureInGPU(RSTexture* texture)
 	if (!initialized)
 		return false;
 
-	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, IFLinear).img;
+	sg_image img = MakeImage(texture->width, texture->height, SG_PIXELFORMAT_RGBA8, SG_USAGE_DYNAMIC, 0 /*IFLinear*/).img;
 	texture->id = img.id;
 
 	return true;
@@ -929,7 +929,9 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 			count[v2] += 1.0f;
 		}
 		for (int i = 0; i < data.vertice.size(); ++i) {
-			data.vertice[i].normal = HMM_NormalizeVec3(data.vertice[i].normal / count[i]);
+			RSVector3 an = data.vertice[i].normal / count[i];
+			//assert(HMM_LengthVec3(an) > 0.001);
+			data.vertice[i].normal = HMM_NormalizeVec3(an);
 		}
 	};
 
@@ -991,8 +993,8 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 
 			hmm_vec2 uvs[3];
 			for(int j = 0; j < 3; j++){
-				const float u = textInfo.uvs[j].u / (float)texture->width;
-				const float v = textInfo.uvs[j].v / (float)texture->height;
+				const float u = (textInfo.uvs[j].u) / (float)(texture->width);
+				const float v = (textInfo.uvs[j].v) / (float)(texture->height);
 				uvs[j] = { u, v };
 			}
 
@@ -1329,17 +1331,6 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD
 		const MapVertex& bottomRightVertex = *rightBottonBlock.GetVertice(0,0);
 		const MapVertex& bottomVertex      = *bottomBlock.GetVertice(currentBlock.sideSize-1,0);
 		RenderQuad(vfunc,area,currentVertex,rightVertex, bottomRightVertex, bottomVertex,renderTexture);
-	}
-}
-
-void SCRenderer::RenderEntities(const std::vector<std::unique_ptr<RSEntity>>& entities)
-{
-	for(auto&& entity : entities) {
-		RSMatrix world = HMM_QuaternionToMat4(entity->orientation) * HMM_Scale({ OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE });
-		world.Elements[3][0] = entity->position.X;
-		world.Elements[3][1] = entity->position.Y;
-		world.Elements[3][2] = entity->position.Z;
-		DrawModel(entity.get(), LOD_LEVEL_MAX, world);
 	}
 }
 

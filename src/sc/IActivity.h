@@ -50,6 +50,7 @@ public:
 		const std::set<int>& pressed;
 		GTime totalTime{};
 		GTime activityTime{};
+		GTime deltaTime{};
 		float fade{};
 	};
 
