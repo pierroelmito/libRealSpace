@@ -634,7 +634,7 @@ void SCRenderer::Init()
 #endif
 	}
 
-	camera.SetPersective(50.0f, width / (float)height, 0.1f, 20000.0f);
+	camera.SetPersective(50.0f, width / (float)height, 0.1f, 2000.0f);
 
 	lightDir = HMM_NormalizeVec3({ 1, 1, 1 });
 
@@ -993,8 +993,8 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, ModelR
 
 			hmm_vec2 uvs[3];
 			for(int j = 0; j < 3; j++){
-				const float u = (textInfo.uvs[j].u) / (float)(texture->width);
-				const float v = (textInfo.uvs[j].v) / (float)(texture->height);
+				const float u = (textInfo.uvs[j].u + 0.5f) / (float)(texture->width);
+				const float v = (textInfo.uvs[j].v + 0.5f) / (float)(texture->height);
 				uvs[j] = { u, v };
 			}
 

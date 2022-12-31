@@ -91,39 +91,62 @@ void SCStrike::ComputeMove(const RSMatrix& transform, GTime dt)
 	plane.pos += 2.0f * dt* mQuick * ((mUp + mDown) * d + (mLeft + mRight) * n);
 }
 
-RSMatrix SCStrike::ComputeTransform(bool cockpit)
+RSMatrix SCStrike::ComputeTransform(bool cockpit, bool lookAt)
 {
-	const RSVector3 d = plane.dir;
-	const RSVector3 u = plane.up;
-	const RSVector3 n = HMM_Cross(u, d);
-	const RSMatrix r = { .Elements = {
-			{ n.X, u.X, d.X, 0 },
-			{ n.Y, u.Y, d.Y, 0 },
-			{ n.Z, u.Z, d.Z, 0 },
-			{   0,   0,   0, 1 },
-		}
-	};
+	RSVector3 d, u, n;
+	if (lookAt) {
+		d = pilot.lookAt;
+		n = HMM_NormalizeVec3(HMM_Cross(plane.up, d));
+		u = HMM_Cross(d, n);
+	} else {
+		d = plane.dir;
+		u = plane.up;
+		n = HMM_Cross(u, d);
+	}
+
 	const float cT = cockpit ? -1.0f : 1.0f;
 	const RSMatrix t = HMM_Translate(cT * -plane.pos);
 
 	if (cockpit) {
-		const RSMatrix invr = HMM_QuaternionToMat4(HMM_InverseQuaternion(HMM_Mat4ToQuaternion(r)));
-		return t * invr;
+		const RSMatrix r = { .Elements = {
+				{ n.X, n.Y, n.Z, 0 },
+				{ u.X, u.Y, u.Z, 0 },
+				{ d.X, d.Y, d.Z, 0 },
+				{   0,   0,   0, 1 },
+			}
+		};
+		return t * r;
 	} else {
+		const RSMatrix r = { .Elements = {
+				{ n.X, u.X, d.X, 0 },
+				{ n.Y, u.Y, d.Y, 0 },
+				{ n.Z, u.Z, d.Z, 0 },
+				{   0,   0,   0, 1 },
+			}
+		};
 		return r * t;
 	}
 }
 
 void SCStrike::RunFrame(const FrameParams& p)
 {
-	const RSMatrix view = ComputeTransform(false);
-	const RSMatrix cockpit = ComputeTransform(true);
-	ComputeMove(view, p.deltaTime);
+	// look at target
+	const float lookAtTarget = Game.IsKeyPressed(GLFW_KEY_TAB);
+	const bool usePlaneDirLookAt = jets.empty() || !lookAtTarget;
+	const RSVector3 lookAt = usePlaneDirLookAt ? plane.dir : HMM_NormalizeVec3(plane.pos - jets[0].position);
+	pilot.lookAt = HMM_NormalizeVec3(0.3f * lookAt + 0.7f * pilot.lookAt);
+
+	const RSMatrix viewPilot = ComputeTransform(false, true);
+	const RSMatrix viewPlane = ComputeTransform(false, false);
+	const RSMatrix cockpit = ComputeTransform(true, false);
+	ComputeMove(viewPlane, p.deltaTime);
 
 	auto& cam = Renderer.GetCamera();
-	cam.SetView(view);
+	cam.SetView(viewPilot);
 
-	const RSVector3 light = HMM_NormalizeVec3(UserProperties::Get().Vectors3.Get("LightDir", { 2, 3, 2 }));
+	const auto& props = UserProperties::Get();
+
+	const RSVector3 light = HMM_NormalizeVec3(props.Vectors3.Get("LightDir", { 2, 3, 2 }));
 	Renderer.SetLight(light);
 
 	//pilot._a = 0.09f * cosf(p.activityTime);
@@ -144,8 +167,8 @@ void SCStrike::RunFrame(const FrameParams& p)
 
 		// cockpit
 		if (1) {
-			const float sc = 1.0f;
-			const RSMatrix mdl = HMM_Scale({ sc, sc, sc }) * HMM_Rotate(90.0f, { 0, 1, 0 }) * HMM_Translate({ 0, -3 * sc, 0 });
+			const float sc = props.Floats.Get("CockpitScale", 0.05f);
+			const RSMatrix mdl = HMM_Scale({ sc, sc, sc }) * HMM_Rotate(90.0f, { 0, 1, 0 }) * HMM_Translate({ 0, -3, 0 });
 			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, cockpit * mdl);
 		}
 	});

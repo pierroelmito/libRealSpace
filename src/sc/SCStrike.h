@@ -23,7 +23,7 @@ public:
 class Pilot
 {
 public:
-	std::optional<RSVector3> lookAt{};
+	RSVector3 lookAt{};
 };
 
 struct Jet
@@ -42,7 +42,7 @@ public:
 	void Init();
 	void RunFrame(const FrameParams& p) override;
 	void ComputeMove(const RSMatrix& transform, GTime dt);
-	RSMatrix ComputeTransform(bool cockpit);
+	RSMatrix ComputeTransform(bool cockpit, bool lookAt);
 
 protected:
 	Pilot pilot;

@@ -7,6 +7,7 @@
 #float BlockObjScale 0.05
 #int BlockObjX 1
 #int BlockObjZ 0
+float CockpitScale 2.0
 
 # ===== fog and sky =====
 #float FogThickness 0.0004
