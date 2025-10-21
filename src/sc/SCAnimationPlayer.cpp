@@ -8,8 +8,6 @@
 
 #include "SCAnimationPlayer.h"
 
-#include "precomp.h"
-
 SCAnimationPlayer::SCAnimationPlayer()
 {
 }

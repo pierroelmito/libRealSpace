@@ -57,7 +57,8 @@ void main() {
 @fs bitmap_fs
 @include_block common
 
-uniform sampler2D fs_bitmap;
+uniform texture2D fs_bitmap_tex;
+uniform sampler fs_bitmap_smp;
 
 in vec4 uv;
 in vec3 color;
@@ -76,7 +77,7 @@ vec3 vignetting(vec3 color, float p, float b)
 }
 
 void main() {
-	vec4 tc = texture(fs_bitmap, uv.xy);
+	vec4 tc = texture(sampler2D(fs_bitmap_tex, fs_bitmap_smp), uv.xy);
 	if (tc.a < 0.5)
 		discard;
 	frag_color = vec4(vignetting(tc.xyz, 8, 1.5), 1);
@@ -112,7 +113,8 @@ void main() {
 @end
 @fs sky_fs
 
-uniform sampler2D skydome;
+uniform texture2D skydome_tex;
+uniform sampler skydome_smp;
 
 uniform sky_fs_params {
 	vec3 lightdir;
@@ -130,7 +132,7 @@ void main() {
 	float ey = 1 + e.y;
 	vec2 tmp = (e.xz / (1 - e.y * e.y)) * ey;
 	//vec2 tmp = e.xz;
-	vec4 dome = texture(skydome, 0.5 * (0.99f * tmp + 1));
+	vec4 dome = texture(sampler2D(skydome_tex, skydome_smp), 0.5 * (0.99f * tmp + 1));
 	float edotl = 0.5 * (1 + dot(-lightdir, e));
 	edotl = edotl * edotl * edotl * edotl * edotl * edotl;
 	edotl = 0.5 * (edotl + dome.a);
@@ -170,14 +172,15 @@ uniform fog_params {
 	float thickNess;
 };
 
-uniform sampler2D tex_depth;
+uniform texture2D depth_tex;
+uniform sampler depth_smp;
 
 in vec4 uv;
 
 out vec4 frag_color;
 
 void main() {
-	float d = texture(tex_depth, uv.xy).x;
+	float d = texture(sampler2D(depth_tex, depth_smp), uv.xy).x;
 	float intensity = 1 - exp(thickNess * d);
 	frag_color = vec4(fogColor, intensity);
 }
@@ -232,7 +235,8 @@ void main() {
 
 @include_block lighting
 
-uniform sampler2D model_bitmap;
+uniform texture2D model_bitmap_tex;
+uniform sampler model_bitmap_smp;
 
 in vec4 color;
 in vec3 n;
@@ -247,7 +251,7 @@ layout(location=0) out vec4 frag_color;
 layout(location=1) out vec4 frag_depth;
 
 void main() {
-	vec4 tc = texture(model_bitmap, uv);
+	vec4 tc = texture(sampler2D(model_bitmap_tex, model_bitmap_smp), uv);
 	if (tc.a * color.a < 0.5)
 		discard;
 	tc.a = 1.0;
@@ -308,8 +312,10 @@ void main() {
 
 @include_block lighting
 
-uniform sampler2D ground_bitmap;
-uniform sampler2D water;
+uniform texture2D ground_bitmap_tex;
+uniform sampler ground_bitmap_smp;
+uniform texture2D water_tex;
+uniform sampler water_smp;
 
 in vec4 color;
 in vec4 worldpos_depth;
@@ -324,7 +330,7 @@ layout(location=1) out vec4 frag_depth;
 vec4 sampleWater(vec3 wpos, float cf, float sc, vec2 dir)
 {
 	vec2 uv = sc * (0.002 * wpos.xz + cf * 0.05 * dir);
-	vec4 wc = texture(water, uv);
+	vec4 wc = texture(sampler2D(water_tex, water_smp), uv);
 	return wc;
 }
 
@@ -341,7 +347,7 @@ float computeWater(vec3 wpos, float cf, float sc)
 }
 
 void main() {
-	vec4 tc = texture(ground_bitmap, uv.xy);
+	vec4 tc = texture(sampler2D(ground_bitmap_tex, ground_bitmap_smp), uv.xy);
 	if (tc.a == 0.0)
 		discard;
 	tc.a = 1;
@@ -357,10 +363,10 @@ void main() {
 		frag_color = tc * vec4(color.rgb, 1);
 	} else if (idx == 0x5 * 16) {
 		// grass!!
-		vec4 gc0 = 0.1 * (2 * texture(water, 0.005 * worldpos.xz) - 1);
-		vec4 gc1 = 0.1 * (2 * texture(water, 0.006 * worldpos.zx) - 1);
-		vec4 gc2 = 0.2 * (2 * texture(water, 0.0007 * worldpos.xz) - 1);
-		vec4 gc3 = 0.2 * (2 * texture(water, 0.0008 * worldpos.zx) - 1);
+		vec4 gc0 = 0.1 * (2 * texture(sampler2D(water_tex, water_smp), 0.005 * worldpos.xz) - 1);
+		vec4 gc1 = 0.1 * (2 * texture(sampler2D(water_tex, water_smp), 0.006 * worldpos.zx) - 1);
+		vec4 gc2 = 0.2 * (2 * texture(sampler2D(water_tex, water_smp), 0.0007 * worldpos.xz) - 1);
+		vec4 gc3 = 0.2 * (2 * texture(sampler2D(water_tex, water_smp), 0.0008 * worldpos.zx) - 1);
 		vec4 gc = gc0 + gc1  + gc2 + gc3;
 		frag_color = tc * vec4(color.rgb + 0.5 * gc.rgb, 1);
 	} else if (idx == 0xA * 16) {

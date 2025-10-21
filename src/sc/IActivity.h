@@ -8,21 +8,20 @@
 
 #pragma once
 
-#include <vector>
 #include <memory>
 #include <set>
+#include <vector>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include <raylib.h>
 
-#include "Texture.h"
 #include "PakArchive.h"
 #include "PaletteIDs.h"
-#include "ShapeIDs.h"
 #include "RLEShape.h"
 #include "RSSound.h"
-#include "SCMouse.h"
 #include "SCButton.h"
+#include "SCMouse.h"
+#include "ShapeIDs.h"
+#include "Texture.h"
 
 #include "ShapeIDs.h"
 #include "SoundIDs.h"
@@ -33,43 +32,41 @@ using GTime = double;
 constexpr GTime TimeToMSec = 1000.0;
 constexpr GTime FrameMul = 15.0;
 
-class IActivity
-{
+class IActivity {
 public:
-	struct SceneSchape
-	{
+	struct SceneSchape {
 		std::vector<std::unique_ptr<RLEShape>> frames;
-		AnimMode am{ AnimMode::Cutscene };
-		GTime timeOffset{};
-		const std::vector<uint16_t>* anim{ nullptr };
+		AnimMode am { AnimMode::Cutscene };
+		GTime timeOffset {};
+		const std::vector<uint16_t>* anim { nullptr };
 	};
 	using SceneSchapes = std::vector<SceneSchape>;
 
-	struct FrameParams
-	{
-		const std::set<int>& pressed;
-		GTime totalTime{};
-		GTime activityTime{};
-		GTime deltaTime{};
-		float fade{};
+	struct FrameParams {
+		GTime totalTime {};
+		GTime activityTime {};
+		GTime deltaTime {};
+		float fade {};
+		int ScWidth {};
+		int ScHeight {};
 	};
 
 	virtual ~IActivity();
 
-	virtual void Focus() { focused = true;}
-	virtual void UnFocus() { focused = false;}
+	virtual void Focus() { focused = true; }
+	virtual void UnFocus() { focused = false; }
 	virtual void Start(GTime startTime)
 	{
 		this->startTime = startTime;
 		this->running = true;
 	}
 
-	//virtual void Init() = 0;
+	// virtual void Init() = 0;
 	virtual void RunFrame(const FrameParams& p) = 0;
 
 	GTime GetStartTime() const { return startTime; }
 	void SetStartTime(GTime t) { startTime = t; }
-	void Stop() { running = false;}
+	void Stop() { running = false; }
 	bool IsRunning() const { return running; }
 	void SetTitle(const char* title);
 	bool Frame2D(const FrameParams& p, SceneSchapes& shapes, std::function<void()> userDraw = {});
@@ -98,7 +95,7 @@ protected:
 
 	VGAPalette palette;
 	std::vector<std::unique_ptr<SCButton>> buttons;
-	GTime startTime{};
+	GTime startTime {};
 
 	std::vector<RSSoundInstance> sounds;
 
@@ -106,4 +103,3 @@ protected:
 	bool running;
 	bool focused;
 };
-

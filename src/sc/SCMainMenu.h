@@ -10,8 +10,7 @@
 
 #include "IActivity.h"
 
-class SCMainMenu : public IActivity
-{
+class SCMainMenu : public IActivity {
 public:
 	SCMainMenu();
 	~SCMainMenu();

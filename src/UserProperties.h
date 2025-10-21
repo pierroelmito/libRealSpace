@@ -1,22 +1,20 @@
 
 #pragma once
 
-#include <string>
 #include <map>
 #include <sstream>
+#include <string>
 
 #include "Math.h"
 
-class StringReader
-{
+class StringReader {
 public:
-	virtual ~StringReader() {}
+	virtual ~StringReader() { }
 	virtual void ReadFromString(const std::string& s, const std::string& v) = 0;
 };
 
 template <class T>
-class PropContainer : public StringReader
-{
+class PropContainer : public StringReader {
 public:
 	void Set(const std::string& ID, T value)
 	{
@@ -35,17 +33,17 @@ public:
 		T& nv = values[s];
 		ss >> nv;
 	}
+
 protected:
 	std::map<std::string, T> values;
 };
 
-class UserProperties
-{
+class UserProperties {
 public:
 	PropContainer<bool> Bools;
 	PropContainer<int> Ints;
 	PropContainer<float> Floats;
-	PropContainer<hmm_vec3> Vectors3;
+	PropContainer<Vector3> Vectors3;
 	PropContainer<std::string> Strings;
 
 	static UserProperties& Get();

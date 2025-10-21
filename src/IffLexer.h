@@ -8,14 +8,14 @@
 
 #pragma once
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
-#include <vector>
 #include <map>
+#include <vector>
 
-#include "ByteStream.h"
 #include "ByteSlice.h"
+#include "ByteStream.h"
 
 constexpr uint32_t IdToUInt(const char id[5])
 {
@@ -26,16 +26,15 @@ constexpr uint32_t IdToUInt(const char id[5])
 	return (a << 24) | (b << 16) | (c << 8) | d;
 }
 
-class IffChunk
-{
+class IffChunk {
 public:
 	IffChunk();
 	~IffChunk();
 
-	uint32_t id{};
-	uint8_t* data{};
-	size_t size{};
-	uint32_t subId{}; //In the case of FORM,CAT  and LIST
+	uint32_t id {};
+	uint8_t* data {};
+	size_t size {};
+	uint32_t subId {}; // In the case of FORM,CAT  and LIST
 	std::vector<IffChunk*> children;
 	char name[5];
 
@@ -44,8 +43,7 @@ public:
 	void List(FILE* output, int level = 0);
 };
 
-class IffLexer
-{
+class IffLexer {
 public:
 	IffLexer();
 	~IffLexer();
@@ -56,7 +54,7 @@ public:
 
 	void List(FILE* output);
 	IffChunk* GetChunkByID(const char id[5]);
-	inline const char* GetName(){ return this->path;}
+	inline const char* GetName() { return this->path; }
 	DataBufferPtr Buffer() { return _buffer; }
 
 private:
@@ -66,15 +64,14 @@ private:
 	size_t ParseLIST(IffChunk* child);
 
 	void Parse(void);
-	std::map<uint32_t,IffChunk*> chunksHashTable;
+	std::map<uint32_t, IffChunk*> chunksHashTable;
 
 	DataBufferPtr _buffer;
 	ByteStream stream;
-	uint8_t* data{ nullptr };
-	size_t size{};
+	uint8_t* data { nullptr };
+	size_t size {};
 
 	IffChunk topChunk;
 
 	char path[512];
 };
-

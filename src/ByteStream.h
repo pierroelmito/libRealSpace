@@ -8,21 +8,18 @@
 
 #pragma once
 
-#include <cstdint>
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <array>
 
 /*
-
  This is the class used to parse all byte streams.
  It is just a class which encapsulate convenient operations
  and can read byte,short,int as Little or Big Endian.
-
 */
-class ByteStream
-{
+class ByteStream {
 public:
 	ByteStream(uint8_t* cursor);
 	ByteStream(ByteStream& stream);
@@ -47,7 +44,7 @@ public:
 	inline T ReadT()
 	{
 		T* v = (T*)this->cursor;
-		this->cursor+=sizeof(T);
+		this->cursor += sizeof(T);
 		return *v;
 	}
 
@@ -67,7 +64,7 @@ public:
 
 	inline uint8_t PeekByte(void)
 	{
-		return *(this->cursor+1);
+		return *(this->cursor + 1);
 	}
 
 	inline uint16_t ReadUShort(void)
@@ -98,23 +95,23 @@ public:
 	inline uint32_t ReadUInt32BE(void)
 	{
 		uint32_t toLittleEndian = 0;
-		toLittleEndian |= *(cursor++)   << 24 ;
-		toLittleEndian |= *(cursor++)   << 16 ;
-		toLittleEndian |= *(cursor++)   <<  8 ;
-		toLittleEndian |= *(cursor++)   <<  0 ;
+		toLittleEndian |= *(cursor++) << 24;
+		toLittleEndian |= *(cursor++) << 16;
+		toLittleEndian |= *(cursor++) << 8;
+		toLittleEndian |= *(cursor++) << 0;
 		return toLittleEndian;
 	}
 
 	inline uint32_t ReadInt32BE(void)
 	{
 		uint32_t toLittleEndian = 0;
-		toLittleEndian |= *(cursor++)   << 24 ;
-		toLittleEndian |= *(cursor++)   << 16 ;
-		toLittleEndian |= *(cursor++)   <<  8 ;
-		toLittleEndian |= *(cursor++)   <<  0 ;
+		toLittleEndian |= *(cursor++) << 24;
+		toLittleEndian |= *(cursor++) << 16;
+		toLittleEndian |= *(cursor++) << 8;
+		toLittleEndian |= *(cursor++) << 0;
 		return *reinterpret_cast<int32_t*>(&toLittleEndian);
 	}
 
 private:
-	uint8_t* cursor{ nullptr };
+	uint8_t* cursor { nullptr };
 };

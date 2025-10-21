@@ -8,12 +8,14 @@
 
 #include "SCDogFightMenu.h"
 
-#include "precomp.h"
+#include "main.h"
 
-constexpr uint8_t PAK_ID_PALETTE    = 7;
+#include "IffLexer.h"
+
+constexpr uint8_t PAK_ID_PALETTE = 7;
 constexpr uint8_t PAK_ID_BACKGROUND = 6;
-constexpr uint8_t PAK_ID_TITLE      = 1 ;
-constexpr uint8_t PAK_ID_BUTTONS    = 3 ;
+constexpr uint8_t PAK_ID_TITLE = 1;
+constexpr uint8_t PAK_ID_BUTTONS = 3;
 
 SCDogFightMenu::SCDogFightMenu()
 {
@@ -27,8 +29,8 @@ void SCDogFightMenu::Init()
 {
 	TreArchive& tre = Assets.tres[AssetManager::TRE_GAMEFLOW];
 
-	TreEntry* objViewIFF = NULL;//Assets.tres[]->GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
-	TreEntry* objViewPAK = NULL;//tre.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");
+	TreEntry* objViewIFF = NULL; // Assets.tres[]->GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
+	TreEntry* objViewPAK = NULL; // tre.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK");
 
 	IffLexer objToDisplay;
 	objToDisplay.InitFromRAM(*objViewIFF);
@@ -41,7 +43,7 @@ void SCDogFightMenu::Init()
 
 	auto file0 = GetPak("OBJVIEW.PAK: file PAK_ID_MENU_DYNAMC", assets->GetEntry(PAK_ID_BACKGROUND));
 	file0->List(stdout);
-	//showAllImage(&file0);
+	// showAllImage(&file0);
 }
 
 void SCDogFightMenu::RunFrame(const FrameParams& p)

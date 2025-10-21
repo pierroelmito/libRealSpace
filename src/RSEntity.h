@@ -9,14 +9,13 @@
 #pragma once
 
 #include <cstdint>
-#include <cstddef>
-#include <cstdio>
-#include <vector>
-#include <map>
+#include <array>
 #include <memory>
+#include <vector>
 
-#include "Matrix.h"
-#include "Quaternion.h"
+#include <raylib.h>
+#include <raymath.h>
+
 #include "ByteSlice.h"
 
 class RSImage;
@@ -29,42 +28,36 @@ enum LOD_LEVEL {
 	LOD_LEVEL_MIN,
 };
 
-struct BoudingBox
-{
-	RSVector3 min;
-	RSVector3 max;
+struct BoudingBox {
+	Vector3 min;
+	Vector3 max;
 };
 
-struct UV
-{
+struct UV {
 	uint8_t u;
 	uint8_t v;
 };
 
-struct uvxyEntry
-{
+struct uvxyEntry {
 	uint8_t triangleID;
 	uint8_t textureID;
-	UV uvs[3];
+	std::array<UV, 3> uvs;
 };
 
-struct Triangle
-{
+struct Triangle {
 	uint8_t property;
 	std::array<uint8_t, 3> ids;
 	uint8_t color;
 	std::array<uint8_t, 3> flags;
 };
 
-struct Lod
-{
+struct Lod {
 	uint32_t dist;
 	uint16_t numTriangles;
 	uint16_t triangleIDs[256];
 };
 
-class RSEntity
-{
+class RSEntity {
 public:
 	RSEntity();
 	~RSEntity();
@@ -73,13 +66,13 @@ public:
 
 	void InitFromIFF(IffLexer* lexer);
 
-	void AddVertex(const RSVector3& vertex);
+	void AddVertex(const Vector3& vertex);
 	void AddUV(const uvxyEntry& uv);
 	void AddLod(Lod* lod);
 	void AddTriangle(Triangle* triangle);
 
 	std::vector<std::unique_ptr<RSImage>> images;
-	std::vector<RSVector3> vertices;
+	std::vector<Vector3> vertices;
 	std::vector<uvxyEntry> uvs;
 	std::vector<Lod> lods;
 	std::vector<Triangle> triangles;
@@ -91,9 +84,9 @@ public:
 
 	const BoudingBox& GetBoudingBpx() const { return bb; }
 
-	//Has the entity been sent to te GPU and is ready to be renderer.
+	// Has the entity been sent to te GPU and is ready to be renderer.
 	bool IsPrepared() const { return prepared; }
-	bool prepared{ false };
+	bool prepared { false };
 
 protected:
 	void InitFromRAM(const ByteSlice& bytes);

@@ -8,13 +8,12 @@
 
 #pragma once
 
-#include "Texture.h"
 #include "RLEShape.h"
+#include "Texture.h"
 
 class RSFont;
 
-class RSVGA
-{
+class RSVGA {
 public:
 	static constexpr uint32_t WIDTH = 320;
 	static constexpr uint32_t HEIGHT = 200;
@@ -23,18 +22,18 @@ public:
 	~RSVGA();
 
 	const VGAPalette& GetPalette() const { return palette; }
-	uint8_t* GetFrameBuffer(void){ return frameBuffer;}
+	uint8_t* GetFrameBuffer(void) { return frameBuffer; }
 	bool& ShowPalette() { return _showPalette; }
 
 	void Init();
-	void Release() {}
+	void Release() { }
 
 	void SetPalette(const VGAPalette& newPalette);
 	bool DrawShape(RLEShape& shape);
 	template <typename... T>
 	void PrintText(RSFont* font, const Point2D& coo, const uint8_t color, const size_t interLetterSpace, const size_t spaceSize, const char* fmt, T&&... args)
 	{
-		char buffer[512]{};
+		char buffer[512] {};
 		auto sz = snprintf(buffer, sizeof(buffer), fmt, args...);
 		DrawText(font, coo, buffer, color, 0, sz, interLetterSpace, spaceSize);
 	}
@@ -46,5 +45,5 @@ public:
 private:
 	VGAPalette palette;
 	uint8_t frameBuffer[WIDTH * HEIGHT];
-	bool _showPalette{ false };
+	bool _showPalette { false };
 };

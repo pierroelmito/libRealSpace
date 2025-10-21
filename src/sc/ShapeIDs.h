@@ -8,26 +8,23 @@
 
 #pragma once
 
-#include "PaletteIDs.h"
-
 #include <cstring>
-#include <utility>
 
-enum class AnimMode
-{
+enum class AnimMode {
 	First, // display only first frame animation
 	Second, // display only second frame animation
-	Character, //display frame 0 + loop over remaining frames
+	Character, // display frame 0 + loop over remaining frames
 	Cutscene, // display each frame sequentially
 };
 
 struct PalBg {
-	const char* pakShp{};
-	const char* pakPal{};
-	int pal{};
-	int shp{};
-	AnimMode am{ AnimMode::Character };
-	bool operator !=(const PalBg& o) {
+	const char* pakShp {};
+	const char* pakPal {};
+	int pal {};
+	int shp {};
+	AnimMode am { AnimMode::Character };
+	bool operator!=(const PalBg& o)
+	{
 		if (o.pal != pal)
 			return true;
 		if (o.shp != shp)
@@ -52,13 +49,12 @@ struct PalBg {
 #define MAINMENU TRE_DATA_GAMEFLOW "MAINMENU.PAK"
 #define OBJVIEW TRE_DATA_GAMEFLOW "OBJVIEW.PAK"
 
-constexpr PalBg OptSky =             { OPTSHPS,  OPTPALS,  21, 116 };
-constexpr PalBg OptMountain	=        { OPTSHPS,  OPTPALS,  24,  44 };
-constexpr PalBg OptRegistration =    { OPTSHPS,  OPTPALS,  30, 160 };
-constexpr PalBg ShpClouds =          { MIDGAMES, OPTPALS,  21,  20 };
-constexpr PalBg ShpBoard =           { MAINMENU, MAINMENU,  2,   1 };
-constexpr PalBg ShpBlueprint =       { OBJVIEW, nullptr,    0,   8 };
-constexpr PalBg ShpTitle =           { OBJVIEW, nullptr,    0,   0 };
-constexpr PalBg ShpTrainingTitle =   { OBJVIEW, OBJVIEW,    7,   1 };
-constexpr PalBg ShpTraingBg0 =       { OBJVIEW, OBJVIEW,    7,   6 };
-
+constexpr PalBg OptSky = { OPTSHPS, OPTPALS, 21, 116 };
+constexpr PalBg OptMountain = { OPTSHPS, OPTPALS, 24, 44 };
+constexpr PalBg OptRegistration = { OPTSHPS, OPTPALS, 30, 160 };
+constexpr PalBg ShpClouds = { MIDGAMES, OPTPALS, 21, 20 };
+constexpr PalBg ShpBoard = { MAINMENU, MAINMENU, 2, 1 };
+constexpr PalBg ShpBlueprint = { OBJVIEW, nullptr, 0, 8 };
+constexpr PalBg ShpTitle = { OBJVIEW, nullptr, 0, 0 };
+constexpr PalBg ShpTrainingTitle = { OBJVIEW, OBJVIEW, 7, 1 };
+constexpr PalBg ShpTraingBg0 = { OBJVIEW, OBJVIEW, 7, 6 };

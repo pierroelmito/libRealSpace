@@ -6,61 +6,29 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
-
-#define SOKOL_GLCORE33
-#include "sokol_gfx.h"
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include "main.h"
 
 #include "IActivity.h"
 #include "UserProperties.h"
+#include <raylib.h>
 
-extern GLFWwindow* win;
+GameEngine::GameEngine() { }
 
-GameEngine::GameEngine()
-{
-}
-
-GameEngine::~GameEngine()
-{
-}
-
-void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
-{
-	auto& buttons = Mouse.buttons;
-	if (action == GLFW_PRESS)
-		buttons[button].event = SCMouseButton::PRESSED;
-	if (action == GLFW_RELEASE)
-		buttons[button].event = SCMouseButton::RELEASED;
-}
-
-std::set<int> JustPressed;
-
-void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if (action == GLFW_PRESS)
-		JustPressed.insert(key);
-	if (mods == GLFW_MOD_CONTROL && key == GLFW_KEY_R && action == GLFW_PRESS)
-		UserProperties::Get().Reload();
-}
+GameEngine::~GameEngine() { }
 
 void GameEngine::Init()
 {
 	const int scale = UserProperties::Get().Ints.Get("WindowScale", 3);
 
-	Assets.Init(); //Load all TREs and PAKs
+	Assets.Init(); // Load all TREs and PAKs
 	FontManager.Init(Assets.tres[AssetManager::TRE_MISC]);
-	ConvAssets.Init(); //Load assets needed for Conversations (char and background)
-	Screen.Init(scale); //Load Main Palette and Initialize the GL
+	ConvAssets
+		.Init(); // Load assets needed for Conversations (char and background)
+	Screen.Init(scale); // Load Main Palette and Initialize the GL
 	VGA.Init();
 	Audio.Init();
 	Renderer.Init();
-	Mouse.Init(); //Load the Mouse Cursor
-
-	glfwSetMouseButtonCallback(win, MouseButtonCallback);
-	glfwSetKeyCallback(win, KeyCallback);
-	glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+	Mouse.Init(); // Load the Mouse Cursor
 }
 
 void GameEngine::Release()
@@ -75,112 +43,42 @@ void GameEngine::Release()
 	Assets.Release();
 }
 
-void GameEngine::SetMouseLock(bool lock)
-{
-	if (glfwRawMouseMotionSupported())
-		glfwSetInputMode(win, GLFW_RAW_MOUSE_MOTION, lock);
-}
-
-bool GameEngine::IsKeyPressed(uint32_t keyCode)
-{
-	return glfwGetKey(win, keyCode) == GLFW_PRESS;
-}
-
-bool GameEngine::PumpEvents(void)
-{
-#if 1
-	double mx, my;
-	glfwGetCursorPos(win, &mx, &my);
-	double x = 320.0 * saturate(mx / double(Screen.width));
-	double y = 200.0 * saturate(my / double(Screen.height));
-	Mouse.SetPosition({
-		int32_t(x),
-		int32_t(y)
-	});
-#else
-	//Joystick
-
-	//Keyboard
-	SDL_Event keybEvents[5];
-	int numKeybEvents = SDL_PeepEvents(keybEvents,5,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_TEXTINPUT);
-	for(int i= 0 ; i < numKeybEvents ; i++){
-		SDL_Event* event = &keybEvents[i];
-		switch (event->type) {
-			case SDL_KEYDOWN:
-				if (event->key.keysym.scancode == SDL_SCANCODE_ESCAPE)
-				return false;
-			default:
-				break;
-		}
-	}
-
-	//Oculus VR
-
-	//System events
-	SDL_Event sysEvents[5];
-	int numSysEvents = SDL_PeepEvents(sysEvents,5,SDL_PEEKEVENT,SDL_FIRSTEVENT,SDL_SYSWMEVENT);
-	for(int i= 0 ; i < numSysEvents ; i++) {
-		SDL_Event* event = &sysEvents[i];
-		switch (event->type) {
-			case SDL_APP_TERMINATING:
-				Terminate("System request.");
-				break;
-			case SDL_QUIT:
-				Terminate("System request.");
-				break;
-			//Verify is we should be capturing the mouse or not.
-			case SDL_WINDOWEVENT:
-				if (event->window.event == SDL_WINDOWEVENT_ENTER){
-					Mouse.SetVisible(true);
-					SDL_ShowCursor(SDL_DISABLE);
-					return true;
-				}
-				if (event->window.event == SDL_WINDOWEVENT_LEAVE){
-					Mouse.SetVisible(false);
-					SDL_ShowCursor(SDL_ENABLE);
-					return true;
-				}
-				break;
-			default:
-				break;
-		}
-	}
-#endif
-	return true;
-}
-
 void GameEngine::Run()
 {
-	GTime pt = glfwGetTime();
+	GTime pt = GetTime();
 
 	while (Screen.StartFrame() && activities.size() > 0) {
-		if (!PumpEvents())
-			break;
+		// Audio.Update();
 
-		//Audio.Update();
+		const auto w = GetScreenWidth();
+		const auto h = GetScreenHeight();
 
-		//Allow the active activity to Run and Render
+		Vector2 mpos = GetMousePosition();
+		Mouse.SetPosition({ int(mpos.x) / Screen.scale, int(mpos.y) / Screen.scale });
+		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+			Mouse.buttons[0].event = SCMouseButton::PRESSED;
+		} else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+			Mouse.buttons[0].event = SCMouseButton::RELEASED;
+		}
+
+		// Allow the active activity to Run and Render
 		IActivity* currentActivity = activities.top();
 		if (currentActivity->IsRunning()) {
 			currentActivity->Focus();
-			const GTime t = glfwGetTime();
+			const GTime t = GetTime();
 			const GTime dt = t - pt;
 			pt = t;
-			currentActivity->RunFrame({ JustPressed, t, t - currentActivity->GetStartTime(), dt });
+			currentActivity->RunFrame(
+				{ t, t - currentActivity->GetStartTime(), dt, 0, w, h });
 			currentActivity->UnFocus();
-		} else{
+		} else {
 			activities.pop();
 			delete currentActivity;
 			if (!activities.empty())
-				activities.top()->SetStartTime(glfwGetTime());
+				activities.top()->SetStartTime(GetTime());
 		}
 
-		JustPressed.clear();
-
-		//Swap GL buffer
-		Screen.Refresh();
-
-		//Also clear the Mouse flags.
+		// Also clear the Mouse flags.
 		Mouse.FlushEvents();
 		Screen.EndFrame();
 	}
@@ -188,18 +86,18 @@ void GameEngine::Run()
 
 void GameEngine::AddActivity(IActivity* activity)
 {
-	activity->Start(glfwGetTime());
+	activity->Start(GetTime());
 	this->activities.push(activity);
 }
 
-void GameEngine::StopTopActivity(void)
+void GameEngine::StopTopActivity()
 {
 	IActivity* currentActivity;
 	currentActivity = activities.top();
 	currentActivity->Stop();
 }
 
-IActivity* GameEngine::GetCurrentActivity(void)
+IActivity* GameEngine::GetCurrentActivity()
 {
 	return activities.top();
 }

@@ -6,7 +6,11 @@
 //  Copyright (c) 2013 fabien sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "TreArchive.h"
+
+#include "Base.h"
+#include "IffLexer.h"
+#include "PakArchive.h"
 
 TreArchive::TreArchive()
 {
@@ -29,7 +33,7 @@ void TreArchive::Release()
 
 bool TreArchive::InitFromFile(const char* filepath)
 {
-	char fullPath[512] ;
+	char fullPath[512];
 	fullPath[0] = '\0';
 
 	strcat(fullPath, GetBase());
@@ -75,7 +79,7 @@ void TreArchive::ReadEntry(ByteStream* stream, TreEntry* entry)
 	 */
 
 	entry->unknownFlag = stream->ReadByte();
-	for(int i=0 ; i < 65 ; i++)
+	for (int i = 0; i < 65; i++)
 		entry->name[i] = stream->ReadByte();
 	entry->data = this->data + stream->ReadUInt32LE();
 	entry->size = stream->ReadUInt32LE();
@@ -85,15 +89,15 @@ void TreArchive::Parse(void)
 {
 	ByteStream stream(this->data);
 
-	const size_t numEntries = stream.ReadUInt32LE() ;
+	const size_t numEntries = stream.ReadUInt32LE();
 
-	//The pointer to the start of the data. We are not using it.
-	stream.ReadUInt32LE() ;
+	// The pointer to the start of the data. We are not using it.
+	stream.ReadUInt32LE();
 
-	//Now read all entries
+	// Now read all entries
 	entries.reserve(numEntries);
-	for(size_t i =0; i < numEntries; i++){
-		TreEntry entry{};
+	for (size_t i = 0; i < numEntries; i++) {
+		TreEntry entry {};
 		ReadEntry(&stream, &entry);
 
 		size_t index = entries.size();
@@ -111,16 +115,16 @@ void TreArchive::Parse(void)
 
 void TreArchive::List(FILE* output)
 {
-	fprintf(output,"Listing content of TRE archive '%s'.\n",this->path);
-	fprintf(output,"    %lu entrie(s) found.\n",entries.size());
+	fprintf(output, "Listing content of TRE archive '%s'.\n", this->path);
+	fprintf(output, "    %lu entrie(s) found.\n", entries.size());
 
-	for (size_t i=0 ; i < entries.size() ; i++){
+	for (size_t i = 0; i < entries.size(); i++) {
 		TreEntry& entry = entries[i];
-		fprintf(output,"    Entry [%3lu] offset[0x%8lX]'%s' size: %lu bytes.\n",i,entry.data-this->data,entry.name,entry.size);
+		fprintf(output, "    Entry [%3lu] offset[0x%8lX]'%s' size: %lu bytes.\n", i, entry.data - this->data, entry.name, entry.size);
 	}
 }
 
-//Direct access to a TRE entry.
+// Direct access to a TRE entry.
 TreEntry* TreArchive::GetEntryByName(const char* entryName)
 {
 	auto it = mappedEntries.find(entryName);
@@ -129,7 +133,7 @@ TreEntry* TreArchive::GetEntryByName(const char* entryName)
 	return &entries[it->second];
 }
 
-bool TreArchive::GetPAKByName(const char* entryName,PakArchive* pak)
+bool TreArchive::GetPAKByName(const char* entryName, PakArchive* pak)
 {
 	TreEntry* entry = GetEntryByName(entryName);
 	if (entry == NULL)
@@ -152,46 +156,44 @@ size_t TreArchive::GetNumEntries(void)
 
 bool TreArchive::Decompress(const char* dstDirectory)
 {
-	for(size_t i = 0; i < mappedEntries.size(); i++) {
+	for (size_t i = 0; i < mappedEntries.size(); i++) {
 		TreEntry& entry = entries[i];
 
 		char fullPath[512];
 		fullPath[0] = '\0';
-		strcat(fullPath,dstDirectory);
+		strcat(fullPath, dstDirectory);
 
-		//Make sure the dstDirectory end with a /
+		// Make sure the dstDirectory end with a /
 		size_t dstSize = strlen(fullPath);
-		if (fullPath[dstSize-1] != '/')
-			strcat(fullPath,"/");
+		if (fullPath[dstSize - 1] != '/')
+			strcat(fullPath, "/");
 
-		//Remove the leading . and .. and /
+		// Remove the leading . and .. and /
 		char* cursor = entry.name;
-		while(*cursor == '.' ||
-			  *cursor == '/' ||
-			  *cursor == '\\')
+		while (*cursor == '.' || *cursor == '/' || *cursor == '\\')
 			cursor++;
 		strcat(fullPath, cursor);
 
-		//Convert '\\' to '/'
+		// Convert '\\' to '/'
 		size_t sizeFullPath = strlen(fullPath);
-		for (int i =0 ; i < sizeFullPath ; i++){
-			if (fullPath[i] =='\\')
+		for (int i = 0; i < sizeFullPath; i++) {
+			if (fullPath[i] == '\\')
 				fullPath[i] = '/';
 		}
 
-		//Recursively create the directories
+		// Recursively create the directories
 		CreateDirectories(fullPath);
 
-		//Write file !
-		printf("Decompressing TRE file: %lu '%s' %lu (bytes).\n",i,fullPath,entry.size);
-		FILE* file = fopen(fullPath,"wb");
+		// Write file !
+		printf("Decompressing TRE file: %lu '%s' %lu (bytes).\n", i, fullPath, entry.size);
+		FILE* file = fopen(fullPath, "wb");
 		fwrite(entry.data, 1, entry.size, file);
 		fclose(file);
 
 		const char* ext = fullPath + strlen(fullPath) - 4;
 		if (strcmp(ext, ".IFF") == 0) {
 			strcat(fullPath, ".dump");
-			FILE* iffFile = fopen(fullPath,"w");
+			FILE* iffFile = fopen(fullPath, "w");
 			IffLexer lexer;
 			lexer.InitFromRAM(entry);
 			lexer.List(iffFile);

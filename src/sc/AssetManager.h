@@ -8,16 +8,15 @@
 
 #pragma once
 
-#include <vector>
 #include <array>
+#include <vector>
 
 #include "ShapeIDs.h"
+#include "TreArchive.h"
 
-class TreArchive;
 class PakArchive;
 
-class AssetManager
-{
+class AssetManager {
 public:
 	enum TreID {
 		TRE_GAMEFLOW,

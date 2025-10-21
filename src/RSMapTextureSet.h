@@ -11,16 +11,15 @@
 #include <cstdint>
 #include <cstdio>
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 class PakArchive;
 class RSImage;
 
-//TODO: CHANGE CONSTRUCTORE TO USE IFF and MapImageEntry!!!
+// TODO: CHANGE CONSTRUCTORE TO USE IFF and MapImageEntry!!!
 
-struct MapImageEntry
-{
+struct MapImageEntry {
 	uint16_t startingIDs;
 	char name[8];
 
@@ -31,8 +30,7 @@ struct MapImageEntry
 	uint8_t unknown3;
 };
 
-class RSMapTextureSet
-{
+class RSMapTextureSet {
 public:
 	RSMapTextureSet();
 	~RSMapTextureSet();

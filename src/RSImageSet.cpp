@@ -8,7 +8,9 @@
 
 #include "RSImageSet.h"
 
-#include "precomp.h"
+#include <memory>
+
+#include "RLEShape.h"
 
 RSImageSet::RSImageSet()
 {
@@ -24,21 +26,21 @@ void RSImageSet::InitFromRAM(const ByteSlice& entry)
 	ByteStream index(entry.data);
 
 	uint32_t nextImage = index.ReadUInt32LE();
-	//uint8_t flag  = (nextImage & 0xFF000000) >> 24;
-	//printf("flag = %2X\n",flag);
+	// uint8_t flag  = (nextImage & 0xFF000000) >> 24;
+	// printf("flag = %2X\n",flag);
 	nextImage = nextImage & 0x00FFFFFF;
 
 	const uint32_t numImages = nextImage / 4;
-	for(size_t i = 0 ; i < numImages && (entry.data + nextImage < end); i++) {
-		uint8_t* currImage = entry.data+nextImage;
+	for (size_t i = 0; i < numImages && (entry.data + nextImage < end); i++) {
+		uint8_t* currImage = entry.data + nextImage;
 
 		nextImage = index.ReadUInt32LE();
 		nextImage = nextImage & 0x00FFFFFF;
-		//flag  = (nextImage & 0xFF000000) >> 24;
-		//printf("flag = %2X\n",flag);
+		// flag  = (nextImage & 0xFF000000) >> 24;
+		// printf("flag = %2X\n",flag);
 
 		size_t size = 0;
-		if (i == numImages - 1){
+		if (i == numImages - 1) {
 		} else {
 		}
 

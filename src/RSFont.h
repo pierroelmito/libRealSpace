@@ -14,15 +14,14 @@
 
 class RLEShape;
 
-class RSFont
-{
+class RSFont {
 public:
 	RSFont();
 	~RSFont();
+
 	RLEShape* GetShapeForChar(char c);
 	void InitFromPAK(const PakArchive& fontArchive);
 
 private:
 	std::vector<std::unique_ptr<RLEShape>> letters;
 };
-

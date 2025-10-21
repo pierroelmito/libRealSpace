@@ -6,8 +6,9 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "RSPalette.h"
 
+#include "IffLexer.h"
 
 RSPalette::RSPalette()
 {
@@ -27,20 +28,24 @@ RSPalette RSPalette::LoadFromFile(const char* file)
 	return palette;
 }
 
-VGAPalette* RSPalette::GetColorPalette(void){
+VGAPalette* RSPalette::GetColorPalette(void)
+{
 	return &this->colors;
 }
 
-VGAPalette* RSPalette::GetBWPalette(void){
+VGAPalette* RSPalette::GetBWPalette(void)
+{
 	return &this->bwColors;
 }
 
-void RSPalette::SetColorFlag(uint32_t flag){
+void RSPalette::SetColorFlag(uint32_t flag)
+{
 	this->colorFlag = flag;
 }
 
-void RSPalette::SetBWFlag(uint32_t flag){
-	this->bwFlag  =flag;
+void RSPalette::SetBWFlag(uint32_t flag)
+{
+	this->bwFlag = flag;
 }
 
 void RSPalette::ParsePALT(IffChunk* chunk)
@@ -49,9 +54,9 @@ void RSPalette::ParsePALT(IffChunk* chunk)
 
 	this->colorFlag = stream.ReadUInt32LE();
 
-	Texel texel;
+	Color texel;
 
-	for(int i = 0 ; i < 256 ; i++){
+	for (int i = 0; i < 256; i++) {
 		texel.r = stream.ReadByte();
 		texel.g = stream.ReadByte();
 		texel.b = stream.ReadByte();
@@ -61,25 +66,25 @@ void RSPalette::ParsePALT(IffChunk* chunk)
 		else
 			texel.a = 255;
 
-		//Since VGA palette RGB are on 6 bits and not 8, we need to adjust
-		texel.r *= 255/63.0f;
-		texel.g *= 255/63.0f;
-		texel.b *= 255/63.0f;
+		// Since VGA palette RGB are on 6 bits and not 8, we need to adjust
+		texel.r *= 255 / 63.0f;
+		texel.g *= 255 / 63.0f;
+		texel.b *= 255 / 63.0f;
 
 		colors.SetColor(i, texel);
 	}
 }
 
-void RSPalette::ParseBLWH(IffChunk* chunk){
+void RSPalette::ParseBLWH(IffChunk* chunk)
+{
 
 	ByteStream stream(chunk->data);
 
 	this->bwFlag = stream.ReadUInt32LE();
 
+	Color texel;
 
-	Texel texel;
-
-	for(int i = 0 ; i < 256 ; i++){
+	for (int i = 0; i < 256; i++) {
 		texel.r = stream.ReadByte();
 		texel.g = stream.ReadByte();
 		texel.b = stream.ReadByte();
@@ -89,9 +94,9 @@ void RSPalette::ParseBLWH(IffChunk* chunk){
 		else
 			texel.a = 255;
 
-		texel.r *= 255/63.0f;
-		texel.g *= 255/63.0f;
-		texel.b *= 255/63.0f;
+		texel.r *= 255 / 63.0f;
+		texel.g *= 255 / 63.0f;
+		texel.b *= 255 / 63.0f;
 		bwColors.SetColor(i, texel);
 	}
 }
@@ -100,9 +105,9 @@ void RSPalette::ParseCMAP(IffChunk* chunk)
 {
 	ByteStream stream(chunk->data);
 
-	Texel texel;
+	Color texel;
 
-	for(int i = 0 ; i < 256 ; i++){
+	for (int i = 0; i < 256; i++) {
 		texel.r = stream.ReadByte();
 		texel.g = stream.ReadByte();
 		texel.b = stream.ReadByte();
@@ -119,24 +124,24 @@ void RSPalette::InitFromIFF(IffLexer* lexer)
 	IffChunk* chunk = NULL;
 
 	chunk = lexer->GetChunkByID("PALT");
-	if (chunk != NULL){
+	if (chunk != NULL) {
 		foundPalette = true;
 		this->ParsePALT(chunk);
 	}
 
 	chunk = lexer->GetChunkByID("BLWH");
-	if (chunk != NULL){
+	if (chunk != NULL) {
 		foundPalette = true;
 		this->ParseBLWH(chunk);
 	}
 
 	chunk = lexer->GetChunkByID("CMAP");
-	if (chunk != NULL){
+	if (chunk != NULL) {
 		foundPalette = true;
 		this->ParseCMAP(chunk);
 	}
 
-	if (!foundPalette){
-		printf("Error: Unable to find palette with lexer '%s'\n",lexer->GetName());
+	if (!foundPalette) {
+		printf("Error: Unable to find palette with lexer '%s'\n", lexer->GetName());
 	}
 }

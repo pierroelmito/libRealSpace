@@ -8,16 +8,13 @@
 
 #include "SCGenericScene.h"
 
-#include "precomp.h"
+#include "main.h"
 
-#include <sstream>
-#include <iomanip>
-
+#include "IffLexer.h"
 #include "SCConvPlayer.h"
 #include "SCStrike.h"
 
-class SceneData
-{
+class SceneData {
 public:
 	struct Shot {
 		std::vector<int> pals;
@@ -27,8 +24,8 @@ public:
 	std::vector<Shot> shots;
 
 	struct Spr {
-		int shp{};
-		int target{};
+		int shp {};
+		int target {};
 		std::string label;
 		std::vector<uint16_t> seq;
 		std::vector<Area> rects;
@@ -36,9 +33,9 @@ public:
 	};
 
 	struct Scene {
-		uint16_t info{};
-		uint16_t colr{};
-		uint16_t tune{};
+		uint16_t info {};
+		uint16_t colr {};
+		uint16_t tune {};
 		std::vector<int> bgPals;
 		std::vector<int> fgPals;
 		std::vector<int> bgShps;
@@ -153,8 +150,7 @@ protected:
 	}
 };
 
-class GameFlow
-{
+class GameFlow {
 public:
 	void ApplyInteraction(IActivity& activity, SceneID from, int to);
 };
@@ -170,7 +166,7 @@ void GameFlow::ApplyInteraction(IActivity& activity, SceneID from, int to)
 	const bool isScene = sd.sceneIdToIndex.find(to) != sd.sceneIdToIndex.end();
 	if (isScene) {
 		activity.Stop();
-		Game.MakeActivity<SCGenericScene>(SceneID{ to });
+		Game.MakeActivity<SCGenericScene>(SceneID { to });
 	} else if (to == 0x129) {
 		Game.MakeActivity<SCStrike>();
 	} else if (to == 0x67 || to == 0x68) {
@@ -229,8 +225,8 @@ void SCCutScene::Init(int id)
 
 void SCCutScene::RunFrame(const FrameParams& p)
 {
-	const bool running = Frame2D(p, shapes, [&] {});
-	if (!running || p.pressed.contains(GLFW_KEY_ESCAPE)) {
+	const bool running = Frame2D(p, shapes, [&] { });
+	if (!running || IsKeyPressed(KEY_ESCAPE)) {
 		Stop();
 	}
 }
@@ -280,7 +276,7 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 
 	const std::map<int, std::pair<AnimMode, AnimMode>> specialAnimModes = {
 		{ 0x14, { AnimMode::First, AnimMode::Character } },
-		{ 0x11,  { AnimMode::Second, AnimMode::Character } },
+		{ 0x11, { AnimMode::Second, AnimMode::Character } },
 	};
 
 	for (const auto& spr : sc.sprs) {
@@ -298,7 +294,7 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 		if (!use)
 			continue;
 
-		char buffer[512]{};
+		char buffer[512] {};
 		sprintf(buffer, "0x%02x - %s - %s - 0x%02x", spr.shp, spr.label.c_str(), isScene ? "scene" : "??", spr.target);
 
 		Interaction& interaction = _interactions.emplace_back();
@@ -306,8 +302,8 @@ void SCGenericScene::InitFromScene(SceneID id, uint32_t sprMask)
 		interaction.areas = spr.rects;
 		interaction.quads = spr.quads;
 
-		const int target{ spr.target };
-		interaction.action = [target] (SCGenericScene* current) {
+		const int target { spr.target };
+		interaction.action = [target](SCGenericScene* current) {
 			GameFlow flow;
 			flow.ApplyInteraction(*current, current->_currentScene, target);
 		};
@@ -341,8 +337,8 @@ void SCGenericScene::Init(SceneID sc)
 	switch (sc.id) {
 	case Scene::WildcatBaseHangar.id:
 		targetMask = 0b10010100111100u;
-		//AddInteraction({ 103, 21, 237, 76 }, Scene::WildcatTentInside);
-		//AddInteraction({ 189, 102, 198, 124 }, Character::Janet);
+		// AddInteraction({ 103, 21, 237, 76 }, Scene::WildcatTentInside);
+		// AddInteraction({ 189, 102, 198, 124 }, Character::Janet);
 		break;
 	case Scene::WildcatBaseChangeroom.id:
 		targetMask = 0b1101111u;
@@ -354,15 +350,15 @@ void SCGenericScene::Init(SceneID sc)
 		break;
 	case Scene::WildcatTentOutside.id:
 		targetMask = 0b1110010u;
-		//AddInteraction({ 110, 0, 320, 107 }, Scene::WildcatTentWeapons);
+		// AddInteraction({ 110, 0, 320, 107 }, Scene::WildcatTentWeapons);
 		break;
 	case Scene::WildcatTentWeapons.id:
-		//InitShapes({
+		// InitShapes({
 		//	OptOutsideHanger,
 		//	OptTentOutside00,
-		//});
-		//AddInteraction({ 203, 28, 268, 67 }, Scene::WildcatTentOutside);
-		//AddInteraction({ 122, 73, 198, 111 }, Mission::M00);
+		// });
+		// AddInteraction({ 203, 28, 268, 67 }, Scene::WildcatTentOutside);
+		// AddInteraction({ 122, 73, 198, 111 }, Mission::M00);
 		break;
 	case Scene::Bar.id:
 		targetMask = 0b10111u;
@@ -381,7 +377,7 @@ void SCGenericScene::AddInteraction(Area area, SceneID sc, std::optional<int> cu
 {
 	Interaction& interaction = _interactions.emplace_back();
 	interaction.areas = { area };
-	interaction.action = [sc, cutscene] (SCGenericScene* current) {
+	interaction.action = [sc, cutscene](SCGenericScene* current) {
 		current->Stop();
 		if (sc.id != Scene::Exit.id) {
 			Game.MakeActivity<SCGenericScene>(sc);
@@ -395,7 +391,7 @@ void SCGenericScene::AddInteraction(Area area, Character ch)
 {
 	Interaction& interaction = _interactions.emplace_back();
 	interaction.areas = { area };
-	interaction.action = [ch] (SCGenericScene* current) {
+	interaction.action = [ch](SCGenericScene* current) {
 		current->Stop();
 		Game.MakeActivity<SCConvPlayer>().SetID(14);
 	};
@@ -405,7 +401,7 @@ void SCGenericScene::AddInteraction(Area area, Mission m)
 {
 	Interaction& interaction = _interactions.emplace_back();
 	interaction.areas = { area };
-	interaction.action = [m] (SCGenericScene* current) {
+	interaction.action = [m](SCGenericScene* current) {
 		current->Stop();
 		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar); // place to go after mission end
 		Game.MakeActivity<SCStrike>();
@@ -419,7 +415,7 @@ bool InsideQuad(Point2D p, const std::array<Point2D, 4>& quad)
 	for (int i = 0; i < 4; ++i) {
 		const Point2D a = quad[i];
 		const Point2D b = quad[(i + 1) % 4];
-		const auto d  = (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
+		const auto d = (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
 		if (d > 0)
 			pos++;
 		if (d < 0)
@@ -446,7 +442,7 @@ bool SCGenericScene::IsHovered(const Interaction& interaction) const
 
 void SCGenericScene::RunFrame(const FrameParams& p)
 {
-	if (p.pressed.contains(GLFW_KEY_F1))
+	if (IsKeyPressed(KEY_F1))
 		VGA.ShowPalette() = !VGA.ShowPalette();
 
 	const double t = p.activityTime;

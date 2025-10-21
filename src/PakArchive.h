@@ -12,24 +12,24 @@
 #include <cstdio>
 #include <vector>
 
-#include "ByteStream.h"
 #include "ByteSlice.h"
+#include "ByteStream.h"
 
-struct PakEntry : public ByteSlice
-{
+struct PakEntry : public ByteSlice {
 	uint8_t type;
 
 	// The mystery bytes at the end of the table.
 	// 0xE0 seems to indicate content. 0xFF indicates an empty entry.
-	enum ContentType {EMPTY = 0xFF, CONTENT = 0xE0};
+	enum ContentType { EMPTY = 0xFF,
+		CONTENT = 0xE0 };
 
-	static inline bool Compare(PakEntry* any, PakEntry* other){
+	static inline bool Compare(PakEntry* any, PakEntry* other)
+	{
 		return any->data < other->data;
 	}
 };
 
-class PakArchive
-{
+class PakArchive {
 public:
 	PakArchive();
 	~PakArchive();
@@ -49,21 +49,20 @@ public:
 
 	const char* GetName(void) const { return path; }
 
-	bool IsReady() const { return ready;}
+	bool IsReady() const { return ready; }
 	uint8_t* GetData() const { return this->data; }
 
 private:
-
-	bool ready{ false };
+	bool ready { false };
 
 	ByteStream stream;
 
 	void Parse(void);
 	uint8_t* data;
 	size_t size;
-	char path[512] ;
+	char path[512];
 	std::vector<PakEntry> entries;
 
 	// allows to know if we should free the TRE data
-	bool initalizedFromFile{ false };
+	bool initalizedFromFile { false };
 };

@@ -6,10 +6,5 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef libRealSpace_precomp_h
-#define libRealSpace_precomp_h
+#pragma once
 
-#include "../precomp.h"
-#include "main.h"
-
-#endif

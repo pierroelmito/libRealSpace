@@ -8,17 +8,13 @@
 
 #include "SCSelectWeaponsF16.h"
 
-#include "precomp.h"
+#include "main.h"
 
 #include "SCStrike.h"
 
-SCSelectWeaponF16::SCSelectWeaponF16()
-{
-}
+SCSelectWeaponF16::SCSelectWeaponF16() { }
 
-SCSelectWeaponF16::~SCSelectWeaponF16()
-{
-}
+SCSelectWeaponF16::~SCSelectWeaponF16() { }
 
 #if 0
 class RSVocSound
@@ -116,12 +112,12 @@ void SCSelectWeaponF16::Init()
 {
 	_font = FontManager.GetFont("");
 
-	wantedBg = { OPTSHPS,  OPTPALS, 5, 20, AnimMode::First };
+	wantedBg = { OPTSHPS, OPTPALS, 5, 20, AnimMode::First };
 	wantedBg.am = AnimMode::Cutscene;
 
 #if 0
 	const std::vector<std::string> items = {
-	#if 1
+#if 1
 		"..\\..\\DATA\\GAMEFLOW\\CONV.PAK",
 		"..\\..\\DATA\\GAMEFLOW\\CONVPALS.PAK",
 		"..\\..\\DATA\\GAMEFLOW\\CONVSHPS.PAK",
@@ -146,8 +142,8 @@ void SCSelectWeaponF16::Init()
 		"..\\..\\DATA\\MIDGAMES\\MIDGAMES.PAK",
 		"..\\..\\DATA\\MIDGAMES\\RMUSIC.PAK",
 		"..\\..\\DATA\\MIDGAMES\\RSOUNDFX.PAK",
-	#endif
-	#if 0
+#endif
+#if 0
 		//"..\\..\\DATA\\FONTS\\NEWBUTNS.SHP",
 		//"..\\..\\DATA\\FONTS\\NODISK3.SHP",
 		  "..\\..\\DATA\\MIDGAMES\\MMUSIC.PAK",
@@ -170,7 +166,7 @@ void SCSelectWeaponF16::Init()
 		//"..\\..\\DATA\\SOUND\\SOUNDFX.ROL",
 		//"..\\..\\DATA\\SOUND\\STRIKE.AD",
 		//"..\\..\\DATA\\SOUND\\STRIKE.MT",
-	#endif
+#endif
 	};
 
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
@@ -188,27 +184,29 @@ void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 	if (soundIndex != soundWanted) {
 		soundIndex = soundWanted;
 		testSound = {};
-		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\RSOUNDFX.PAK";
-		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
-		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1.PAK";
-		//const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
-		//auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-		//const char* pakPath = "..\\..\\DATA\\SOUND\\DSOUNDFX.PAK";
-		//auto& treGameFlow = Assets.tres[AssetManager::TRE_SOUND];
+		// const char* pakPath = "..\\..\\DATA\\MIDGAMES\\RSOUNDFX.PAK";
+		// const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
+		// const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1.PAK";
+		// const char* pakPath = "..\\..\\DATA\\MIDGAMES\\MID1VOC.PAK";
+		// auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
+		// const char* pakPath = "..\\..\\DATA\\SOUND\\DSOUNDFX.PAK";
+		// auto& treGameFlow = Assets.tres[AssetManager::TRE_SOUND];
 		const char* pakPath = MID2VOC;
 		auto& treGameFlow = Assets.tres[AssetManager::TRE_MGSPEECH];
 		auto* entry = treGameFlow.GetEntryByName(pakPath);
 		if (entry) {
 			auto pak = GetPak(pakPath, *entry);
-			testSound.InitFromRAM(pak->GetEntry(std::min(pak->GetNumEntries() - 1, soundIndex)));
+			testSound.InitFromRAM(
+				pak->GetEntry(std::min(pak->GetNumEntries() - 1, soundIndex)));
 		}
 	}
 
 	static int played = 0;
 	if (testSound.Data().data != nullptr) {
-		Audio.Update([&] (int sr, int chan, std::vector<float>& buffer) {
+		Audio.Update([&](int sr, int chan, std::vector<float>& buffer) {
 			for (float& f : buffer) {
-				const uint8_t s = testSound.Data().data[(testSound.Data().sampelRate * ((played++)) / sr) % testSound.Data().sz];
+				const uint8_t s = testSound.Data()
+									  .data[(testSound.Data().sampelRate * ((played++)) / sr) % testSound.Data().sz];
 				f = (s / 255.0f) - 0.5f;
 			}
 		});
@@ -228,32 +226,34 @@ void SCSelectWeaponF16::RunFrame(const FrameParams& p)
 			s->SetColorOffset(uint8_t(colOfs));
 	}
 
-	if (p.pressed.contains(GLFW_KEY_ENTER)) {
+	if (IsKeyPressed(KEY_ENTER)) {
 		VGA.ShowPalette() = false;
 		Stop();
 		Game.MakeActivity<SCStrike>();
 	}
 
-	if (p.pressed.contains(GLFW_KEY_F1))
+	if (IsKeyPressed(KEY_F1))
 		VGA.ShowPalette() = !VGA.ShowPalette();
-	if (p.pressed.contains(GLFW_KEY_A))
-		wantedBg.shp+= 1;
-	if (p.pressed.contains(GLFW_KEY_Q))
+	if (IsKeyPressed(KEY_A))
+		wantedBg.shp += 1;
+	if (IsKeyPressed(KEY_Q))
 		wantedBg.shp = std::max(0, wantedBg.shp - 1);
-	if (p.pressed.contains(GLFW_KEY_W))
+	if (IsKeyPressed(KEY_W))
 		wantedBg.pal += 1;
-	if (p.pressed.contains(GLFW_KEY_S))
+	if (IsKeyPressed(KEY_S))
 		wantedBg.pal = std::max(0, wantedBg.pal - 1);
-	if (p.pressed.contains(GLFW_KEY_E))
+	if (IsKeyPressed(KEY_E))
 		colOfs += 1;
-	if (p.pressed.contains(GLFW_KEY_D))
+	if (IsKeyPressed(KEY_D))
 		colOfs = std::max(0, colOfs - 1);
-	if (p.pressed.contains(GLFW_KEY_R))
+	if (IsKeyPressed(KEY_R))
 		soundWanted += 1;
-	if (p.pressed.contains(GLFW_KEY_F))
+	if (IsKeyPressed(KEY_F))
 		soundWanted = soundWanted == 0 ? soundWanted : soundWanted - 1;
 
 	Frame2D(p, shapes, [&] {
-		VGA.PrintText(_font, { 10, 10 }, uint8_t(p.activityTime * 40), 3, 5, "pal:%d - shp:%d - ofs:%d - sound: %d", currentBg.pal, currentBg.shp, colOfs, soundIndex);
+		VGA.PrintText(_font, { 10, 10 }, uint8_t(p.activityTime * 40), 3, 5,
+			"pal:%d - shp:%d - ofs:%d - sound: %d", currentBg.pal,
+			currentBg.shp, colOfs, soundIndex);
 	});
 }

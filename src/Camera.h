@@ -10,22 +10,10 @@
 
 #include <cmath>
 
-#include "HandmadeMath.h"
+#include "Math.h"
 
-#include "Matrix.h"
-
-class RSCamera
-{
+class RSCamera {
 public:
-	void SetPersective(float fovy, float aspect, float zNear, float zFar);
-	void SetCam(const RSVector3& position, const RSVector3& lookAtv);
-	void SetView(const RSMatrix& view) { viewChanged = true; this->view = view; }
-	const RSMatrix& getView(bool* changed = nullptr) const;
-	const RSMatrix& getProj() const { return proj; }
-	const RSVector3 getPosition() const { return { view.Elements[3][0], view.Elements[3][1], view.Elements[3][2] }; }
-
-protected:
-	RSMatrix view;
-	RSMatrix proj;
-	mutable bool viewChanged{ false };
+	void SetFov(float fovy);
+	void SetCam(const Vector3& position, const Vector3& lookAtv);
 };

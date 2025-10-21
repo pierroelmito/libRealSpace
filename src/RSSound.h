@@ -12,14 +12,13 @@
 
 #include "ByteSlice.h"
 
-class RSVocSoundData
-{
+class RSVocSoundData {
 public:
-	struct SoundData
-	{
-		uint32_t sampelRate{};
-		uint32_t sz{};
-		const uint8_t* data{};;
+	struct SoundData {
+		uint32_t sampelRate {};
+		uint32_t sz {};
+		const uint8_t* data {};
+		;
 	};
 	struct BlockType {
 		enum Type {
@@ -36,13 +35,13 @@ public:
 	};
 	bool InitFromRAM(const ByteSlice& bs);
 	const SoundData& Data() const { return data; }
+
 protected:
 	SoundData data;
 };
 
-class RSSoundInstance
-{
+class RSSoundInstance {
 public:
-	RSVocSoundData* data{};
-	double startTime{};
+	RSVocSoundData* data {};
+	double startTime {};
 };

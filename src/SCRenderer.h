@@ -8,29 +8,22 @@
 
 #pragma once
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 #include <functional>
-#include <optional>
-#include <map>
-#include <string>
-#include <memory>
 
-#include "Matrix.h"
-#include "Quaternion.h"
-#include "Texture.h"
 #include "Camera.h"
+#include "Texture.h"
 
 class RSEntity;
 class Triangle;
 class RSArea;
 class MapVertex;
 
-class SCRenderer
-{
+class SCRenderer {
 public:
-	 SCRenderer();
+	SCRenderer();
 	~SCRenderer();
 
 	void Prepare();
@@ -38,30 +31,31 @@ public:
 	void Release();
 	void ClearCache();
 	void MakeContext();
-	void DrawModel(const RSEntity* object, size_t lodLevel, const RSMatrix& world);
+	void DrawModel(const RSEntity* object, size_t lodLevel, const Matrix& world);
 	bool CreateTextureInGPU(RSTexture* texture);
 	bool UploadTextureContentToGPU(RSTexture* texture);
 	void DeleteTextureInGPU(RSTexture* texture);
 
-	static void UpdateBitmapQuad(Texel* data, uint32_t width, uint32_t height, float fade);
+	static void UpdateBitmapQuad(Color* data, uint32_t width, uint32_t height,
+		float fade);
 
 	VGAPalette& GetPalette() { return palette; }
 
 #if USE_SHADER_PIPELINE != 1
-	//Map Rendering
-	//For research methods: Those should be deleted soon:
-	void RenderObjects(const RSArea& area,size_t blockID);
-	void RenderVerticeField(RSVector3* vertices, int numVertices);
+	// Map Rendering
+	// For research methods: Those should be deleted soon:
+	void RenderObjects(const RSArea& area, size_t blockID);
+	void RenderVerticeField(Vector3* vertices, int numVertices);
 	void RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock);
 #endif
 
-	using AddVertex = std::function<void(uint32_t, const RSVector3&, const RSVector3&, const float*, const float*)>;
+	using AddVertex = std::function<void(Texture&, const Vector3&, const Vector3&, const float*, const float*)>;
 
-	bool IsTextured(const MapVertex* tri0,const MapVertex* tri1,const MapVertex* tri2);
-	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area,const MapVertex& tri0,const MapVertex& tri1,const MapVertex& tri2,int triangleType);
-	void RenderColoredTriangle (const AddVertex& vfunc, const MapVertex& tri0,const MapVertex& tri1,const MapVertex& tri2);
+	bool IsTextured(const MapVertex* tri0, const MapVertex* tri1, const MapVertex* tri2);
+	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area, const MapVertex& tri0, const MapVertex& tri1, const MapVertex& tri2, int triangleType);
+	void RenderColoredTriangle(const AddVertex& vfunc, const MapVertex& tri0, const MapVertex& tri1, const MapVertex& tri2);
 	void RenderQuad(const AddVertex& vfunc, const RSArea& area, const MapVertex& currentVertex, const MapVertex& rightVertex, const MapVertex& bottomRightVertex, const MapVertex& bottomVertex, bool renderTexture);
-	void RenderBlock(const AddVertex& vfunc, const RSArea& area,int LOD, int blockID,bool renderTexture);
+	void RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD, int blockID, bool renderTexture);
 	void RenderWorldSolid(const RSArea& area, int LOD, double gtime);
 	void RenderWorldGround(const RSArea& area, int LOD, double gtime);
 	void RenderWorldModels(const RSArea& area, int LOD, double gtime);
@@ -74,33 +68,33 @@ public:
 			SKY = 2,
 			CLOUDS = 4,
 		};
-		uint32_t flags{ CLEAR_COLORS };
+		uint32_t flags { CLEAR_COLORS };
 	};
+
 	void Draw3D(const Render3DParams& params, std::function<void()>&& f);
 
 	RSCamera& GetCamera() { return camera; }
-	void SetLight(const RSVector3& position);
+	void SetLight(const Vector3& position);
 
 	bool IsPaused() const { return paused; }
-	void Pause(){ paused = true; }
+	void Pause() { paused = true; }
+
 	void Prepare(RSEntity* object);
-	static RSVector3 GetNormal(const RSEntity* object, const Triangle* triangle);
-	static RSVector3 GetNormal(const RSVector3& v0, const RSVector3& v1, const RSVector3& v2);
+
+	static Vector3 GetNormal(const RSEntity* object, const Triangle* triangle);
+	static Vector3 GetNormal(const Vector3& v0, const Vector3& v1, const Vector3& v2);
+
+	static void Log(const char* tag, uint32_t log_level, uint32_t log_item_id, const char* message_or_null, uint32_t line_nr, const char* filename_or_null, void* user_data);
 
 private:
 	VGAPalette palette;
 	RSCamera camera;
-	RSVector3 lightDir;
-	bool initialized{ false };
-	bool running;
-	bool paused;
+	Vector3 lightDir;
+
+	bool initialized { false };
+	bool running{};
+	bool paused{};
 };
 
 using R3Dp = SCRenderer::Render3DParams;
 
-/*
-void IMG_Init();
-void IMG_ShowPalette(Palette* palette,int cellSize);
-void IMG_ShowImage(uint8_t* image, uint16_t width, uint16_t height,Palette* palette,int zoom,bool wait);
-void IMG_ShowModel(RealSpaceObject* object,Palette* palette );
-*/

@@ -3,8 +3,7 @@
 
 #include <functional>
 
-class RSAudio
-{
+class RSAudio {
 public:
 	using SamplerCB = std::function<void(int, int, std::vector<float>&)>;
 
@@ -16,7 +15,7 @@ public:
 
 protected:
 	static constexpr int BufSize = 128;
-	int bufPos{ 0 };
-	int count{ 0 };
+	int bufPos { 0 };
+	int count { 0 };
 	float buf[BufSize];
 };

@@ -6,54 +6,52 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "RSImage.h"
 
+#include "SCRenderer.h"
 
+extern SCRenderer Renderer;
 
-RSImage::RSImage() :
-data(0),
-dirty(false),
-palette(NULL){
-    
-}
-
-RSImage::~RSImage(){
-    if (data)
-        free(data);
-}
-
-void RSImage::Create(const char name[8],uint32_t width,uint32_t height, uint32_t flags)
+RSImage::RSImage()
 {
-    strcpy(this->name,name);
+}
+
+RSImage::~RSImage()
+{
+	if (data)
+		free(data);
+}
+
+void RSImage::Create(const char name[8], uint32_t width, uint32_t height, uint32_t flags)
+{
+	strcpy(this->name, name);
 	this->flags = flags;
 	this->width = width;
-    this->height = height;
-    this->data = (uint8_t*)malloc(this->width*this->height);
+	this->height = height;
+	this->data = (uint8_t*)malloc(this->width * this->height);
 	this->palette = &Renderer.GetPalette();
-    
-    this->texture.Set(this);
-    dirty = true;
+
+	this->texture.Set(*this);
+	dirty = true;
 }
 
-void RSImage::UpdateContent(uint8_t* src){
-    
-    memcpy(this->data,src, width * height);
-    this->dirty = true;
-    
+void RSImage::UpdateContent(uint8_t* src)
+{
+	memcpy(this->data, src, width * height);
+	this->dirty = true;
 }
 
 void RSImage::SyncTexture()
 {
-	//Check that we have a texture with an id on the GPU
-	if ((texture.locFlag & RSTexture::VRAM) == 0){
-		//Create texture in the GPU
+	// Check that we have a texture with an id on the GPU
+	if ((texture.locFlag & RSTexture::VRAM) == 0) {
 		Renderer.CreateTextureInGPU(&texture);
 		texture.locFlag |= RSTexture::VRAM;
 	}
 
-	//Check if we are synchornized with GPU
-	if (this->dirty){
-		texture.UpdateContent(this);
+	// Check if we are synchornized with GPU
+	if (this->dirty) {
+		texture.UpdateContent(*this);
 		Renderer.UploadTextureContentToGPU(&texture);
 		dirty = false;
 	}
@@ -67,7 +65,7 @@ uint8_t* RSImage::GetData()
 
 void RSImage::ClearContent()
 {
-	memset(this->data,0,this->width*this->height);
+	memset(this->data, 0, this->width * this->height);
 	dirty = true;
 }
 

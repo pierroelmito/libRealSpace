@@ -10,8 +10,7 @@
 
 #include "IActivity.h"
 
-class SCDogFightMenu : public IActivity
-{
+class SCDogFightMenu : public IActivity {
 public:
 	SCDogFightMenu();
 	~SCDogFightMenu();
@@ -21,4 +20,3 @@ public:
 
 protected:
 };
-

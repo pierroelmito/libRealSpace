@@ -11,45 +11,40 @@
 #include "IActivity.h"
 #include "RSArea.h"
 
-class Plane
-{
+class Plane {
 public:
-	RSVector3 pos{};
-	RSVector3 dir{ 0, 0, 1 };
-	RSVector3 up{ 0, 1, 0 };
-	RSEntity* _entity{};
+	Vector3 pos {};
+	Vector3 dir { 0, 0, 1 };
+	Vector3 up { 0, 1, 0 };
+	RSEntity* _entity {};
 };
 
-class Pilot
-{
+class Pilot {
 public:
-	RSVector3 lookAt{};
+	Vector3 lookAt {};
 };
 
-struct Jet
-{
+struct Jet {
 	std::unique_ptr<RSEntity> entity;
-	RSQuaternion orientation;
-	RSVector3 position;
+	Quaternion orientation;
+	Vector3 position;
 };
 
-class SCStrike : public IActivity
-{
+class SCStrike : public IActivity {
 public:
 	SCStrike();
 	~SCStrike();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;
-	void ComputeMove(const RSMatrix& transform, GTime dt);
-	RSMatrix ComputeTransform(bool cockpit, bool lookAt);
+	void ComputeMove(const Matrix& transform, GTime dt);
+	Matrix ComputeTransform(bool cockpit, bool lookAt);
 
 protected:
 	Pilot pilot;
 	Plane plane;
 
-	RSArea area{};
-	std::unique_ptr<RSEntity> _cockpit{};
+	RSArea area {};
+	std::unique_ptr<RSEntity> _cockpit {};
 	std::vector<Jet> jets;
 };
-

@@ -6,11 +6,17 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "RSArea.h"
 
 #include <cassert>
 
 #include "AssetManager.h"
+#include "IffLexer.h"
+#include "PakArchive.h"
+#include "RSMapTextureSet.h"
+#include "SCRenderer.h"
+
+extern SCRenderer Renderer;
 
 RSArea::RSArea()
 {
@@ -23,7 +29,7 @@ RSArea::~RSArea()
 
 void RSArea::ParseMetadata()
 {
-	//Meta are in the first PAK file.
+	// Meta are in the first PAK file.
 
 	printf("Parsing file[0] (Metadatas)\n");
 
@@ -39,7 +45,7 @@ void RSArea::ParseMetadata()
 		return;
 	}
 
-	//Parse BLOX containing the Elevation, Triangles and OBJS.
+	// Parse BLOX containing the Elevation, Triangles and OBJS.
 	IffChunk* blox = lexer.GetChunkByID("BLOX");
 	if (blox == NULL) {
 		printf("Error while parsing Metadata: Cannot find a BLOX chunk.\n");
@@ -55,7 +61,7 @@ void RSArea::ParseMetadata()
 	 At the end change. RHODEI / CANYON / QUEBEC / MAURITAN etc.....
 	 */
 
-	//Elevation format entry is 46 bytes long:
+	// Elevation format entry is 46 bytes long:
 
 	// 2 bytes 0F 00
 	// 2 bytes
@@ -65,51 +71,50 @@ void RSArea::ParseMetadata()
 	// 1 byte
 	// 4 bytes 00 20 4e 00 00
 
-	//13 bytes: A filename
-	//13 bytes: An other filename
+	// 13 bytes: A filename
+	// 13 bytes: An other filename
 
 	IffChunk* elev = lexer.GetChunkByID("ELEV");
 	printf("Content of elevation chunk:\n");
 	size_t numEleRecords = elev->size / 46;
 	ByteStream elevStream(elev->data);
-	for(size_t e=0 ; e < numEleRecords ; e++)
-	{
+	for (size_t e = 0; e < numEleRecords; e++) {
 
-		printf("elev record [%zu] ",e);
+		printf("elev record [%zu] ", e);
 		uint8_t unknownsElev[20];
-		for(int i=0; i < 20 ; i++)
+		for (int i = 0; i < 20; i++)
 			unknownsElev[i] = elevStream.ReadByte();
 
 		char elevName[14];
-		for(int i=0; i < 13 ; i++)
+		for (int i = 0; i < 13; i++)
 			elevName[i] = elevStream.ReadByte();
-		elevName[13]  = 0;
+		elevName[13] = 0;
 
 		char elevOtherName[14];
-		for(int i=0; i < 13 ; i++)
+		for (int i = 0; i < 13; i++)
 			elevOtherName[i] = elevStream.ReadByte();
-		elevOtherName[13]  = 0;
+		elevOtherName[13] = 0;
 
-		for (int i=0; i<20 ; i++){
-			printf("%2X ",unknownsElev[i]);
+		for (int i = 0; i < 20; i++) {
+			printf("%2X ", unknownsElev[i]);
 		}
 
-		printf("%-13s %-13s \n",elevName,elevOtherName);
+		printf("%-13s %-13s \n", elevName, elevOtherName);
 	}
 
 	IffChunk* atri = lexer.GetChunkByID("ATRI");
 	printf("Content of trigo chunk:\n");
 
 	ByteStream triStream(atri->data);
-	for (int i=0; i < 40; i++) {
-		printf(" %2X",triStream.ReadByte());
+	for (int i = 0; i < 40; i++) {
+		printf(" %2X", triStream.ReadByte());
 	}
 	char triFileName[13];
-	for (int i=0; i < 13; i++)
+	for (int i = 0; i < 13; i++)
 		triFileName[i] = triStream.ReadByte();
-	printf(" '%-13s' \n",triFileName);
+	printf(" '%-13s' \n", triFileName);
 
-	//IffChunk* objs = lexer.GetChunkByID("OBJS");
+	// IffChunk* objs = lexer.GetChunkByID("OBJS");
 	/*
 	 OBJS format:
 	  4 bytes unknown :
@@ -136,22 +141,22 @@ void RSArea::ParseMetadata()
 		return;
 	}
 
-	//Num texture sets
-	size_t numTexturesSets = txmsMaps->size/12;
-	//printf("This area features %lu textureSets references.\n",numTexturesSets);
+	// Num texture sets
+	size_t numTexturesSets = txmsMaps->size / 12;
+	// printf("This area features %lu textureSets references.\n",numTexturesSets);
 
 	ByteStream textureRefStrean(txmsMaps->data);
 
-	for (size_t i=0; i < numTexturesSets ; i++) {
-		/*uint16_t fastID =*/ textureRefStrean.ReadUShort();
+	for (size_t i = 0; i < numTexturesSets; i++) {
+		/*uint16_t fastID =*/textureRefStrean.ReadUShort();
 		char setName[8];
-		for(int n=0; n < 8 ; n++){
+		for (int n = 0; n < 8; n++) {
 			setName[n] = textureRefStrean.ReadByte();
 		}
-		/*uint8_t unknown =*/ textureRefStrean.ReadByte();
-		/*uint8_t numImages =*/ textureRefStrean.ReadByte();
+		/*uint8_t unknown =*/textureRefStrean.ReadByte();
+		/*uint8_t numImages =*/textureRefStrean.ReadByte();
 
-	   // printf("Texture Set Ref [%3lu] 0x%2X[%-8s] %02X (%2u files).\n",i,fastID,setName,unknown,numImages);
+		// printf("Texture Set Ref [%3lu] 0x%2X[%-8s] %02X (%2u files).\n",i,fastID,setName,unknown,numImages);
 	}
 
 	/*
@@ -188,11 +193,11 @@ void RSArea::ParseObjects()
 	const PakEntry& objectsFilesLocation = archive->GetEntry(5);
 
 	PakArchive objectFiles;
-	objectFiles.InitFromRAM("PAK Objects from RAM",objectsFilesLocation);
+	objectFiles.InitFromRAM("PAK Objects from RAM", objectsFilesLocation);
 
-	printf("This .OBJ features %lu entries.\n",objectFiles.GetNumEntries());
+	printf("This .OBJ features %lu entries.\n", objectFiles.GetNumEntries());
 
-	for(size_t i = 0 ; i < objectFiles.GetNumEntries() ; i++){
+	for (size_t i = 0; i < objectFiles.GetNumEntries(); i++) {
 		const PakEntry& entry = objectFiles.GetEntry(i);
 
 		if (entry.size == 0)
@@ -200,17 +205,17 @@ void RSArea::ParseObjects()
 
 		ByteStream sizeGetter(entry.data);
 		uint16_t numObjs = sizeGetter.ReadUShort();
-		printf("OBJ files %lu features %d objects.\n",i,numObjs);
+		printf("OBJ files %lu features %d objects.\n", i, numObjs);
 
-		//if (i != 97)
-		//    continue;
+		// if (i != 97)
+		//     continue;
 
-		for(int j = 0 ; j < numObjs; j++) {
+		for (int j = 0; j < numObjs; j++) {
 			ByteStream reader(entry.data + OBJ_ENTRY_NUM_OBJECTS_FIELD + OBJ_ENTRY_SIZE * j);
 
 			MapObject mapObject;
 
-			for(int k=0 ; k <8 ; k++)
+			for (int k = 0; k < 8; k++)
 				mapObject.name[k] = reader.ReadByte();
 			mapObject.name[8] = 0;
 
@@ -220,14 +225,14 @@ void RSArea::ParseObjects()
 			const uint8_t unknown12 = reader.ReadByte();
 			const uint8_t unknown13 = reader.ReadByte();
 
-			for(int k=0 ; k <8 ; k++)
+			for (int k = 0; k < 8; k++)
 				mapObject.destroyedName[k] = reader.ReadByte();
 			mapObject.destroyedName[8] = 0;
 
 			// decoding is incorrect...
-			const auto Read32bitPos = [&reader] (const char* lbl) {
+			const auto Read32bitPos = [&reader](const char* lbl) {
 #if 1
-				int32_t v[4]{};
+				int32_t v[4] {};
 				v[0] = reader.ReadByte();
 				v[1] = reader.ReadByte();
 				v[2] = reader.ReadByte();
@@ -243,8 +248,8 @@ void RSArea::ParseObjects()
 			};
 
 			// work for 0, 1, -1 but is probably wrong for other values :-/
-			const auto Read32bitTransform = [&reader] (const char* lbl) {
-				int32_t v[4]{};
+			const auto Read32bitTransform = [&reader](const char* lbl) {
+				int32_t v[4] {};
 				v[0] = reader.ReadByte();
 				v[1] = reader.ReadByte();
 				v[2] = reader.ReadByte();
@@ -254,7 +259,7 @@ void RSArea::ParseObjects()
 				if ((r & (1 << 23)) != 0) {
 					r = -((~(r | 0xff000000)) + 1);
 				}
-				//printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
+				// printf("%s: %02X %02X %02X %02X -> %d\n", lbl, v[0], v[1], v[2], v[3], r);
 				return float(r);
 			};
 
@@ -269,13 +274,13 @@ void RSArea::ParseObjects()
 			// zero separator??
 			const int count = 1;
 			uint8_t unknowns[count];
-			for(int k=0 ; k <count; k++) {
+			for (int k = 0; k < count; k++) {
 				unknowns[k] = reader.ReadByte();
 				assert(unknowns[k] == 0);
 			}
 
 			// looks like a 3x3 transform matrix
-			float transform[3][3]{};
+			float transform[3][3] {};
 			for (int k = 0; k < 3; ++k) {
 				for (int l = 0; l < 3; ++l) {
 					char buffer[4] = "tXY";
@@ -314,8 +319,7 @@ void RSArea::ParseObjects()
 				unknown11,
 				unknown12,
 				unknown13,
-				mapObject.destroyedName
-			);
+				mapObject.destroyedName);
 
 			objects[i].push_back(mapObject);
 		}
@@ -326,24 +330,24 @@ void RSArea::ParseObjects()
 
 void RSArea::ParseTriFile(const PakEntry* entry)
 {
-	const auto readCoord = [] (int32_t coo) -> float {
-		return (coo>>8) + (coo&0x000000FF)/255.0;
+	const auto readCoord = [](int32_t coo) -> float {
+		return (coo >> 8) + (coo & 0x000000FF) / 255.0;
 	};
 
-	RSVector3* vertices = new RSVector3[300];
+	Vector3* vertices = new Vector3[300];
 
 	ByteStream stream(entry->data);
-	/*const auto v0 =*/ stream.ReadInt32LE();
-	/*const auto v1 =*/ stream.ReadInt32LE();
+	/*const auto v0 =*/stream.ReadInt32LE();
+	/*const auto v1 =*/stream.ReadInt32LE();
 	const float scale = 1.0f / 2000.0f;
-	for (int i=0 ; i < 300; i++) {
+	for (int i = 0; i < 300; i++) {
 		const float x = scale * readCoord(stream.ReadInt32LE());
 		const float z = scale * readCoord(stream.ReadInt32LE());
 		const float y = scale * readCoord(stream.ReadInt32LE());
 		vertices[i] = { x, y, z };
 	}
 
-	//Render them
+	// Render them
 	Renderer.RenderVerticeField(vertices, 300);
 
 	delete[] vertices;
@@ -355,17 +359,17 @@ void RSArea::ParseTrigo()
 
 	const PakEntry& entry = archive->GetEntry(4);
 
-	printf(".TRI file is %lu bytes.\n",entry.size);
+	printf(".TRI file is %lu bytes.\n", entry.size);
 	// .TRI is a PAK
 	PakArchive triFiles;
-	triFiles.InitFromRAM(".TRI",entry);
+	triFiles.InitFromRAM(".TRI", entry);
 	triFiles.List(stdout);
-	//triFiles.Decompress("/Users/fabiensanglard/Desktop/MAURITAN.TRIS/","TRI");
+	// triFiles.Decompress("/Users/fabiensanglard/Desktop/MAURITAN.TRIS/","TRI");
 
-	printf("Found %zu .TRI files.\n",triFiles.GetNumEntries());
+	printf("Found %zu .TRI files.\n", triFiles.GetNumEntries());
 
-	for(size_t i=0 ; i < triFiles.GetNumEntries() ; i++) {
-		const PakEntry& entry  = triFiles.GetEntry(i);
+	for (size_t i = 0; i < triFiles.GetNumEntries(); i++) {
+		const PakEntry& entry = triFiles.GetEntry(i);
 		if (entry.size != 0)
 			ParseTriFile(&entry);
 	}
@@ -384,41 +388,40 @@ enum LAND_TYPE {
 };
 
 #define BYTETOBINARYPATTERN "%d%d%d%d%d%d%d%d"
-#define BYTETOBINARY(byte)  \
-(byte & 0x80 ? 1 : 0), \
-(byte & 0x40 ? 1 : 0), \
-(byte & 0x20 ? 1 : 0), \
-(byte & 0x10 ? 1 : 0), \
-(byte & 0x08 ? 1 : 0), \
-(byte & 0x04 ? 1 : 0), \
-(byte & 0x02 ? 1 : 0), \
-(byte & 0x01 ? 1 : 0)
+#define BYTETOBINARY(byte)     \
+	(byte & 0x80 ? 1 : 0),     \
+		(byte & 0x40 ? 1 : 0), \
+		(byte & 0x20 ? 1 : 0), \
+		(byte & 0x10 ? 1 : 0), \
+		(byte & 0x08 ? 1 : 0), \
+		(byte & 0x04 ? 1 : 0), \
+		(byte & 0x02 ? 1 : 0), \
+		(byte & 0x01 ? 1 : 0)
 
-
-//A lod features
-//A block features either 25, 100 or 400 vertex
-void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
+// A lod features
+// A block features either 25, 100 or 400 vertex
+void RSArea::ParseBlocks(size_t lod, const PakEntry* entry, size_t blockDim)
 {
-	const auto typeToPal = [] (uint8_t t) -> uint8_t {
+	const auto typeToPal = [](uint8_t t) -> uint8_t {
 		// Hardcoding the values since I have no idea where those
 		// are coming from. Maybe it was hard-coded in STRIKE.EXE ?
 		switch (t) {
-			case LAND_TYPE_SEA:
-				return 0xA;
-			case LAND_TYPE_DESERT:
-				return 0x3;
-			case LAND_TYPE_GROUND:
-				return 0x7;
-			case LAND_TYPE_SAVANNAH:
-				return 0x5;
-			case LAND_TYPE_TAIGA:
-				return 0x9;
-			case LAND_TYPE_TUNDRA:
-				return 0x1;
-			case LAND_TYPE_SNOW:
-				return 0xC;
-			default:
-				printf("No color for type %d\n", t);
+		case LAND_TYPE_SEA:
+			return 0xA;
+		case LAND_TYPE_DESERT:
+			return 0x3;
+		case LAND_TYPE_GROUND:
+			return 0x7;
+		case LAND_TYPE_SAVANNAH:
+			return 0x5;
+		case LAND_TYPE_TAIGA:
+			return 0x9;
+		case LAND_TYPE_TUNDRA:
+			return 0x1;
+		case LAND_TYPE_SNOW:
+			return 0xC;
+		default:
+			printf("No color for type %d\n", t);
 		}
 		return 0;
 	};
@@ -431,16 +434,16 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 		const int bx = i % bcount;
 		const int by = i / bcount;
 
-		//SRC Asset Block
+		// SRC Asset Block
 		const PakEntry& blockEntry = blocksPAL.GetEntry(i);
 
-		//DST custom block
+		// DST custom block
 		AreaBlock* block = &blocks[lod][i];
 
 		block->sideSize = static_cast<int32_t>(blockDim);
 
 		ByteStream vertStream(blockEntry.data);
-		for(size_t vertexID = 0; vertexID < blockDim*blockDim; vertexID++) {
+		for (size_t vertexID = 0; vertexID < blockDim * blockDim; vertexID++) {
 			const int vx = vertexID % blockDim;
 			const int vy = vertexID / blockDim;
 
@@ -450,7 +453,6 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 
 			vertex->flag = vertStream.ReadByte();
 			vertex->type = vertStream.ReadByte();
-
 
 			uint8_t shade = (vertex->flag & 0x0F);
 			shade = shade >> 1;
@@ -475,8 +477,7 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			}
 			*/
 
-
-			//Texel* t = renderer.GetDefaultPalette()->GetRGBColor(vertex->text);
+			// Texel* t = renderer.GetDefaultPalette()->GetRGBColor(vertex->text);
 			/*
 			  TODO: Figure out what are:
 					- flag high 4 bits.
@@ -490,18 +491,20 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			const float ry = offset + (1.0f - 2.0f * offset) * float(vy) / (float)(blockDim);
 			const float bsz = BLOCK_WIDTH;
 
-			vertex->v.X = (bx + rx)* bsz;
-			vertex->v.Y = (float)height / (float)HEIGHT_DIVIDER; //-vertex->text * 10;//height ;
-			vertex->v.Z = (by + ry) * bsz;
+			vertex->v.x = (bx + rx) * bsz;
+			vertex->v.y = (float)height / (float)HEIGHT_DIVIDER; //-vertex->text * 10;//height ;
+			vertex->v.z = (by + ry) * bsz;
 
 			// need to compute normals
 			vertex->n = { 0, -1, 0 };
 
 			const uint8_t paletteColor = 16 * typeToPal(vertex->type);
-			Texel* t = Renderer.GetPalette().GetRGBColor(paletteColor + shade);
-			vertex->color[0] = t->r/255.0f;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
-			vertex->color[1] = t->g/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
-			vertex->color[2] = t->b/255.0f;;//*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
+			const Color& t = Renderer.GetPalette().GetRGBColor(paletteColor + shade);
+			vertex->color[0] = t.r / 255.0f; //*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
+			vertex->color[1] = t.g / 255.0f;
+			; //*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
+			vertex->color[2] = t.b / 255.0f;
+			; //*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
 			vertex->color[3] = paletteColor / 255.0f;
 		}
 	}
@@ -516,7 +519,7 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 		AreaBlock* const block01 = by < bcount - 1 ? &blocks[lod][i + bcount] : block00;
 		AreaBlock* const block11 = bx < bcount - 1 && by < bcount - 1 ? &blocks[lod][i + bcount + 1] : block00;
 
-		for(size_t vertexID = 0; vertexID < blockDim * blockDim; vertexID++) {
+		for (size_t vertexID = 0; vertexID < blockDim * blockDim; vertexID++) {
 			const int vx = vertexID % blockDim;
 			const int vy = vertexID / blockDim;
 
@@ -525,10 +528,10 @@ void RSArea::ParseBlocks(size_t lod,const PakEntry* entry, size_t blockDim)
 			MapVertex* const vertex01 = vy < blockDim - 1 ? &block00->vertice[vertexID + blockDim] : &block01->vertice[vx];
 			MapVertex* const vertex11 = vx < blockDim - 1 && vy < blockDim - 1 ? &block00->vertice[vertexID + blockDim + 1] : &block11->vertice[0];
 
-			const RSVector3 v0 = vertex11->v - vertex00->v;
-			const RSVector3 v1 = vertex01->v - vertex10->v;
+			const Vector3 v0 = vertex11->v - vertex00->v;
+			const Vector3 v1 = vertex01->v - vertex10->v;
 
-			vertex00->n = HMM_Normalize(HMM_Cross(v0, v1));
+			vertex00->n = Vector3Normalize(Vector3CrossProduct(v0, v1));
 		}
 	}
 }
@@ -537,38 +540,38 @@ void RSArea::ParseElevations()
 {
 	const PakEntry& entry = archive->GetEntry(6);
 	ByteStream stream(entry.data);
-	for (size_t i = 0 ; i < BLOCKS_PER_MAP; i++) {
-		elevation[i] = stream.ReadUShort() ;
+	for (size_t i = 0; i < BLOCKS_PER_MAP; i++) {
+		elevation[i] = stream.ReadUShort();
 	}
 }
 
 void RSArea::ParseHeightMap(void)
 {
-	//char title[512];
+	// char title[512];
 
 	const PakEntry& entry0 = archive->GetEntry(1);
 	PakArchive fullPak;
 	fullPak.InitFromRAM("FULLSIZE", entry0);
 	// fullPak.List(stdout);
-	ParseBlocks(BLOCK_LOD_MAX,&entry0,20);
+	ParseBlocks(BLOCK_LOD_MAX, &entry0, 20);
 
-	//renderer.RenderWorldPoints(this,BLOCK_LOD_MAX,400);
+	// renderer.RenderWorldPoints(this,BLOCK_LOD_MAX,400);
 
 	const PakEntry& entry1 = archive->GetEntry(2);
 	PakArchive medPak;
-	medPak.InitFromRAM("MED SIZE",entry1);
+	medPak.InitFromRAM("MED SIZE", entry1);
 	// medPak.List(stdout);
-	ParseBlocks(BLOCK_LOD_MED,&entry1,10);
+	ParseBlocks(BLOCK_LOD_MED, &entry1, 10);
 
-	//renderer.RenderWorldSolid(this,BLOCK_LOD_MED,100);
+	// renderer.RenderWorldSolid(this,BLOCK_LOD_MED,100);
 
 	const PakEntry& entry2 = archive->GetEntry(3);
 	PakArchive smallPak;
-	smallPak.InitFromRAM("SMALSIZE",entry2);
+	smallPak.InitFromRAM("SMALSIZE", entry2);
 	// smallPak.List(stdout);
-	ParseBlocks(BLOCK_LOD_MIN,&entry2,5);
+	ParseBlocks(BLOCK_LOD_MIN, &entry2, 5);
 
-	//renderer.RenderWorldSolid(this,BLOCK_LOD_MIN,25);
+	// renderer.RenderWorldSolid(this,BLOCK_LOD_MIN,25);
 }
 
 RSImage* RSArea::GetImageByID(size_t ID) const
@@ -578,7 +581,7 @@ RSImage* RSArea::GetImageByID(size_t ID) const
 
 void RSArea::AddEntities(TreArchive& treObjects)
 {
-	for(int id = 0; id < BLOCKS_PER_MAP; id++) {
+	for (int id = 0; id < BLOCKS_PER_MAP; id++) {
 		std::vector<MapObject>& blockObjects = objects[id];
 		for (MapObject& object : blockObjects) {
 			if (object.entity == nullptr) {
@@ -600,26 +603,26 @@ void RSArea::AddEntities(TreArchive& treObjects)
 
 void RSArea::InitFromPAKFileName(const char* pakFilename, TreArchive& treObjects, TreArchive& treTextures)
 {
-	strcpy(name,pakFilename);
+	strcpy(name, pakFilename);
 
-	//Check the PAK has 5 entries
+	// Check the PAK has 5 entries
 	this->archive = new PakArchive();
 	this->archive->InitFromFile(pakFilename);
 
-	//Check that we have 6 entries.
-	if (archive->GetNumEntries() != 7){
+	// Check that we have 6 entries.
+	if (archive->GetNumEntries() != 7) {
 		printf("***Error: An area PAK file should have 7 files:\n");
 		printf("        - IFF file.\n");
 		printf("        - 1 file containing records of size 2400.\n");
 		printf("        - 1 file containing records of size 600 (mipmaps of the 2400 records ?)\n");
 		printf("        - 1  file containing records of size 150 (mipmaps of the 600  records ?)\n");
 		printf("        - 1 file containing the map 3D data (MAURITAN.TRI).\n");
-		printf("        - 1 file containing the objects locations on the map (MAURITAN.OBJ).\n");      //COMPLETELY REVERSE ENGINEERED !!!!
+		printf("        - 1 file containing the objects locations on the map (MAURITAN.OBJ).\n"); // COMPLETELY REVERSE ENGINEERED !!!!
 		printf("        - 1 file containing MAURITAN.AVG (I assume Average of something ?)\n");
 		return;
 	}
 
-	//Load the textures from the PAKs (TXMPACK.PAK and ACCPACK.PAK) within TEXTURES.TRE.
+	// Load the textures from the PAKs (TXMPACK.PAK and ACCPACK.PAK) within TEXTURES.TRE.
 	/*
 		  Note: This is the bruteforce approach and not very good:
 				I feel like the right way would be to be able to parse the AREA info
@@ -637,12 +640,12 @@ void RSArea::InitFromPAKFileName(const char* pakFilename, TreArchive& treObjects
 		const char* txmPakName = TRE_DATA_TXM "TXMPACK.PAK";
 		TreEntry* treEntry = treTextures.GetEntryByName(txmPakName);
 		PakArchive txmPakArchive;
-		txmPakArchive.InitFromRAM(txmPakName,*treEntry);
+		txmPakArchive.InitFromRAM(txmPakName, *treEntry);
 		auto& set = textures.emplace_back(std::make_unique<RSMapTextureSet>());
 		set->InitFromPAK(&txmPakArchive);
 	}
 
-	//Parse the meta datas.
+	// Parse the meta datas.
 	ParseElevations();
 	ParseMetadata();
 	ParseObjects();

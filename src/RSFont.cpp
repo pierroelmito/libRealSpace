@@ -7,8 +7,9 @@
 //
 
 #include "RSFont.h"
+#include "RLEShape.h"
 
-#include "precomp.h"
+#include <memory>
 
 RSFont::RSFont()
 {

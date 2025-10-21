@@ -10,8 +10,7 @@
 
 #include <cstdint>
 
-class RSScreen
-{
+class RSScreen {
 public:
 	RSScreen();
 	~RSScreen();
@@ -22,12 +21,8 @@ public:
 	void SetTitle(const char* title);
 	bool StartFrame();
 	void EndFrame();
-	void Refresh(void);
 
 	int32_t width;
 	int32_t height;
 	int32_t scale;
-
-private:
 };
-

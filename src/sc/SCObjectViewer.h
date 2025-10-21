@@ -13,8 +13,7 @@
 
 class RSFont;
 
-class SCObjectViewer : public IActivity
-{
+class SCObjectViewer : public IActivity {
 public:
 	SCObjectViewer();
 	~SCObjectViewer();
@@ -28,13 +27,14 @@ protected:
 	void ParseObjList(IffLexer* lexer);
 	void ParseAssets();
 
-	struct RSShowCase
-	{
+	struct RSShowCase {
 		float cameraDist;
 		std::unique_ptr<RSEntity> entity;
 		char displayName[20];
 	};
 	std::vector<RSShowCase> showCases;
 	uint32_t currentObject;
+	Vector2 angles{};
+	float dist{};
 	RSFont* _font;
 };

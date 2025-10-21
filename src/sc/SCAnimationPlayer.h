@@ -12,8 +12,7 @@
 
 #include "IActivity.h"
 
-class SCAnimationPlayer: public IActivity
-{
+class SCAnimationPlayer : public IActivity {
 public:
 	SCAnimationPlayer();
 	~SCAnimationPlayer();

@@ -6,9 +6,13 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "PakArchive.h"
 
 #include <cerrno>
+
+#include <map>
+
+#include "Base.h"
 
 PakArchive::PakArchive()
 {
@@ -24,8 +28,8 @@ void PakArchive::Parse(void)
 {
 	uint32_t advertisedSize = stream.ReadUInt32LE();
 
-	//if (advertisedSize != this->size) {
-	//if (advertisedSize != this->size)
+	// if (advertisedSize != this->size) {
+	// if (advertisedSize != this->size)
 	//	printf("expected size: %d instead of %d\n", this->size, advertisedSize);
 	if (advertisedSize > this->size)
 		return;
@@ -34,45 +38,45 @@ void PakArchive::Parse(void)
 
 	ByteStream peek(this->stream);
 	uint32_t offset = peek.ReadUInt32LE();
-	offset &= 0x00FFFFFF ; //Remove the leading 0xE0
+	offset &= 0x00FFFFFF; // Remove the leading 0xE0
 
-	size_t numEntries = (offset-4)/4;
+	size_t numEntries = (offset - 4) / 4;
 
-	//Hashmap to keep track of duplicates
+	// Hashmap to keep track of duplicates
 	std::map<uint32_t, size_t> uniqueOffsets;
 
-	//First to read all the offsets
-	for(int i =0 ; i < numEntries ; i ++) {
+	// First to read all the offsets
+	for (int i = 0; i < numEntries; i++) {
 		offset = stream.ReadUInt32LE();
-		PakEntry entry{};
+		PakEntry entry {};
 		entry.type = (offset & 0xFF000000) >> 24;
-		offset &= 0x00FFFFFF ; //Remove the leading 0xE0 or 0xFF
+		offset &= 0x00FFFFFF; // Remove the leading 0xE0 or 0xFF
 		entry.data = this->data + offset;
-		//if (uniqueOffsets[offset] == NULL){
-			size_t index = entries.size();
-			entries.push_back(entry);
-			uniqueOffsets[offset] = index;
+		// if (uniqueOffsets[offset] == NULL){
+		size_t index = entries.size();
+		entries.push_back(entry);
+		uniqueOffsets[offset] = index;
 		//}
 	}
 
-	//numEntries = uniqueOffsets.size();
+	// numEntries = uniqueOffsets.size();
 
-	//Second pass to calculate the sizes.
-	int i =0;
-	for( ; i < numEntries-1 ; i ++){
+	// Second pass to calculate the sizes.
+	int i = 0;
+	for (; i < numEntries - 1; i++) {
 		PakEntry& entry = entries[i];
-		entry.size = entries[i+1].data - entry.data;
+		entry.size = entries[i + 1].data - entry.data;
 	}
 
 	PakEntry& entry = entries[i];
 	entry.size = (this->data + this->size) - entries[i].data;
 
-	//std::sort(entries.begin(), entries.end(),PakEntry::Compare);
+	// std::sort(entries.begin(), entries.end(),PakEntry::Compare);
 }
 
 bool PakArchive::InitFromFile(const char* filepath)
 {
-	char fullPath[512] ;
+	char fullPath[512];
 	fullPath[0] = '\0';
 
 	strcat(fullPath, GetBase());
@@ -80,21 +84,21 @@ bool PakArchive::InitFromFile(const char* filepath)
 
 	FILE* file = fopen(fullPath, "rb");
 
-	if (!file){
-		printf("Unable to open PAK archive: '%s'.\n",filepath);
+	if (!file) {
+		printf("Unable to open PAK archive: '%s'.\n", filepath);
 		return false;
 	}
 
-	fseek(file, 0,SEEK_END);
+	fseek(file, 0, SEEK_END);
 	size_t fileSize = ftell(file);
-	fseek(file,0 ,SEEK_SET);
+	fseek(file, 0, SEEK_SET);
 
 	uint8_t* fileData = new uint8_t[fileSize];
 	fread(fileData, 1, fileSize, file);
 
 	initalizedFromFile = true;
 
-	InitFromRAM(filepath,{ fileData, fileSize });
+	InitFromRAM(filepath, { fileData, fileSize });
 
 	fclose(file);
 
@@ -103,7 +107,7 @@ bool PakArchive::InitFromFile(const char* filepath)
 
 void PakArchive::InitFromRAM(const char* name, const ByteSlice& bs)
 {
-	strcpy(this->path,name);
+	strcpy(this->path, name);
 
 	this->data = bs.data;
 	this->size = bs.size;
@@ -131,13 +135,13 @@ bool PakArchive::Decompress(const char* dstDirectory, const char* unkExtension)
 	const char* filePattern = "FILE%04d.%s";
 	char fullDstPath[512];
 
-	printf("Decompressing PAK %s (size: %lu bytes)\n.",this->path,this->size);
+	printf("Decompressing PAK %s (size: %lu bytes)\n.", this->path, this->size);
 
-	for( size_t idx = 0 ; idx < this->entries.size(); idx++) {
+	for (size_t idx = 0; idx < this->entries.size(); idx++) {
 		const PakEntry& entry = entries[idx];
 		const char* data = (const char*)entry.data;
 
-		if(entry.size == 0)
+		if (entry.size == 0)
 			continue;
 
 		const char vocHeader[] = "Creative Voice File";
@@ -150,44 +154,44 @@ bool PakArchive::Decompress(const char* dstDirectory, const char* unkExtension)
 		else if (isIff)
 			printf("iff found!\n");
 
-		//Build dst path
+		// Build dst path
 		fullDstPath[0] = '\0';
 		strcat(fullDstPath, dstDirectory);
-		//Make sure we have a slash at the end of the dst.
+		// Make sure we have a slash at the end of the dst.
 		size_t pathLength = strlen(fullDstPath);
-		if (fullDstPath[pathLength-1] != '/')
-			strcat(fullDstPath,"/");
-		//Append the PAK archive name
+		if (fullDstPath[pathLength - 1] != '/')
+			strcat(fullDstPath, "/");
+		// Append the PAK archive name
 		strcat(fullDstPath, this->path);
-		//Append the subdirectory name.
+		// Append the subdirectory name.
 		strcat(fullDstPath, suffix);
 
 		sprintf(fullDstPath + strlen(fullDstPath), filePattern, idx, extension);
 
-		//Convert '\\' to '/'
+		// Convert '\\' to '/'
 		size_t sizeFullPath = strlen(fullDstPath);
-		for (int i =0 ; i < sizeFullPath ; i++){
-			if (fullDstPath[i] =='\\')
+		for (int i = 0; i < sizeFullPath; i++) {
+			if (fullDstPath[i] == '\\')
 				fullDstPath[i] = '/';
 		}
 
-		//Make sure we have all the directories
+		// Make sure we have all the directories
 		CreateDirectories(fullDstPath);
 
-		//Write content.
-		FILE* dstFile = fopen(fullDstPath,"w");
+		// Write content.
+		FILE* dstFile = fopen(fullDstPath, "w");
 
-		if (dstFile == NULL){
-			printf("Unable to create destination file: '%s'.\n",fullDstPath);
+		if (dstFile == NULL) {
+			printf("Unable to create destination file: '%s'.\n", fullDstPath);
 			continue;
 		}
 
-		size_t byteWritten = fwrite(entry.data,1, entry.size, dstFile);
+		size_t byteWritten = fwrite(entry.data, 1, entry.size, dstFile);
 
 		if (byteWritten != entry.size)
-			printf("*Error while writing entry (errono: %s) size(size: %lu).\n",strerror(errno),entry.size);
+			printf("*Error while writing entry (errono: %s) size(size: %lu).\n", strerror(errno), entry.size);
 		else
-			printf("Extracted file: '%s. (size: %lu).'\n",fullDstPath,entry.size);
+			printf("Extracted file: '%s. (size: %lu).'\n", fullDstPath, entry.size);
 
 		fclose(dstFile);
 	}
@@ -207,14 +211,14 @@ const PakEntry& PakArchive::GetEntry(size_t index) const
 
 void PakArchive::List(FILE* output)
 {
-	fprintf(output,"Listing content of PAK archives '%s'\n",this->path);
-	for(size_t i =0; i < GetNumEntries() ; i++){
+	fprintf(output, "Listing content of PAK archives '%s'\n", this->path);
+	for (size_t i = 0; i < GetNumEntries(); i++) {
 		PakEntry& entry = entries[i];
 		if (entry.size != 0) {
-			fprintf(output,"    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X.",i,entry.data-this->data, entry.size,entry.type);
+			fprintf(output, "    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X.", i, entry.data - this->data, entry.size, entry.type);
 			ByteStream::PrintBufStart(output, entry.data, entry.size, 16);
 		} else {
-			fprintf(output,"    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X (DUPLICATE).",i,entry.data-this->data, entry.size,entry.type);
+			fprintf(output, "    Entry [%3lu] offset[0x%8lX] size: %7lu bytes, type: %X (DUPLICATE).", i, entry.data - this->data, entry.size, entry.type);
 		}
 		fprintf(output, "\n");
 	}
@@ -226,7 +230,6 @@ void PakArchive::GuessPakEntryContent(PakEntry& entry)
 
 void PakArchive::GuessContent(FILE* output)
 {
-	for(size_t i=0 ; i < entries.size() ; i++)
+	for (size_t i = 0; i < entries.size(); i++)
 		GuessPakEntryContent(entries[i]);
 }
-

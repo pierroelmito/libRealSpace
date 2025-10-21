@@ -10,14 +10,13 @@
 
 #include "IActivity.h"
 
-//GAMEFLOW
-// 70 74
-//Main image 91	
+// GAMEFLOW
+//  70 74
+// Main image 91
 
 class RSFont;
 
-class SCSelectWeaponF16 : public IActivity
-{
+class SCSelectWeaponF16 : public IActivity {
 public:
 	SCSelectWeaponF16();
 	~SCSelectWeaponF16();
@@ -27,11 +26,10 @@ public:
 
 protected:
 	RSFont* _font;
-	PalBg wantedBg{};
-	PalBg currentBg{};
-	int colOfs{ 0 };
-	size_t soundIndex{ ~0u };
-	size_t soundWanted{ 0 };
+	PalBg wantedBg {};
+	PalBg currentBg {};
+	int colOfs { 0 };
+	size_t soundIndex { ~0u };
+	size_t soundWanted { 0 };
 	RSVocSoundData testSound;
 };
-

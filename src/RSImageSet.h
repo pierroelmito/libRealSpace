@@ -15,8 +15,7 @@
 
 class RLEShape;
 
-class RSImageSet
-{
+class RSImageSet {
 public:
 	RSImageSet();
 	~RSImageSet();

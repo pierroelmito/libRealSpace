@@ -6,11 +6,11 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "main.h"
 
-#include "SCTrainingMenu.h"
+// #include "SCSelectWeaponsF16.h"
 #include "SCStrike.h"
-#include "SCSelectWeaponsF16.h"
+#include "SCTrainingMenu.h"
 
 SCTrainingMenu::SCTrainingMenu()
 {
@@ -34,7 +34,7 @@ void SCTrainingMenu::Init()
 
 	const Point2D positionBoard = { 6, 150 };
 
-	//InitShapeAt(*s, { 4, 0 }, "", assets->GetEntry(1));
+	// InitShapeAt(*s, { 4, 0 }, "", assets->GetEntry(1));
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 	auto trButtonsPack = GetPak("TM.SHP", *treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "TM.SHP"));
 	auto& board = AddSingleShape();
@@ -43,14 +43,14 @@ void SCTrainingMenu::Init()
 
 	const Point2D sandDDimension = { 130, 15 };
 	const Point2D sanDPosition = { positionBoard.x + 16, positionBoard.y + 9 };
-	const Point2D dogDDimension = { 130, 15 } ;
+	const Point2D dogDDimension = { 130, 15 };
 	const Point2D dogDPosition = { positionBoard.x + 155, positionBoard.y + 9 };
-	const Point2D exitDDimension = { 60, 15 } ;
+	const Point2D exitDDimension = { 60, 15 };
 	const Point2D exitDPosition = { positionBoard.x + 155, positionBoard.y + 23 };
 
 	MakeButton(sanDPosition, sandDDimension, *trButtonsPack, 1, 2, [&] {
 		Stop();
-		//Game.MakeActivity<SCSelectWeaponF16>();
+		// Game.MakeActivity<SCSelectWeaponF16>();
 		Game.MakeActivity<SCStrike>();
 	});
 

@@ -7,25 +7,22 @@
 //
 
 #include "SCMainMenu.h"
-#include "SCTrainingMenu.h"
-#include "SCObjectViewer.h"
-#include "SCGenericScene.h"
-#include "SCRegister.h"
 
-#include "precomp.h"
+#include "main.h"
+
+#include "Math.h"
+#include "SCObjectViewer.h"
+#include "SCRegister.h"
+#include "SCTrainingMenu.h"
 
 /*
  3 eagle
  9 letters
  */
 
-SCMainMenu::SCMainMenu()
-{
-}
+SCMainMenu::SCMainMenu() { }
 
-SCMainMenu::~SCMainMenu()
-{
-}
+SCMainMenu::~SCMainMenu() { }
 
 void SCMainMenu::Init(void)
 {
@@ -38,31 +35,45 @@ void SCMainMenu::Init(void)
 
 	{
 		const Point2D buttonDimension = { 211, 15 };
-		const Point2D continuePosition = { boardPosition.x + 11, boardPosition.y + 10 };
-		const Point2D loadGamePosition = { boardPosition.x + 11, continuePosition.y + buttonDimension.y + 2 };
-		const Point2D startNewGamePosition = { boardPosition.x + 11, loadGamePosition.y + buttonDimension.y + 2 };
-		const Point2D trainingPosition = { boardPosition.x + 11, startNewGamePosition.y + buttonDimension.y + 2 };
-		const Point2D viewObjectPosition = { boardPosition.x + 11, trainingPosition.y + buttonDimension.y + 2 };
+		const Point2D continuePosition = { boardPosition.x + 11,
+			boardPosition.y + 10 };
+		const Point2D loadGamePosition = {
+			boardPosition.x + 11, continuePosition.y + buttonDimension.y + 2
+		};
+		const Point2D startNewGamePosition = {
+			boardPosition.x + 11, loadGamePosition.y + buttonDimension.y + 2
+		};
+		const Point2D trainingPosition = {
+			boardPosition.x + 11, startNewGamePosition.y + buttonDimension.y + 2
+		};
+		const Point2D viewObjectPosition = {
+			boardPosition.x + 11, trainingPosition.y + buttonDimension.y + 2
+		};
 
-		//The buttons are within an other pak within MAINMENU.PAK !!!!
+		// The buttons are within an other pak within MAINMENU.PAK !!!!
 		TreArchive& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
-		auto mainMenupak = GetPak("MAINMENU.PAK", *treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "MAINMENU.PAK"));
+		auto mainMenupak = GetPak("MAINMENU.PAK",
+			*treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "MAINMENU.PAK"));
 		auto subPak = GetPak("subPak Buttons", mainMenupak->GetEntry(0));
 
-		MakeButton(continuePosition, buttonDimension, *subPak, 0, 5, [] {})->SetEnable(false);
-		MakeButton(loadGamePosition, buttonDimension, *subPak, 1, 6, [] {})->SetEnable(false);
+		MakeButton(continuePosition, buttonDimension, *subPak, 0, 5, [] {
+		})->SetEnable(false);
+		MakeButton(loadGamePosition, buttonDimension, *subPak, 1, 6, [] {
+		})->SetEnable(false);
 		MakeButton(startNewGamePosition, buttonDimension, *subPak, 2, 7, [this] {
 			Game.MakeActivity<SCRegister>();
-			//SCCutScene::PushAll();
+			// SCCutScene::PushAll();
 		});
-		MakeButton(trainingPosition, buttonDimension, *subPak, 3, 8, [] { Game.MakeActivity<SCTrainingMenu>(); });
-		MakeButton(viewObjectPosition, buttonDimension, *subPak, 4, 9, [] { Game.MakeActivity<SCObjectViewer>(); });
+		MakeButton(trainingPosition, buttonDimension, *subPak, 3, 8,
+			[] { Game.MakeActivity<SCTrainingMenu>(); });
+		MakeButton(viewObjectPosition, buttonDimension, *subPak, 4, 9,
+			[] { Game.MakeActivity<SCObjectViewer>(); });
 	}
 }
 
 void SCMainMenu::RunFrame(const FrameParams& p)
 {
-	if (p.pressed.contains(GLFW_KEY_ESCAPE))
+	if (IsKeyPressed(KEY_ESCAPE))
 		Stop();
 
 	Frame2D(p, shapes);

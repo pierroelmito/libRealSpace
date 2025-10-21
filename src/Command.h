@@ -6,24 +6,21 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__Event__
-#define __libRealSpace__Event__
+#pragma once
 
-class Event{
-    
-    uint32_t timestamp;
-    uint32_t type;
-    uint32_t args[4];
+/*
+#include <cstdint>
+
+class Event {
+	uint32_t timestamp {};
+	uint32_t type {};
+	uint32_t args[4] {};
 };
 
-class Command{
-    
+class Command {
 public:
-    
-    void PumpSystem();
-    
-    bool HasMore(void);
-    Event* GetNext();
+	void PumpSystem();
+	bool HasMore(void);
+	Event* GetNext();
 };
-
-#endif /* defined(__libRealSpace__Event__) */
+*/

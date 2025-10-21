@@ -8,8 +8,6 @@
 
 #include "RSFontManager.h"
 
-#include "precomp.h"
-
 RSFontManager::RSFontManager()
 {
 }
@@ -25,7 +23,7 @@ void RSFontManager::Init(TreArchive& tre)
 
 	PakArchive fontArch;
 	fontArch.InitFromRAM("CONVFONT.SHP", *convFontEntry);
-	//fontArch.List(stdout);
+	// fontArch.List(stdout);
 
 	font.InitFromPAK(fontArch);
 }

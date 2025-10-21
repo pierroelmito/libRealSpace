@@ -8,8 +8,6 @@
 
 #include "SCButton.h"
 
-#include "precomp.h"
-
 SCButton::SCButton()
 {
 }
@@ -18,12 +16,14 @@ SCButton::~SCButton()
 {
 }
 
-void SCButton::InitBehavior(Point2D position, Point2D dimension, ActionFunction&& fct){
+void SCButton::InitBehavior(Point2D position, Point2D dimension, ActionFunction&& fct)
+{
 	this->onClick = fct;
 	this->position = position;
 	this->dimension = dimension;
 }
 
-void SCButton::OnAction(void){
-    this->onClick();
+void SCButton::OnAction(void)
+{
+	this->onClick();
 }

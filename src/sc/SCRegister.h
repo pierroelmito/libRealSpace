@@ -10,8 +10,7 @@
 
 #include "IActivity.h"
 
-class SCRegister : public IActivity
-{
+class SCRegister : public IActivity {
 public:
 	SCRegister();
 	~SCRegister();
@@ -19,4 +18,3 @@ public:
 	void Init();
 	void RunFrame(const FrameParams& p) override;
 };
-

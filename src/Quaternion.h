@@ -8,8 +8,3 @@
 
 #pragma once
 
-#include <cmath>
-
-#include "HandmadeMath.h"
-
-using RSQuaternion = hmm_quaternion;

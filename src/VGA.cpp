@@ -8,9 +8,9 @@
 
 #include "RSVGA.h"
 
-#include "precomp.h"
-
 #include "RSFont.h"
+#include "RSPalette.h"
+#include "SCRenderer.h"
 
 RSVGA::RSVGA()
 {
@@ -54,12 +54,12 @@ void RSVGA::SetPalette(const VGAPalette& newPalette)
 
 void RSVGA::VSync(float fade)
 {
-	int counts[256]{};
-	Texel data[WIDTH * HEIGHT];
+	std::array<int, 256> counts {};
+	std::array<Color, WIDTH * HEIGHT> data {};
 
 	for (size_t i = 0; i < WIDTH * HEIGHT; i++) {
 		++counts[frameBuffer[i]];
-		data[i] = *palette.GetRGBColor(frameBuffer[i]);
+		data[i] = palette.GetRGBColor(frameBuffer[i]);
 		data[i].a = 0xff;
 	}
 
@@ -68,18 +68,18 @@ void RSVGA::VSync(float fade)
 			const int ofs = WIDTH * (HEIGHT - 2) + (WIDTH - 256) / 2 + i;
 			int sz = counts[i] == 0 ? 4 : 8;
 			for (int j = 0; j < sz; ++j) {
-				data[ofs - j * WIDTH] = *palette.GetRGBColor(i);
+				data[ofs - j * WIDTH] = palette.GetRGBColor(i);
 				data[ofs - j * WIDTH].a = 0xff;
 			}
 		}
 	}
 
-	SCRenderer::UpdateBitmapQuad(data, WIDTH, HEIGHT, fade);
+	SCRenderer::UpdateBitmapQuad(&data[0], WIDTH, HEIGHT, fade);
 }
 
 void RSVGA::FillLineColor(size_t lineIndex, uint8_t color)
 {
-	memset(frameBuffer+lineIndex * WIDTH, color, WIDTH);
+	memset(frameBuffer + lineIndex * WIDTH, color, WIDTH);
 }
 
 void RSVGA::DrawText(RSFont* font, const Point2D& baseCoo, const char* text, const uint8_t color, const size_t start, const uint32_t size, const size_t interLetterSpace, const size_t spaceSize)
@@ -92,18 +92,16 @@ void RSVGA::DrawText(RSFont* font, const Point2D& baseCoo, const char* text, con
 	if (size <= 0)
 		return;
 
-	for (size_t i =0; i < size; i++) {
-		char chartoDraw = text[start+i];
+	for (size_t i = 0; i < size; i++) {
+		char chartoDraw = text[start + i];
 		RLEShape* shape = font->GetShapeForChar(chartoDraw);
 
 		shape->SetColorOffset(color);
-		//Adjust height
+		// Adjust height
 		int32_t lineHeight = coo.y;
 		coo.y -= shape->GetHeight();
 
-		if (chartoDraw== 'p' ||
-			chartoDraw== 'y' ||
-			chartoDraw== 'g' )
+		if (chartoDraw == 'p' || chartoDraw == 'y' || chartoDraw == 'g')
 			coo.y += 1;
 
 		shape->SetPosition(coo);
@@ -111,8 +109,8 @@ void RSVGA::DrawText(RSFont* font, const Point2D& baseCoo, const char* text, con
 		coo.y = lineHeight;
 
 		if (chartoDraw == ' ')
-			coo.x += spaceSize ;
+			coo.x += spaceSize;
 		else
-			coo.x+=shape->GetWidth() + interLetterSpace;
+			coo.x += shape->GetWidth() + interLetterSpace;
 	}
 }

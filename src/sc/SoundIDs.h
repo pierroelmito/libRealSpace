@@ -4,9 +4,10 @@
 #include <cstring>
 
 struct SoundID {
-	const char* pak{};
-	int index{};
-	bool operator !=(const SoundID& o) {
+	const char* pak {};
+	int index {};
+	bool operator!=(const SoundID& o)
+	{
 		if (o.index != index)
 			return true;
 		if (strcmp(o.pak, pak) != 0)

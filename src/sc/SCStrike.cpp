@@ -8,9 +8,12 @@
 
 #include "SCStrike.h"
 
-#include "precomp.h"
+#include "main.h"
+
+#include <raymath.h>
 
 #include "UserProperties.h"
+#include "rltools.hpp"
 
 SCStrike::SCStrike()
 {
@@ -20,12 +23,11 @@ SCStrike::~SCStrike()
 {
 }
 
-void SCStrike::Init(void )
+void SCStrike::Init(void)
 {
-	Game.SetMouseLock(true);
+	// Game.SetMouseLock(true);
 
-	auto AddJet = [&] (TreArchive& tre, const char* name, RSQuaternion* orientation, RSVector3* position)
-	{
+	auto AddJet = [&](TreArchive& tre, const char* name, Quaternion* orientation, Vector3* position) {
 		TreEntry* jetEntry = tre.GetEntryByName(name);
 		auto entity = RSEntity::LoadFromRAM(*jetEntry);
 		jets.push_back({ std::move(entity), *orientation, *position });
@@ -42,87 +44,110 @@ void SCStrike::Init(void )
 	const float angle = 25.0f;
 	const float mul = 1.0f;
 
-	//TRE_DATA_GAMEFLOW "MIG29.IFF
-	//TRE_DATA_GAMEFLOW "F-22.IFF"
-	//TRE_DATA_GAMEFLOW "F-15.IFF"
-	//TRE_DATA_GAMEFLOW "YF23.IFF"
-	//TRE_DATA_GAMEFLOW "MIG21.IFF"
-	//TRE_DATA_GAMEFLOW "MIG29.IFF"
+	// TRE_DATA_GAMEFLOW "MIG29.IFF
+	// TRE_DATA_GAMEFLOW "F-22.IFF"
+	// TRE_DATA_GAMEFLOW "F-15.IFF"
+	// TRE_DATA_GAMEFLOW "YF23.IFF"
+	// TRE_DATA_GAMEFLOW "MIG21.IFF"
+	// TRE_DATA_GAMEFLOW "MIG29.IFF"
 
-	RSQuaternion rot0 = HMM_Mat4ToQuaternion(HMM_Rotate(angle, { 1, 0, 0 }));
-	RSVector3 pos0 = { mul * 4016, mul * 95, mul * 2980};
+	Quaternion rot0 = QuaternionIdentity(); // HMM_Mat4ToQuaternion(QuaternionRotate(angle, { 1, 0, 0 }));
+	Vector3 pos0 = { mul * 4016, mul * 95, mul * 2980 };
 	AddJet(treObjects, TRE_DATA_OBJECTS "F-16DES.IFF", &rot0, &pos0);
 
-	RSQuaternion rot1 = HMM_Mat4ToQuaternion(HMM_Rotate(-angle, { 1, 0, 0 }));
-	RSVector3 pos1 = { mul * 4010, mul * 95, mul * 2980};
+	Quaternion rot1 = QuaternionIdentity(); // HMM_Mat4ToQuaternion(HMM_Rotate(-angle, { 1, 0, 0 }));
+	Vector3 pos1 = { mul * 4010, mul * 95, mul * 2980 };
 	AddJet(treObjects, TRE_DATA_OBJECTS "F-22.IFF", &rot1, &pos1);
 }
 
-void SCStrike::ComputeMove(const RSMatrix& transform, GTime dt)
+void SCStrike::ComputeMove(const Matrix& transform, GTime dt)
 {
-	const float mQuick = Game.IsKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 20.0f : 2.0f;
+	const float mQuick = IsKeyDown(KEY_LEFT_SHIFT) ? 20.0f : 2.0f;
 
 	// rotate
-	const float mLeft = Game.IsKeyPressed(GLFW_KEY_A) ? -1.0f : 0.0f;
-	const float mRight = Game.IsKeyPressed(GLFW_KEY_D) ? 1.0f : 0.0f;
-	const float mUp = Game.IsKeyPressed(GLFW_KEY_W) ? -1.0f : 0.0f;
-	const float mDown = Game.IsKeyPressed(GLFW_KEY_S) ? 1.0f : 0.0f;
-	const float mPanL = Game.IsKeyPressed(GLFW_KEY_Q) ? -1.0f : 0.0f;
-	const float mPanR = Game.IsKeyPressed(GLFW_KEY_E) ? 1.0f : 0.0f;
+	const float mLeft = IsKeyDown(KEY_A) ? -1.0f : 0.0f;
+	const float mRight = IsKeyDown(KEY_D) ? 1.0f : 0.0f;
+	const float mUp = IsKeyDown(KEY_W) ? -1.0f : 0.0f;
+	const float mDown = IsKeyDown(KEY_S) ? 1.0f : 0.0f;
+	const float mPanL = IsKeyDown(KEY_Q) ? -1.0f : 0.0f;
+	const float mPanR = IsKeyDown(KEY_E) ? 1.0f : 0.0f;
 
 	// move
-	const float rLeft = Game.IsKeyPressed(GLFW_KEY_LEFT) ? -1.0f : 0.0f;
-	const float rRight = Game.IsKeyPressed(GLFW_KEY_RIGHT) ? 1.0f : 0.0f;
-	const float rUp = Game.IsKeyPressed(GLFW_KEY_UP) ? -1.0f : 0.0f;
-	const float rDown = Game.IsKeyPressed(GLFW_KEY_DOWN) ? 1.0f : 0.0f;
+	const float rLeft = IsKeyDown(KEY_LEFT) ? -1.0f : 0.0f;
+	const float rRight = IsKeyDown(KEY_RIGHT) ? 1.0f : 0.0f;
+	const float rUp = IsKeyDown(KEY_UP) ? -1.0f : 0.0f;
+	const float rDown = IsKeyDown(KEY_DOWN) ? 1.0f : 0.0f;
 
-	RSVector3 d = plane.dir;
-	RSVector3 u = plane.up;
-	RSVector3 n = HMM_Cross(u, d);
+	Vector3 d = plane.dir;
+	Vector3 u = plane.up;
+	Vector3 n = Vector3CrossProduct(u, d);
 
-	d = HMM_NormalizeVec3(d - dt * (rLeft + rRight) * n - dt * (rUp + rDown) * u);
-	u = HMM_NormalizeVec3(HMM_Cross(d, n));
-	u = HMM_NormalizeVec3(u + dt * (mPanL + mPanR) * n);
-	n = HMM_Cross(u, d);
-	d = HMM_NormalizeVec3(HMM_Cross(n, u));
+	d = Vector3Normalize(d - n * (dt * (rLeft + rRight)) - u * (dt * (rUp + rDown)));
+	u = Vector3Normalize(Vector3CrossProduct(d, n));
+	u = Vector3Normalize(u + n * (dt * (mPanL + mPanR)));
+	n = Vector3CrossProduct(u, d);
+	d = Vector3Normalize(Vector3CrossProduct(n, u));
 
 	plane.dir = d;
 	plane.up = u;
-	plane.pos += 2.0f * dt* mQuick * ((mUp + mDown) * d + (mLeft + mRight) * n);
+	plane.pos += (d * (mUp + mDown) + n * (mLeft + mRight)) * (2.0f * dt * mQuick);
 }
 
-RSMatrix SCStrike::ComputeTransform(bool cockpit, bool lookAt)
+Matrix SCStrike::ComputeTransform(bool cockpit, bool lookAt)
 {
-	RSVector3 d, u, n;
+	Vector3 d, u, n;
 	if (lookAt) {
 		d = pilot.lookAt;
-		n = HMM_NormalizeVec3(HMM_Cross(plane.up, d));
-		u = HMM_Cross(d, n);
+		n = Vector3Normalize(Vector3CrossProduct(plane.up, d));
+		u = Vector3CrossProduct(d, n);
 	} else {
 		d = plane.dir;
 		u = plane.up;
-		n = HMM_Cross(u, d);
+		n = Vector3CrossProduct(u, d);
 	}
 
 	const float cT = cockpit ? -1.0f : 1.0f;
-	const RSMatrix t = HMM_Translate(cT * -plane.pos);
+	auto pos = plane.pos * -cT;
+	const Matrix t = MatrixTranslate(pos.x, pos.y, pos.z);
 
 	if (cockpit) {
-		const RSMatrix r = { .Elements = {
-				{ n.X, n.Y, n.Z, 0 },
-				{ u.X, u.Y, u.Z, 0 },
-				{ d.X, d.Y, d.Z, 0 },
-				{   0,   0,   0, 1 },
-			}
+		const Matrix r = {
+			n.x,
+			n.y,
+			n.z,
+			0,
+			u.x,
+			u.y,
+			u.z,
+			0,
+			d.x,
+			d.y,
+			d.z,
+			0,
+			0,
+			0,
+			0,
+			1,
 		};
 		return t * r;
 	} else {
-		const RSMatrix r = { .Elements = {
-				{ n.X, u.X, d.X, 0 },
-				{ n.Y, u.Y, d.Y, 0 },
-				{ n.Z, u.Z, d.Z, 0 },
-				{   0,   0,   0, 1 },
-			}
+		const Matrix r = {
+			n.x,
+			u.x,
+			d.x,
+			0,
+			n.y,
+			u.y,
+			d.y,
+			0,
+			n.z,
+			u.z,
+			d.z,
+			0,
+			0,
+			0,
+			0,
+			1,
 		};
 		return r * t;
 	}
@@ -131,49 +156,66 @@ RSMatrix SCStrike::ComputeTransform(bool cockpit, bool lookAt)
 void SCStrike::RunFrame(const FrameParams& p)
 {
 	// look at target
-	const float lookAtTarget = Game.IsKeyPressed(GLFW_KEY_TAB);
+	const bool lookAtTarget = IsKeyDown(KEY_TAB);
 	const bool usePlaneDirLookAt = jets.empty() || !lookAtTarget;
-	const RSVector3 lookAt = usePlaneDirLookAt ? plane.dir : HMM_NormalizeVec3(plane.pos - jets[0].position);
-	pilot.lookAt = HMM_NormalizeVec3(0.3f * lookAt + 0.7f * pilot.lookAt);
+	const Vector3 lookAt = usePlaneDirLookAt ? plane.dir : Vector3Normalize(plane.pos - jets[0].position);
+	pilot.lookAt = Vector3Normalize(lookAt * 0.3f + pilot.lookAt * 0.7f);
 
-	const RSMatrix viewPilot = ComputeTransform(false, true);
-	const RSMatrix viewPlane = ComputeTransform(false, false);
-	const RSMatrix cockpit = ComputeTransform(true, false);
+	const Matrix viewPilot = ComputeTransform(false, true);
+	const Matrix viewPlane = ComputeTransform(false, false);
+	const Matrix cockpit = ComputeTransform(true, false);
 	ComputeMove(viewPlane, p.deltaTime);
 
 	auto& cam = Renderer.GetCamera();
-	cam.SetView(viewPilot);
+	// cam.SetView(viewPilot);
 
 	const auto& props = UserProperties::Get();
 
-	const RSVector3 light = HMM_NormalizeVec3(props.Vectors3.Get("LightDir", { 2, 3, 2 }));
+	const Vector3 light = Vector3Normalize(props.Vectors3.Get("LightDir", { 2, 3, 2 }));
 	Renderer.SetLight(light);
 
-	//pilot._a = 0.09f * cosf(p.activityTime);
-	//pilot._b = 0.09f * sinf(p.activityTime);
+	// pilot._a = 0.09f * cosf(p.activityTime);
+	// pilot._b = 0.09f * sinf(p.activityTime);
 
-	Renderer.Draw3D({ R3Dp::SKY | R3Dp::CLOUDS }, [&] () {
+	Camera rcam {};
+	rcam.position = plane.pos;
+	rcam.target = plane.pos + lookAt;
+	rcam.up = plane.up;
+	rcam.fovy = 45.0f;
+	rcam.projection = CAMERA_PERSPECTIVE;
+	BeginMode3D(rcam);
+
+	Renderer.Draw3D({ R3Dp::SKY /*| R3Dp::CLOUDS*/ }, [&]() {
 		// world
 		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.totalTime);
 
 		// jets
-		for(auto&& jet : jets) {
-			RSMatrix world = HMM_QuaternionToMat4(jet.orientation) * HMM_Scale({ OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE });
-			world.Elements[3][0] = jet.position.X;
-			world.Elements[3][1] = jet.position.Y;
-			world.Elements[3][2] = jet.position.Z;
+		for (auto&& jet : jets) {
+			Matrix world = QuaternionToMatrix(jet.orientation) * MatrixScale(OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE);
+			world.m12 = jet.position.x;
+			world.m13 = jet.position.y;
+			world.m14 = jet.position.z;
 			Renderer.DrawModel(jet.entity.get(), LOD_LEVEL_MAX, world);
 		}
 
+		/*
 		// cockpit
 		if (1) {
 			const float sc = props.Floats.Get("CockpitScale", 0.05f);
-			const RSMatrix mdl = HMM_Scale({ sc, sc, sc }) * HMM_Rotate(90.0f, { 0, 1, 0 }) * HMM_Translate({ 0, -3, 0 });
+			const Matrix mdl = HMM_Scale({ sc, sc, sc }) * HMM_Rotate(90.0f, { 0, 1, 0 }) * HMM_Translate({ 0, -3, 0 });
 			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, cockpit * mdl);
 		}
+		*/
 	});
 
-	if (p.pressed.contains(GLFW_KEY_ESCAPE)) {
+	EndMode3D();
+
+	int y = 10;
+	y = rlt::MyDrawText(10, y, WHITE, 20, "SCStrike - libRealSpace Demo");
+	y = rlt::MyDrawText(10, y, WHITE, 20, "SCStrike - libRealSpace Demo");
+	y = rlt::MyDrawText(10, y, WHITE, 20, "SCStrike - libRealSpace Demo");
+
+	if (IsKeyPressed(KEY_ESCAPE)) {
 		Renderer.ClearCache();
 		Stop();
 	}

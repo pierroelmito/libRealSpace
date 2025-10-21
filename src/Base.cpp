@@ -8,14 +8,14 @@
 
 #include "Base.h"
 
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 
 #ifdef _WIN32
 #include <FileAPI.h>
 #else
-#include <sys/stat.h>
 #include <errno.h>
+#include <sys/stat.h>
 #endif
 
 static char base[512];
@@ -27,21 +27,22 @@ const char* GetBase(void)
 
 void SetBase(const char* newBase)
 {
-	strncpy(base,newBase,512);
-	//If the last character is not '/', add it
-	if (base[strlen(base)-1] != '/')
-		strcat(base,"/");
+	strncpy(base, newBase, 512);
+	// If the last character is not '/', add it
+	if (base[strlen(base) - 1] != '/')
+		strcat(base, "/");
 }
 
-int Sys_CreateDirectory(const char* path){
+int Sys_CreateDirectory(const char* path)
+{
 #ifdef _WIN32
-	return CreateDirectoryA(path,NULL);
+	return CreateDirectoryA(path, NULL);
 #else
-	return mkdir(path,S_IRWXU | S_IRUSR | S_IWUSR| S_IXUSR);
+	return mkdir(path, S_IRWXU | S_IRUSR | S_IWUSR | S_IXUSR);
 #endif
 }
 
-void printErrorMessage(int error,const char* subPath)
+void printErrorMessage(int error, const char* subPath)
 {
 #if 0
 	if (error ==EEXIST || error == ENOENT)
@@ -73,14 +74,14 @@ void printErrorMessage(int error,const char* subPath)
 void CreateDirectories(const char* path)
 {
 	const char* cursor = path;
-	const char* endPath = path+strlen(path);
+	const char* endPath = path + strlen(path);
 
 	char subPath[512];
-	char* dst=subPath;
+	char* dst = subPath;
 
-	while(1) {
-		while (*cursor != '\\' && *cursor!= '/'  && cursor != endPath) {
-			*dst=*cursor;
+	while (1) {
+		while (*cursor != '\\' && *cursor != '/' && cursor != endPath) {
+			*dst = *cursor;
 			cursor++;
 			dst++;
 		}
@@ -88,12 +89,12 @@ void CreateDirectories(const char* path)
 			return;
 		*dst = 0;
 		int error = Sys_CreateDirectory(subPath);
-		if (error == -1){
-			printErrorMessage(errno,subPath);
+		if (error == -1) {
+			printErrorMessage(errno, subPath);
 		} else {
-			printf("Created folder: '%s'.\n",subPath);
+			printf("Created folder: '%s'.\n", subPath);
 		}
-		*dst=*cursor;
+		*dst = *cursor;
 		cursor++;
 		dst++;
 	}

@@ -16,8 +16,7 @@
 
 class IActivity;
 
-class GameEngine
-{
+class GameEngine {
 public:
 	GameEngine();
 	~GameEngine();
@@ -45,21 +44,18 @@ public:
 		exit(0);
 	}
 
-	//Add an activity on the top of the stack.
+	// Add an activity on the top of the stack.
 	template <class T, typename... ARGS>
-	T& MakeActivity(const ARGS&... args) {
+	T& MakeActivity(const ARGS&... args)
+	{
 		T* activity = new T();
 		activity->Init(args...);
 		AddActivity(activity);
 		return *activity;
 	}
 	void AddActivity(IActivity* activity);
-	void StopTopActivity(void);
-	IActivity* GetCurrentActivity(void);
-
-	void SetMouseLock(bool lock);
-	bool IsKeyPressed(uint32_t keyCode);
-	bool PumpEvents(void);
+	void StopTopActivity();
+	IActivity* GetCurrentActivity();
 
 private:
 	std::stack<IActivity*> activities;

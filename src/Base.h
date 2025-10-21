@@ -6,11 +6,8 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#ifndef __libRealSpace__Base__
-#define __libRealSpace__Base__
+#pragma once
 
 const char* GetBase(void);
 void SetBase(const char* base);
 void CreateDirectories(const char* path);
-
-#endif /* defined(__libRealSpace__Base__) */

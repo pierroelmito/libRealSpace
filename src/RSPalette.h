@@ -10,14 +10,13 @@
 
 #include <cstdint>
 
-#include "Texture.h"
 #include "ByteSlice.h"
+#include "Texture.h"
 
 class IffLexer;
 class IffChunk;
 
-class RSPalette
-{
+class RSPalette {
 public:
 	RSPalette();
 	~RSPalette();

@@ -8,9 +8,15 @@
 
 #include "SCObjectViewer.h"
 
-#include "precomp.h"
+#include "main.h"
 
 #include <cctype>
+
+#include <raylib.h>
+
+#include "IffLexer.h"
+#include "Math.h"
+#include "RSPalette.h"
 
 SCObjectViewer::SCObjectViewer()
 {
@@ -20,10 +26,9 @@ SCObjectViewer::~SCObjectViewer()
 {
 }
 
-void ConvertToUpperCase(char *sPtr)
+void ConvertToUpperCase(char* sPtr)
 {
-	while(*sPtr != '\0')
-	{
+	while (*sPtr != '\0') {
 		if (islower(*sPtr))
 			*sPtr = toupper(*sPtr);
 		sPtr++;
@@ -33,7 +38,7 @@ void ConvertToUpperCase(char *sPtr)
 void SCObjectViewer::InitFromExtractedFiles()
 {
 	constexpr size_t count = 221;
-	constexpr const char* iffFiles[count] =  {
+	constexpr const char* iffFiles[count] = {
 		"extracted_OBJECTS.TRE/DATA/OBJECTS/HANGAR3.IFF",
 		"extracted_OBJECTS.TRE/DATA/OBJECTS/ABRAMS-G.IFF",
 		"extracted_OBJECTS.TRE/DATA/OBJECTS/FAC10.IFF",
@@ -258,7 +263,7 @@ void SCObjectViewer::InitFromExtractedFiles()
 	};
 
 	showCases.reserve(count);
-	for(int objIndex = 0; objIndex < count; objIndex++) {
+	for (int objIndex = 0; objIndex < count; objIndex++) {
 		RSShowCase& showCase = showCases.emplace_back();
 
 		strncpy(showCase.displayName, iffFiles[objIndex] + 35, 20);
@@ -269,22 +274,22 @@ void SCObjectViewer::InitFromExtractedFiles()
 		showCase.entity->InitFromIFF(&lexer);
 
 		auto& bbox = showCase.entity->GetBoudingBpx();
-		const auto sz = HMM_Length(bbox.max - bbox.min);
+		const auto sz = Vector3Length(bbox.max - bbox.min);
 		showCase.cameraDist = 200.0f * sz;
 	}
 }
 
 void SCObjectViewer::ParseObjList(IffLexer* lexer)
 {
-	//The objects referenced are within this TRE archive
+	// The objects referenced are within this TRE archive
 	TreArchive& tre = Assets.tres[AssetManager::TRE_OBJECTS];
 
-	//The object all follow the same path:
+	// The object all follow the same path:
 	const char* OBJ_PATH = TRE_DATA_OBJECTS;
 	const char* OBJ_EXTENSION = ".IFF";
 
 	IffChunk* chunk = lexer->GetChunkByID("OBJS");
-	if (chunk == NULL){
+	if (chunk == NULL) {
 		printf("**Error: Cannot parse Object List (Missing OBJS chunk).\n");
 		return;
 	}
@@ -294,33 +299,33 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer)
 	size_t numObjectInList = chunk->size / 33;
 
 	showCases.reserve(numObjectInList);
-	for(int objIndex = 0; objIndex < numObjectInList; objIndex++) {
+	for (int objIndex = 0; objIndex < numObjectInList; objIndex++) {
 		RSShowCase& showCase = showCases.emplace_back();
 
 		char objName[9];
-		for(int k = 0 ; k < 9 ; k++)
+		for (int k = 0; k < 9; k++)
 			objName[k] = stream.ReadByte();
 		ConvertToUpperCase(objName);
 
-		for(int k = 0 ; k < 20 ; k++)
+		for (int k = 0; k < 20; k++)
 			showCase.displayName[k] = stream.ReadByte();
 
 		char modelPath[512];
-		strcpy(modelPath,OBJ_PATH);
-		strcat(modelPath,objName);
+		strcpy(modelPath, OBJ_PATH);
+		strcat(modelPath, objName);
 		strcat(modelPath, OBJ_EXTENSION);
 		TreEntry* entry = tre.GetEntryByName(modelPath);
 
-		if (entry == NULL){
-			printf("Object reference '%s' not found in TRE.\n",modelPath);
+		if (entry == NULL) {
+			printf("Object reference '%s' not found in TRE.\n", modelPath);
 			continue;
 		}
 
 		showCase.entity = RSEntity::LoadFromRAM(*entry);
 
 		const uint32_t fixedPointDist = stream.ReadInt32LE();
-		showCase.cameraDist = (fixedPointDist >> 8) + (fixedPointDist & 0xFF)/255.0f ;
-		//showCase.cameraDist = 200000;
+		showCase.cameraDist = (fixedPointDist >> 8) + (fixedPointDist & 0xFF) / 255.0f;
+		// showCase.cameraDist = 200000;
 	}
 }
 
@@ -333,8 +338,8 @@ void SCObjectViewer::ParseAssets()
 {
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 	auto archive = GetPak("OBJVIEW.PAK", *treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.PAK"));
-	//assets->List(stdout);
-	//assets->Decompress("/Users/fabiensanglard/Desktop/ObjViewer.PAK", "MEH");
+	// assets->List(stdout);
+	// assets->Decompress("/Users/fabiensanglard/Desktop/ObjViewer.PAK", "MEH");
 
 	/*
 	PakEntry* entry0 = archive->GetEntry(PAK_ID_MENU_DYNAMC); OBJ_VIEWER BOARD
@@ -344,9 +349,9 @@ void SCObjectViewer::ParseAssets()
 	showAllImage(&file0);
 	*/
 
-	//Identified as OBJECT VIEWER STATIC TITLE
+	// Identified as OBJECT VIEWER STATIC TITLE
 
-	//Identified as TRAINING MISSION TITLE
+	// Identified as TRAINING MISSION TITLE
 	/*
 	PakEntry* entry1 = archive->GetEntry(1);
 	PakArchive file1;
@@ -355,7 +360,7 @@ void SCObjectViewer::ParseAssets()
 	showAllImage(&file1);
 	*/
 
-	//Identified as DOGFIGHT SETUP FIGHT SETUP # enemies and stuff
+	// Identified as DOGFIGHT SETUP FIGHT SETUP # enemies and stuff
 	/*
 	PakEntry* entry2 = archive->GetEntry(2);
 	PakArchive file2;
@@ -364,7 +369,7 @@ void SCObjectViewer::ParseAssets()
 	showAllImage(&file2);
 	*/
 
-	//Identified as BUTTONS DODGE AIR TO AIR button and AIR TO GROUND BUTTON
+	// Identified as BUTTONS DODGE AIR TO AIR button and AIR TO GROUND BUTTON
 	/*
 	PakEntry* entry3 = archive->GetEntry(3);
 	PakArchive file3;
@@ -373,12 +378,12 @@ void SCObjectViewer::ParseAssets()
 	showAllImage(&file3);
 	*/
 
-	//Identified as BUTTONS OBJ VIEWER
+	// Identified as BUTTONS OBJ VIEWER
 	auto objButtons = GetPak("OBJVIEW.PAK: file 4", archive->GetEntry(4));
 	objButtons->List(stdout);
 
-	const Point2D boardPosition = { 4, 155 } ;
-	const Point2D exitDimension{ 30, 15 };
+	const Point2D boardPosition = { 4, 155 };
+	const Point2D exitDimension { 30, 15 };
 	const Point2D exitPosition = { boardPosition.x + 268, boardPosition.y + 15 };
 	const Point2D rotRightButtonPosition = { boardPosition.x + 232, boardPosition.y + 12 };
 	const Point2D rotLeftButtonPosition = { boardPosition.x + 174, boardPosition.y + 12 };
@@ -387,22 +392,28 @@ void SCObjectViewer::ParseAssets()
 	const Point2D zoomOutButtonPosition = { boardPosition.x + 122, boardPosition.y + 25 };
 	const Point2D zoomInButtonPosition = { boardPosition.x + 121, boardPosition.y + 7 };
 	const Point2D nextButtonPosition = { boardPosition.x + 10, boardPosition.y + 15 };
-	const Point2D arrowDimension{ 15, 15 };
+	const Point2D arrowDimension { 15, 15 };
 	const Point2D nextDimension = { 75, 15 };
+	const float rotationSpeed = 0.1f;
+	const float zoomSpeed = 3.0f;
 
+	// exit
 	MakeButton(exitPosition, exitDimension, *objButtons, 14, 15, [] { Game.StopTopActivity(); });
-	MakeButton(rotRightButtonPosition, arrowDimension, *objButtons, 12, 13, [] { Game.StopTopActivity(); });
-	MakeButton(rotLeftButtonPosition, arrowDimension, *objButtons, 10, 11, [] { Game.StopTopActivity(); });
-	MakeButton(rotDownButtonPosition, arrowDimension, *objButtons, 8, 9, [] { Game.StopTopActivity(); });
-	MakeButton(rotUpButtonPosition, arrowDimension, *objButtons, 6, 7, [] { Game.StopTopActivity(); });
-	MakeButton(zoomOutButtonPosition, arrowDimension, *objButtons, 4, 5, [] { Game.StopTopActivity(); });
-	MakeButton(zoomInButtonPosition, arrowDimension, *objButtons, 2, 3, [] { Game.StopTopActivity(); });
+	// rotations
+	MakeButton(rotRightButtonPosition, arrowDimension, *objButtons, 12, 13, [this, rotationSpeed] { angles.x += rotationSpeed; });
+	MakeButton(rotLeftButtonPosition, arrowDimension, *objButtons, 10, 11, [this, rotationSpeed] { angles.x -= rotationSpeed; });
+	MakeButton(rotDownButtonPosition, arrowDimension, *objButtons, 8, 9, [this, rotationSpeed] { angles.y += rotationSpeed; });
+	MakeButton(rotUpButtonPosition, arrowDimension, *objButtons, 6, 7, [this, rotationSpeed] { angles.y -= rotationSpeed; });
+	// zoom
+	MakeButton(zoomOutButtonPosition, arrowDimension, *objButtons, 4, 5, [this, zoomSpeed] { dist += zoomSpeed; });
+	MakeButton(zoomInButtonPosition, arrowDimension, *objButtons, 2, 3, [this, zoomSpeed] { dist -= zoomSpeed; });
+	// next
 	MakeButton(nextButtonPosition, nextDimension, *objButtons, 0, 1, [this] { NextObject(); });
 
-	//buttons.push_back(button);
-	//showAllImage(&file4);
+	// buttons.push_back(button);
+	// showAllImage(&file4);
 
-	//Identified as DODGE FIGHT MISSION BUILDER ACCEPT CANCEL 12:00 3:00   NUMBERS GOOD FAIR
+	// Identified as DODGE FIGHT MISSION BUILDER ACCEPT CANCEL 12:00 3:00   NUMBERS GOOD FAIR
 	/*
 	PakEntry* entry5 = archive->GetEntry(5);
 	PakArchive file5;
@@ -411,7 +422,7 @@ void SCObjectViewer::ParseAssets()
 	showAllImage(&file5);
 	*/
 
-	//Identified as Dodge Fight background
+	// Identified as Dodge Fight background
 	/*
 	PakEntry* entry6 = archive->GetEntry(6);
 	PakArchive file6;
@@ -420,7 +431,7 @@ void SCObjectViewer::ParseAssets()
 	showAllImage(&file6);
 	*/
 
-	//Identified as DOGFIGHT PALETTE
+	// Identified as DOGFIGHT PALETTE
 	/*
 	PakEntry* entry7 = archive->GetEntry(7);
 	PakArchive file7;
@@ -429,11 +440,11 @@ void SCObjectViewer::ParseAssets()
 	//showAllImage(&file7);
 	*/
 
-	//Identified as blue background
+	// Identified as blue background
 
 	InitShapes({ ShpBlueprint, ShpTitle });
 
-	//Unknown content
+	// Unknown content
 	/*
 	PakEntry* entry9 = archive->GetEntry(9);
 	PakArchive file9;
@@ -466,7 +477,7 @@ void SCObjectViewer::Init(void)
 	TreEntry* objViewIFF = treGameFlow.GetEntryByName(TRE_DATA_GAMEFLOW "OBJVIEW.IFF");
 	IffLexer objToDisplay;
 	objToDisplay.InitFromRAM(*objViewIFF);
-	//objToDisplay.List(stdout);
+	// objToDisplay.List(stdout);
 	ParseObjList(&objToDisplay);
 #else
 	InitFromExtractedFiles();
@@ -487,28 +498,43 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 		VGA.PrintText(_font, { 10, 50 }, 255, 3, 5, "%s", showCase.displayName);
 	});
 
-	const double totalTime = TimeToMSec * p.activityTime ;
+	const double totalTime = TimeToMSec * p.activityTime;
 	const double camTime = totalTime / 2000.0;
 	const double lightTime = totalTime / 8000.0;
 
 	const BoudingBox bbox = showCases[currentObject].entity->GetBoudingBpx();
 
-	const RSVector3 newPosition{
-		showCase.cameraDist / 150 * cosf(camTime),
-		showCase.cameraDist / 350,
-		showCase.cameraDist / 150 * sinf(camTime)
+	const float radius = showCase.cameraDist / 150 + dist;
+	const Vector3 targetPos = { 0, 0.2f * (bbox.min.y + bbox.max.y), 0 };
+	const Vector3 camOffset {
+		radius * cosf(angles.x) * cosf(angles.y),
+		radius * sinf(angles.y),
+		radius * sinf(angles.x) * cosf(angles.y)
 	};
+	const Vector3 newPosition = targetPos + camOffset;
 
 	auto& cam = Renderer.GetCamera();
-	cam.SetCam(newPosition, { 0, 0.2f * (bbox.min.Y + bbox.max.Y), 0 });
+	cam.SetCam(newPosition, { 0, 0.2f * (bbox.min.y + bbox.max.y), 0 });
 
-	const RSVector3 light = HMM_NormalizeVec3({ 4.0f * cosf(lightTime), 4.0f, 4.0f * sinf(lightTime) });
-	const RSMatrix id = HMM_Mat4d(1);
+	const Vector3 light = Vector3Normalize({ 4.0f * cosf(lightTime), 4.0f, 4.0f * sinf(lightTime) });
+	const Matrix id = MatrixIdentity();
+
+	Camera rcam {};
+	rcam.position = newPosition;
+	rcam.target = { 0, 0.2f * (bbox.min.y + bbox.max.y), 0 };
+	rcam.up = { 0, 1, 0 };
+	rcam.fovy = 45.0f;
+	rcam.projection = CAMERA_PERSPECTIVE;
+	BeginMode3D(rcam);
+	BeginScissorMode(0, 40 * p.ScHeight / 240, p.ScWidth, 150 * p.ScHeight / 240);
 
 	Renderer.SetLight(light);
-	Renderer.Draw3D({ R3Dp::CLEAR_COLORS }, [&] () {
+	Renderer.Draw3D({ R3Dp::CLEAR_COLORS }, [&]() {
 		Renderer.DrawModel(showCases[currentObject].entity.get(), LOD_LEVEL_MAX, id);
 	});
+
+	EndScissorMode();
+	EndMode3D();
 
 	if (!running)
 		Renderer.ClearCache();

@@ -10,8 +10,7 @@
 
 #include "IActivity.h"
 
-class SCTrainingMenu : public IActivity
-{
+class SCTrainingMenu : public IActivity {
 public:
 	SCTrainingMenu();
 	~SCTrainingMenu();
@@ -19,4 +18,3 @@ public:
 	void Init();
 	void RunFrame(const FrameParams& p) override;
 };
-

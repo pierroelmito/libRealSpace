@@ -8,28 +8,19 @@
 
 #include "SCRegister.h"
 
-#include "precomp.h"
+#include "main.h"
 
 #include "SCGenericScene.h"
-#include "SCAnimationPlayer.h"
-#include "SCConvPlayer.h"
 
-SCRegister::SCRegister()
-{
-}
+SCRegister::SCRegister() { }
 
-SCRegister::~SCRegister()
-{
-}
+SCRegister::~SCRegister() { }
 
-void SCRegister::Init()
-{
-	InitShapes({ OptRegistration });
-}
+void SCRegister::Init() { InitShapes({ OptRegistration }); }
 
 void SCRegister::RunFrame(const FrameParams& p)
 {
-	if (p.pressed.contains(GLFW_KEY_ENTER)) {
+	if (IsKeyPressed(KEY_ENTER)) {
 		Stop();
 		Game.MakeActivity<SCGenericScene>(Scene::WildcatBaseHangar);
 		Game.MakeActivity<SCCutScene>(5);

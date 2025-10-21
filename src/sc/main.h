@@ -8,14 +8,14 @@
 
 #pragma once
 
-#include "SCMouse.h"
 #include "AssetManager.h"
 #include "ConvAssetManager.h"
 #include "GameEngine.h"
-#include "RSScreen.h"
-#include "RSVGA.h"
 #include "RSAudio.h"
 #include "RSFontManager.h"
+#include "RSScreen.h"
+#include "RSVGA.h"
+#include "SCMouse.h"
 #include "SCRenderer.h"
 
 extern GameEngine Game;
@@ -27,3 +27,4 @@ extern AssetManager Assets;
 extern SCRenderer Renderer;
 extern ConvAssetManager ConvAssets;
 extern RSFontManager FontManager;
+

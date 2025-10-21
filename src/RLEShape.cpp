@@ -6,7 +6,7 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "RLEShape.h"
 
 RLEShape::RLEShape()
 {
@@ -19,72 +19,64 @@ RLEShape::~RLEShape()
 void RLEShape::ReadFragment(RLEFragment* frag)
 {
 	uint16_t code = stream.ReadUShort();
-	if (code == 0){
+	if (code == 0) {
 		frag->type = FRAG_END;
 		return;
 	}
 	frag->dx = stream.ReadShort();
 	frag->dy = stream.ReadShort();
 	frag->isCompressed = (code & 0x01);
-	frag->numTexels =     code >> 1;
+	frag->numTexels = code >> 1;
 	if (frag->isCompressed) {
 		frag->type = FRAG_COMPOSITE;
-	} else{
+	} else {
 		frag->type = FRAG_RAW;
 	}
 }
 
-bool RLEShape::ExpandFragment(RLEFragment* frag, uint8_t* dst )
+bool RLEShape::ExpandFragment(RLEFragment* frag, uint8_t* dst)
 {
-	bool error{ false };
+	bool error { false };
 
-	switch(frag->type){
-		case FRAG_RAW:
-		{
-			for(int i=0 ; i < frag->numTexels ; i++){
-				uint8_t color = stream.ReadByte();
-				error = WriteColor(dst,frag->dx+i,frag->dy,color);
-				if (error)
-					return true;
-			}
+	switch (frag->type) {
+	case FRAG_RAW: {
+		for (int i = 0; i < frag->numTexels; i++) {
+			uint8_t color = stream.ReadByte();
+			error = WriteColor(dst, frag->dx + i, frag->dy, color);
+			if (error)
+				return true;
 		}
-		break;
+	} break;
 
-		case FRAG_COMPOSITE:
-		{
-			int numOfTexelsWritten =  0;
-			while (numOfTexelsWritten < frag->numTexels)
-			{
-				uint8_t subCode = stream.ReadByte();
-				uint8_t subCodeType = subCode % 2;
-				uint16_t fragNumTexels = subCode >> 1;
-				if (subCodeType == SUB_FRAG_RAW){
-					for(int i=0 ; i < fragNumTexels ; i++){
-						uint8_t color = stream.ReadByte();
-						error = WriteColor(dst,frag->dx+numOfTexelsWritten,frag->dy,color);
-						if (error)
-							return true;
-						numOfTexelsWritten++;
-					}
-				}
-				else{
+	case FRAG_COMPOSITE: {
+		int numOfTexelsWritten = 0;
+		while (numOfTexelsWritten < frag->numTexels) {
+			uint8_t subCode = stream.ReadByte();
+			uint8_t subCodeType = subCode % 2;
+			uint16_t fragNumTexels = subCode >> 1;
+			if (subCodeType == SUB_FRAG_RAW) {
+				for (int i = 0; i < fragNumTexels; i++) {
 					uint8_t color = stream.ReadByte();
-					for(int i=0 ; i < fragNumTexels ; i++){
-						error = WriteColor(dst,frag->dx+numOfTexelsWritten,frag->dy,color);
-						if (error)
-							return true;
-						numOfTexelsWritten++;
-					}
+					error = WriteColor(dst, frag->dx + numOfTexelsWritten, frag->dy, color);
+					if (error)
+						return true;
+					numOfTexelsWritten++;
+				}
+			} else {
+				uint8_t color = stream.ReadByte();
+				for (int i = 0; i < fragNumTexels; i++) {
+					error = WriteColor(dst, frag->dx + numOfTexelsWritten, frag->dy, color);
+					if (error)
+						return true;
+					numOfTexelsWritten++;
 				}
 			}
 		}
-		break;
+	} break;
 
-		case FRAG_END:
-		{
-			return false;
-		}
-		break;
+	case FRAG_END: {
+		return false;
+	} break;
 	}
 
 	return false;
@@ -101,7 +93,7 @@ bool RLEShape::Init(uint8_t* idata, size_t isize)
 	this->size = isize;
 	this->data = idata;
 
-	//if (isize < 8)
+	// if (isize < 8)
 	//	printf("too short\n");
 
 	this->rightDist = stream.ReadShort();
@@ -122,7 +114,7 @@ void RLEShape::InitWithPosition(const ByteSlice& bytes, const Point2D& position)
 
 void RLEShape::InitWithPositionOld(uint8_t* idata, size_t isize, const Point2D& position)
 {
-	Init(idata,isize);
+	Init(idata, isize);
 	SetPosition(position);
 }
 
@@ -131,7 +123,7 @@ bool RLEShape::Expand(uint8_t* dst, size_t* byteRead)
 	stream.Set(data);
 	RLEFragment frag;
 	ReadFragment(&frag);
-	while( frag.type != FRAG_END) {
+	while (frag.type != FRAG_END) {
 		bool error = ExpandFragment(&frag, dst);
 		if (error) {
 			// printf("RLE is attempting to write out of the frameBuffer\n");
@@ -139,19 +131,19 @@ bool RLEShape::Expand(uint8_t* dst, size_t* byteRead)
 		}
 		ReadFragment(&frag);
 	}
-	*byteRead = stream.GetPosition()-data;
+	*byteRead = stream.GetPosition() - data;
 	return false;
 }
 
-bool RLEShape::WriteColor(uint8_t* dst,int16_t dx, int16_t dy, uint8_t color)
+bool RLEShape::WriteColor(uint8_t* dst, int16_t dx, int16_t dy, uint8_t color)
 {
 	const int16_t fx = leftDist + dx + position.x;
 	const int16_t fy = topDist + dy + position.y;
 	uint8_t* const finalDest = dst + 320 * fy + fx;
-	if (finalDest < dst || finalDest >= dst+(320 * 200))
+	if (finalDest < dst || finalDest >= dst + (320 * 200))
 		return true;
 	if (fx < 320) {
-		color+= colorOffset;
+		color += colorOffset;
 		*finalDest = color;
 	}
 	return false;
@@ -159,7 +151,7 @@ bool RLEShape::WriteColor(uint8_t* dst,int16_t dx, int16_t dy, uint8_t color)
 
 RLEShape* RLEShape::GetStaticEmptyShape()
 {
-	static uint8_t data[9] = {0,0,0,0,0,0,0,0,0};
+	static uint8_t data[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	static RLEShape shape;
 	shape.Init(data, 9);
 	return &shape;
@@ -167,7 +159,7 @@ RLEShape* RLEShape::GetStaticEmptyShape()
 
 RLEShape* RLEShape::GetNewEmptyShape()
 {
-	static uint8_t data[9] = {0,0,0,0,0,0,0,0,0};
+	static uint8_t data[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	auto* shape = new RLEShape();
 	shape->Init(data, 9);
 	return shape;

@@ -8,7 +8,7 @@
 
 #include "SCMouse.h"
 
-#include "precomp.h"
+#include "main.h"
 
 SCMouse::SCMouse()
 {
@@ -20,11 +20,13 @@ SCMouse::~SCMouse()
 
 void SCMouse::Init()
 {
+	HideCursor();
+
 	TreEntry* cursorShape = Assets.tres[AssetManager::TRE_MISC].GetEntryByName(TRE_DATA "MOUSE.SHP");
 	PakArchive cursors;
-	cursors.InitFromRAM("MOUSE.SHP",*cursorShape);
+	cursors.InitFromRAM("MOUSE.SHP", *cursorShape);
 
-	for (int i = 0 ; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		appearances[i] = std::make_unique<RLEShape>();
 		appearances[i]->Init(cursors.GetEntry(i));
 	}
@@ -32,7 +34,7 @@ void SCMouse::Init()
 
 void SCMouse::Draw()
 {
-	if (! IsVisible())
+	if (!IsVisible())
 		return;
 
 	// We need to draw the cursor a little bit higher left than the mouse
@@ -41,7 +43,7 @@ void SCMouse::Draw()
 	cursorPos.x -= 4;
 	cursorPos.y -= 4;
 
-	//If the mouse is over a clickable button, the current appearance has already been selected.
+	// If the mouse is over a clickable button, the current appearance has already been selected.
 	if (mode == CURSOR) {
 		appearances[1]->SetPosition(cursorPos);
 		VGA.DrawShape(*appearances[1]);
@@ -55,6 +57,6 @@ void SCMouse::Draw()
 
 void SCMouse::FlushEvents(void)
 {
-	for (size_t i = 0 ; i < 3 ; i++)
+	for (size_t i = 0; i < 3; i++)
 		buttons[i].event = SCMouseButton::NONE;
 }

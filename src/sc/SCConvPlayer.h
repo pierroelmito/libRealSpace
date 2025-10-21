@@ -14,41 +14,44 @@ class RSFont;
 class CharFigure;
 class CharFace;
 
-class ConvFrame
-{
+class ConvFrame {
 public:
 	RSFont* font;
 	char* text;
 	uint8_t textColor;
 
-	enum ConvMode{ CONV_WIDE, CONV_CLOSEUP, CONV_WINGMAN_CHOICE, CONV_CONTRACT_CHOICE };
+	enum ConvMode { CONV_WIDE,
+		CONV_CLOSEUP,
+		CONV_WINGMAN_CHOICE,
+		CONV_CONTRACT_CHOICE };
 	ConvMode mode;
 
-	enum FacePos{ FACE_DEF=0x0, FACE_LEFT=0x82, FACE_RIGHT=0xBE, FACE_CENTER=0xA0 };
+	enum FacePos { FACE_DEF = 0x0,
+		FACE_LEFT = 0x82,
+		FACE_RIGHT = 0xBE,
+		FACE_CENTER = 0xA0 };
 	FacePos facePosition;
 
-	//If we are in a wide of chose wingman mode
+	// If we are in a wide of chose wingman mode
 	std::vector<CharFigure*> participants;
 
-	//If we are in close up mode
+	// If we are in close up mode
 	CharFace* face;
 	int8_t facePaletteID;
 
 	std::vector<std::unique_ptr<RLEShape>>* bgLayers;
-	std::vector<uint8_t*> * bgPalettes;
+	std::vector<uint8_t*>* bgPalettes;
 
 	GTime creationTime; // Used to check when a frame expires.
 
-	inline void SetExpired(bool exp){ this->expired = exp;}
-	inline bool IsExpired(void){ return this->expired;}
+	inline void SetExpired(bool exp) { this->expired = exp; }
+	inline bool IsExpired(void) { return this->expired; }
 
 private:
 	bool expired;
 };
 
-
-class SCConvPlayer: public IActivity
-{
+class SCConvPlayer : public IActivity {
 public:
 	SCConvPlayer();
 	~SCConvPlayer();
@@ -65,10 +68,10 @@ private:
 	void DrawText(void);
 	void CheckFrameExpired(const FrameParams& p);
 
-	int32_t conversationID{ 0 };
-	ByteStream conv ;
-	size_t size; //In bytes
-	uint8_t* end; //In bytes
+	int32_t conversationID { 0 };
+	ByteStream conv;
+	size_t size; // In bytes
+	uint8_t* end; // In bytes
 	ConvFrame currentFrame;
-	bool initialized{ false };
+	bool initialized { false };
 };

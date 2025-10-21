@@ -14,18 +14,16 @@
 #include "RSFont.h"
 #include "TreArchive.h"
 
-class RSFontManager
-{
+class RSFontManager {
 public:
 	RSFontManager();
 	~RSFontManager();
 
 	void Init(TreArchive& tre);
-	void Release() {}
+	void Release() { }
 	RSFont* GetFont(const char* name);
 
 private:
 	RSFont font;
 	std::map<std::string, RSFont*> fonts;
 };
-

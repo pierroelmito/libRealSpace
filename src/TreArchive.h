@@ -8,29 +8,27 @@
 
 #pragma once
 
-#include <cstring>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 
-#include <vector>
-#include <string>
 #include <map>
+#include <string>
+#include <vector>
 
 #include "ByteSlice.h"
 
 class PakArchive;
 class ByteStream;
 
-struct TreEntry : public ByteSlice
-{
-	uint8_t unknownFlag{ 0 };
-	char name[65]{};
+struct TreEntry : public ByteSlice {
+	uint8_t unknownFlag { 0 };
+	char name[65] {};
 };
 
-class TreArchive
-{
+class TreArchive {
 public:
-	 TreArchive();
+	TreArchive();
 	~TreArchive();
 
 	bool InitFromFile(const char* filepath);
@@ -41,24 +39,25 @@ public:
 
 	void List(FILE* output);
 
-	//Direct access to a TRE entry.
+	// Direct access to a TRE entry.
 	TreEntry* GetEntryByName(const char* entryName);
 
-	//Build a pak directly
-	bool GetPAKByName(const char* entryName,PakArchive* pak);
+	// Build a pak directly
+	bool GetPAKByName(const char* entryName, PakArchive* pak);
 
-	//A way to iterate through all entries in the TRE.
+	// A way to iterate through all entries in the TRE.
 	TreEntry* GetEntryByID(size_t entryID);
 	size_t GetNumEntries(void);
 
 	bool Decompress(const char* dstDirectory);
 
-	static inline bool Compare(TreEntry* any, TreEntry* other) {
+	static inline bool Compare(TreEntry* any, TreEntry* other)
+	{
 		return any->data < other->data;
 	}
 
 	inline uint8_t* GetData() const { return data; }
-	inline bool IsValid() const { return this->valid;}
+	inline bool IsValid() const { return this->valid; }
 
 private:
 	void ReadEntry(ByteStream* stream, TreEntry* entry);
@@ -69,8 +68,8 @@ private:
 	char path[512];
 	std::vector<TreEntry> entries;
 	std::map<std::string, size_t> mappedEntries;
-	uint8_t* data{ nullptr };
-	size_t size{ 0 };
-	bool valid{ false };
-	bool initalizedFromFile{ false }; // allows to know if we should free the TRE data
+	uint8_t* data { nullptr };
+	size_t size { 0 };
+	bool valid { false };
+	bool initalizedFromFile { false }; // allows to know if we should free the TRE data
 };

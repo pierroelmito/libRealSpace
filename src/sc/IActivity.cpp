@@ -8,8 +8,6 @@
 
 #include "IActivity.h"
 
-#include "precomp.h"
-
 #include "main.h"
 
 #include "SCButton.h"
@@ -22,7 +20,8 @@ IActivity::~IActivity()
 {
 }
 
-void IActivity::SetTitle(const char* title){
+void IActivity::SetTitle(const char* title)
+{
 	Screen.SetTitle(title);
 }
 
@@ -47,34 +46,26 @@ bool IActivity::Frame2D(const FrameParams& p, SceneSchapes& shapes, std::functio
 				VGA.DrawShape(*shape.frames[1 + (*shape.anim)[idx]]);
 			} else {
 				switch (shape.am) {
-				case AnimMode::Character:
-					{
-						VGA.DrawShape(*shape.frames[0]);
-						uint32_t idx = uint32_t(t * FrameMul) % (shape.frames.size() - 1);
-						VGA.DrawShape(*shape.frames[1 + idx]);
-					}
-					break;
-				case AnimMode::Cutscene:
-					{
-						uint32_t maxIdx = shape.frames.size() - 1;
-						uint32_t idx = std::min(maxIdx, uint32_t(t * FrameMul));
-						if (idx != maxIdx)
-							running = true;
-						VGA.DrawShape(*shape.frames[idx]);
-					}
-					break;
-				case AnimMode::First:
-					{
-						uint32_t idx = 0;
-						VGA.DrawShape(*shape.frames[idx]);
-					}
-					break;
-				case AnimMode::Second:
-					{
-						uint32_t idx = 1;
-						VGA.DrawShape(*shape.frames[idx]);
-					}
-					break;
+				case AnimMode::Character: {
+					VGA.DrawShape(*shape.frames[0]);
+					uint32_t idx = uint32_t(t * FrameMul) % (shape.frames.size() - 1);
+					VGA.DrawShape(*shape.frames[1 + idx]);
+				} break;
+				case AnimMode::Cutscene: {
+					uint32_t maxIdx = shape.frames.size() - 1;
+					uint32_t idx = std::min(maxIdx, uint32_t(t * FrameMul));
+					if (idx != maxIdx)
+						running = true;
+					VGA.DrawShape(*shape.frames[idx]);
+				} break;
+				case AnimMode::First: {
+					uint32_t idx = 0;
+					VGA.DrawShape(*shape.frames[idx]);
+				} break;
+				case AnimMode::Second: {
+					uint32_t idx = 1;
+					VGA.DrawShape(*shape.frames[idx]);
+				} break;
 				}
 			}
 		} else {
@@ -97,28 +88,23 @@ SCButton* IActivity::CheckButtons(void)
 	if (buttons.empty())
 		return nullptr;
 
-	for(auto&& button : buttons) {
+	for (auto&& button : buttons) {
 		if (!button->IsEnabled())
 			continue;
 
 		const Point2D mpos = Mouse.GetPosition();
-		if (mpos.x < button->position.x ||
-			mpos.x > button->position.x + button->dimension.x ||
-			mpos.y < button->position.y ||
-			mpos.y > button->position.y + button->dimension.y
-			)
-		{
+		if (mpos.x < button->position.x || mpos.x > button->position.x + button->dimension.x || mpos.y < button->position.y || mpos.y > button->position.y + button->dimension.y) {
 			button->SetAppearance(SCButton::APR_UP);
 			continue;
 		}
 
-		//HIT !
+		// HIT !
 		Mouse.SetMode(SCMouse::VISOR);
 
 		if (Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::PRESSED)
 			button->SetAppearance(SCButton::APR_DOWN);
 
-		//If the mouse button has just been released: trigger action.
+		// If the mouse button has just been released: trigger action.
 		if (Mouse.buttons[SCMouseButton::LEFT].event == SCMouseButton::RELEASED) {
 			Mouse.SetMode(SCMouse::CURSOR);
 			button->OnAction();
@@ -175,12 +161,12 @@ bool IActivity::InitShapes(std::initializer_list<PalBg> ids)
 
 	auto& treGameFlow = Assets.tres[AssetManager::TRE_GAMEFLOW];
 	std::map<std::string, std::unique_ptr<PakArchive>> paks;
-	auto getPak = [&] (const char* path) -> PakArchive& {
+	auto getPak = [&](const char* path) -> PakArchive& {
 		auto& pak = paks[path];
 		if (!pak) {
 			pak = GetPak(path, *treGameFlow.GetEntryByName(path));
 			printf("\tload pak %s\n", path);
-			//pak->List(stdout);
+			// pak->List(stdout);
 		}
 		return *pak;
 	};
@@ -257,14 +243,14 @@ SCButton* IActivity::MakeButton(Point2D pos, Point2D size, PakArchive& subPak, s
 {
 	auto& button = buttons.emplace_back(std::make_unique<SCButton>());
 	button->InitBehavior(pos, size, std::move(fn));
-	button->appearance[SCButton::APR_UP]  .InitWithPosition(subPak.GetEntry(upEntry), pos);
+	button->appearance[SCButton::APR_UP].InitWithPosition(subPak.GetEntry(upEntry), pos);
 	button->appearance[SCButton::APR_DOWN].InitWithPosition(subPak.GetEntry(downEntry), pos);
 	return button.get();
 }
 
 void IActivity::DrawButtons(void)
 {
-	for(auto&& button : buttons) {
+	for (auto&& button : buttons) {
 		if (button->IsEnabled())
 			VGA.DrawShape(button->appearance[button->GetAppearance()]);
 		else

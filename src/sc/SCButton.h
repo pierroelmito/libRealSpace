@@ -13,12 +13,12 @@
 #include "Math.h"
 #include "RLEShape.h"
 
-class SCButton
-{
+class SCButton {
 public:
 	using ActionFunction = std::function<void()>;
 
-	enum Appearance { APR_UP, APR_DOWN};
+	enum Appearance { APR_UP,
+		APR_DOWN };
 
 	SCButton();
 	~SCButton();
@@ -30,15 +30,14 @@ public:
 	void OnAction(void);
 
 	inline bool IsEnabled(void) const { return this->enabled; }
-	inline void SetEnable(bool enabled){ this->enabled = enabled;}
-	inline void SetAppearance(Appearance app){ this->apre = app;}
-	inline Appearance GetAppearance(void){ return this->apre; }
+	inline void SetEnable(bool enabled) { this->enabled = enabled; }
+	inline void SetAppearance(Appearance app) { this->apre = app; }
+	inline Appearance GetAppearance(void) { return this->apre; }
 
 	RLEShape appearance[2];
 
 private:
-	bool enabled{ true };
-	Appearance apre{ APR_UP };
-	ActionFunction onClick{};
+	bool enabled { true };
+	Appearance apre { APR_UP };
+	ActionFunction onClick {};
 };
-

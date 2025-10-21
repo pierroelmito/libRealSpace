@@ -12,48 +12,43 @@
 #include <vector>
 
 #include "PakArchive.h"
-#include "TreArchive.h"
 #include "RSImageSet.h"
+#include "TreArchive.h"
 
 class IffChunk;
-//class RLEShape;
+// class RLEShape;
 
 #define CONV_TOP_BAR_HEIGHT 23
 #define CONV_BOTTOM_BAR_HEIGHT 48
 
-#define CONV_BORDER_MARGIN  69
-#define CONV_INTERLETTER_SPACE  3
-#define CONV_SPACE_SIZE  5
+#define CONV_BORDER_MARGIN 69
+#define CONV_INTERLETTER_SPACE 3
+#define CONV_SPACE_SIZE 5
 
-struct CharFace
-{
+struct CharFace {
 	char name[9];
-	RSImageSet appearances{};
+	RSImageSet appearances {};
 	// size_t paletteID;
 };
 
-struct FacePalette
-{
+struct FacePalette {
 	char name[9];
 	uint8_t index;
 };
 
-struct CharFigure
-{
+struct CharFigure {
 	char name[9];
-	RLEShape* appearance{ nullptr };
+	RLEShape* appearance { nullptr };
 	size_t paletteID;
 };
 
-struct ConvBackGround
-{
+struct ConvBackGround {
 	std::vector<std::unique_ptr<RLEShape>> layers;
 	std::vector<uint8_t*> palettes;
 	char name[9];
 };
 
-class ConvAssetManager
-{
+class ConvAssetManager {
 public:
 	ConvAssetManager();
 	~ConvAssetManager();
@@ -73,9 +68,9 @@ private:
 	void ReadFaces(const IffChunk* chunk);
 	void ReadFigures(const IffChunk* chunk);
 	void ReadPFigures(const IffChunk* chunk);
-	//I have no idea what is in there.
+	// I have no idea what is in there.
 	void ReadFCPL(const IffChunk* chunk);
-	//I have no idea what is in there.
+	// I have no idea what is in there.
 	void ReadFGPL(const IffChunk* chunk);
 
 	std::map<std::string, std::unique_ptr<CharFace>> faces;
@@ -88,5 +83,5 @@ private:
 	PakArchive _optShps;
 	PakArchive _optPals;
 
-	void ParseBGLayer(uint8_t* data, size_t layerID,ConvBackGround* back);
+	void ParseBGLayer(uint8_t* data, size_t layerID, ConvBackGround* back);
 };

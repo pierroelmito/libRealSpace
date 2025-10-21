@@ -1,9 +1,9 @@
 
 #include "UserProperties.h"
 
-std::istream& operator >> (std::istream& in, hmm_vec3& v)
+std::istream& operator>>(std::istream& in, Vector3& v)
 {
-	in >> v.X >> v.Y >> v.Z;
+	in >> v.x >> v.y >> v.z;
 	return in;
 }
 

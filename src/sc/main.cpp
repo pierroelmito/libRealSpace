@@ -6,14 +6,14 @@
 //  Copyright (c) 2014 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
+#include "main.h"
 
-#include "SCMainMenu.h"
-#include "RSFontManager.h"
 #include "RSAudio.h"
+#include "RSFontManager.h"
+#include "SCMainMenu.h"
 #include "UserProperties.h"
 
-//Here are all the mean subsystems interacting together
+// Here are all the mean subsystems interacting together
 GameEngine Game;
 RSScreen Screen;
 RSVGA VGA;
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
 	Assets.SetBase("./");
 	Game.Init();
-	//Add MainMenu activity on the game stack.
+	// Add MainMenu activity on the game stack.
 	Game.MakeActivity<SCMainMenu>();
 	Game.Run();
 	Game.Release();
