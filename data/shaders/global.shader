@@ -55,6 +55,7 @@ void main()
 VAR vec3 fragNormal;
 VAR vec2 fragTexCoord;
 VAR vec4 fragColor;
+VAR float fragFog;
 
 #if VS
 
@@ -88,6 +89,7 @@ void main()
 #else
 	gl_Position = fixZB(mvp * vec4(vertexPosition, 1.0));
 #endif
+	fragFog = gl_Position.z / gl_Position.w;
 }
 
 #else //!VS
@@ -116,6 +118,7 @@ void main()
 	finalColor.xyz *= diffuseLight;
 	if (finalColor.a < 0.1)
 		discard;
+	finalColor.xyz = mix(finalColor.xyz, vec3(1.0, 1.0, 1.0), fragFog);
 	//finalColor.xyz = 0.1 * finalColor.xyz + 0.9 * 0.5 * (vec3(1, 1, 1) + fragViewdir.xyz);
 }
 
