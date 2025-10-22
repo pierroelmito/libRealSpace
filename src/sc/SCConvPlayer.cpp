@@ -31,7 +31,7 @@ SCConvPlayer::~SCConvPlayer()
 #define UNKNOWN 0x0E
 #define CHOOSE_WINGMAN 0x0F
 
-void SCConvPlayer::Focus(void)
+void SCConvPlayer::Focus()
 {
 	IActivity::Focus();
 	Screen.SetTitle("CONVersation Player");
@@ -203,7 +203,7 @@ void SCConvPlayer::SetID(int32_t id)
 
 void SCConvPlayer::Init()
 {
-	this->palette = VGA.GetPalette();
+	palette = VGA.GetPalette();
 	currentFrame.font = FontManager.GetFont("");
 }
 
@@ -214,7 +214,7 @@ void SCConvPlayer::CheckFrameExpired(const FrameParams& p)
 		this->currentFrame.SetExpired(true);
 }
 
-void SCConvPlayer::DrawText(void)
+void SCConvPlayer::DrawText()
 {
 	if (currentFrame.text == NULL)
 		return;

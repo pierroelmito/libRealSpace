@@ -6,9 +6,9 @@
 //  Copyright (c) 2013 Fabien Sanglard. All rights reserved.
 //
 
-#include "precomp.h"
-
 #if 0
+
+#include "precomp.h"
 
 #include <SDL2/SDL.h>
 

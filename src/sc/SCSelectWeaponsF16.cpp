@@ -11,6 +11,7 @@
 #include "main.h"
 
 #include "SCStrike.h"
+#include "SoundIDs.h"
 
 SCSelectWeaponF16::SCSelectWeaponF16() { }
 

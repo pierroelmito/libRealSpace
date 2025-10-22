@@ -13,10 +13,8 @@
 class SCDogFightMenu : public IActivity {
 public:
 	SCDogFightMenu();
-	~SCDogFightMenu();
+	virtual ~SCDogFightMenu();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;
-
-protected:
 };

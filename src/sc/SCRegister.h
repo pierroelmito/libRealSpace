@@ -13,7 +13,7 @@
 class SCRegister : public IActivity {
 public:
 	SCRegister();
-	~SCRegister();
+	virtual ~SCRegister();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;

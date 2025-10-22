@@ -15,7 +15,6 @@
 #include <vector>
 
 RSTexture::RSTexture()
-	: locFlag(DISK)
 {
 	img.width = 0;
 	img.height = 0;
@@ -37,7 +36,6 @@ void RSTexture::Set(RSImage& image)
 	strncpy(name, image.name, 8);
 	img = GenImageColor(image.width, image.height, PINK);
 	tex = LoadTextureFromImage(img);
-	locFlag = RAM;
 }
 
 void FillAlphaWithAppropriateColors(size_t w, size_t h, uint8_t* data)
@@ -121,22 +119,17 @@ void RSTexture::UpdateContent(RSImage& image)
 			const uint8_t* psrcIndex = src + j + i * image.width;
 			const uint8_t srcIndex = *psrcIndex;
 			const Color& src = palette->GetRGBColor(srcIndex);
-
 			dst[0] = src.r;
 			dst[1] = src.g;
 			dst[2] = src.b;
 			dst[3] = src.a;
-
 			if (src.r == 0 && src.g == 0 && src.b == 0)
 				dst[3] = 0;
-
 			// force alpha on delimiters...
 			if (image.width == 64 && image.height == 64 && src.r == 174 && src.g == 28 && src.b == 0)
 				dst[3] = 0;
-
 			const bool alpha = dst[3] == 0;
 			hasAlpha = hasAlpha || alpha;
-
 			dst += 4;
 		}
 	}

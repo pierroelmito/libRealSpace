@@ -19,7 +19,7 @@ class RSFont;
 class SCSelectWeaponF16 : public IActivity {
 public:
 	SCSelectWeaponF16();
-	~SCSelectWeaponF16();
+	virtual ~SCSelectWeaponF16();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;

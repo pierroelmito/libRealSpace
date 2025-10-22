@@ -93,12 +93,12 @@ protected:
 		std::vector<Quad> quads {};
 		std::string label {};
 		AreaAction action {};
-		std::optional<size_t> shpIndex;
+		std::optional<size_t> shpIndex{};
 		AnimMode am {};
 	};
 	std::vector<Interaction> _interactions;
 	std::optional<std::pair<double, AreaAction>> _activated;
-	RSFont* _font;
+	RSFont* _font {};
 	uint8_t _textColor { 1 };
 	SceneID _currentScene {};
 

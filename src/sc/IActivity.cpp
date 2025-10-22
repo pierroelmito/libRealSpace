@@ -10,8 +10,6 @@
 
 #include "main.h"
 
-#include "SCButton.h"
-
 IActivity::IActivity()
 {
 }

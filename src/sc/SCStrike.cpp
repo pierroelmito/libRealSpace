@@ -84,13 +84,13 @@ void SCStrike::ComputeMove(const Matrix& transform, GTime dt)
 
 	d = Vector3Normalize(d - n * (dt * (rLeft + rRight)) - u * (dt * (rUp + rDown)));
 	u = Vector3Normalize(Vector3CrossProduct(d, n));
-	u = Vector3Normalize(u + n * (dt * (mPanL + mPanR)));
+	u = Vector3Normalize(u + n * (dt * -(mPanL + mPanR)));
 	n = Vector3CrossProduct(u, d);
 	d = Vector3Normalize(Vector3CrossProduct(n, u));
 
 	plane.dir = d;
 	plane.up = u;
-	plane.pos += (d * (mUp + mDown) + n * (mLeft + mRight)) * (2.0f * dt * mQuick);
+	plane.pos += (d * -(mUp + mDown) + n * -(mLeft + mRight)) * (2.0f * dt * mQuick);
 }
 
 Matrix SCStrike::ComputeTransform(bool cockpit, bool lookAt)
@@ -180,12 +180,14 @@ void SCStrike::RunFrame(const FrameParams& p)
 	Camera rcam {};
 	rcam.position = plane.pos;
 	rcam.target = plane.pos + lookAt;
+	// rcam.position = { 0, 8.5, 0 };
+	// rcam.target = lookAt;
 	rcam.up = plane.up;
 	rcam.fovy = 45.0f;
 	rcam.projection = CAMERA_PERSPECTIVE;
 	BeginMode3D(rcam);
 
-	Renderer.Draw3D({ R3Dp::SKY /*| R3Dp::CLOUDS*/ }, [&]() {
+	Renderer.Draw3D({ rcam, R3Dp::CLEAR_COLORS | R3Dp::SKY /*| R3Dp::CLOUDS*/ }, [&]() {
 		// world
 		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.totalTime);
 

@@ -8,12 +8,14 @@
 
 #pragma once
 
-#include <cmath>
-
-#include "Math.h"
+#include <raylib.h>
 
 class RSCamera {
 public:
 	void SetFov(float fovy);
 	void SetCam(const Vector3& position, const Vector3& lookAtv);
+
+protected:
+	Camera3D cam {};
 };
+

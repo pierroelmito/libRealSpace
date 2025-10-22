@@ -529,7 +529,7 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	BeginScissorMode(0, 40 * p.ScHeight / 240, p.ScWidth, 150 * p.ScHeight / 240);
 
 	Renderer.SetLight(light);
-	Renderer.Draw3D({ R3Dp::CLEAR_COLORS }, [&]() {
+	Renderer.Draw3D({ rcam, 0 }, [&]() {
 		Renderer.DrawModel(showCases[currentObject].entity.get(), LOD_LEVEL_MAX, id);
 	});
 

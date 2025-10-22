@@ -13,7 +13,7 @@
 class SCTrainingMenu : public IActivity {
 public:
 	SCTrainingMenu();
-	~SCTrainingMenu();
+	virtual ~SCTrainingMenu();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;

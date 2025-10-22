@@ -30,7 +30,6 @@ void RSImage::Create(const char name[8], uint32_t width, uint32_t height, uint32
 	this->height = height;
 	this->data = (uint8_t*)malloc(this->width * this->height);
 	this->palette = &Renderer.GetPalette();
-
 	this->texture.Set(*this);
 	dirty = true;
 }
@@ -43,18 +42,11 @@ void RSImage::UpdateContent(uint8_t* src)
 
 void RSImage::SyncTexture()
 {
-	// Check that we have a texture with an id on the GPU
-	if ((texture.locFlag & RSTexture::VRAM) == 0) {
-		Renderer.CreateTextureInGPU(&texture);
-		texture.locFlag |= RSTexture::VRAM;
-	}
-
-	// Check if we are synchornized with GPU
-	if (this->dirty) {
-		texture.UpdateContent(*this);
-		Renderer.UploadTextureContentToGPU(&texture);
-		dirty = false;
-	}
+	if (!this->dirty)
+		return;
+	texture.UpdateContent(*this);
+	Renderer.UploadTextureContentToGPU(&texture);
+	dirty = false;
 }
 
 uint8_t* RSImage::GetData()

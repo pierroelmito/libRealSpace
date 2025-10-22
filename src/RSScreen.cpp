@@ -23,15 +23,14 @@ void RSScreen::Init(int32_t zoomFactor)
 	const int32_t w = 320 * zoomFactor;
 	const int32_t h = 200 * zoomFactor;
 
-	this->scale = zoomFactor;
-	this->width = w;
-	this->height = h;
+	scale = zoomFactor;
+	width = w;
+	height = h;
 
 	InitWindow(w, h, "SC");
 	SetWindowState(FLAG_VSYNC_HINT);
 	SetTargetFPS(60);
-
-	Renderer.MakeContext();
+	SetExitKey(KEY_NULL);
 }
 
 void RSScreen::Release()

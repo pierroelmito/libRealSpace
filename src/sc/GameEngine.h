@@ -53,10 +53,11 @@ public:
 		AddActivity(activity);
 		return *activity;
 	}
+
 	void AddActivity(IActivity* activity);
 	void StopTopActivity();
-	IActivity* GetCurrentActivity();
 
 private:
 	std::stack<IActivity*> activities;
 };
+

@@ -8,20 +8,17 @@
 
 #include "SCRenderer.h"
 
-#include "Math.h"
-#include "UserProperties.h"
-
-#include "main.h"
-
 #include <cassert>
 
 #include <algorithm>
 
-#include "rltools.hpp"
-
+#include "Math.h"
 #include "RSArea.h"
 #include "RSImage.h"
 #include "RSPalette.h"
+#include "UserProperties.h"
+#include "main.h"
+#include "rltools.hpp"
 
 #define TINYDDSLOADER_IMPLEMENTATION
 #include "tinyddsloader.h"
@@ -37,17 +34,15 @@ struct CompTexture {
 	bool operator()(Texture* a, Texture* b) const { return a->id < b->id; }
 };
 
-Texture debugFont {};
-Texture noise {};
-Texture white {};
-Texture skydome {};
-Texture screen {};
+Texture texNoise {};
+Texture texSkydome {};
+Texture texScreen {};
+Texture texWhite {};
 
-Texture renderTargetColor {};
-Texture renderTargetGDepth {};
-Texture renderTargetZBuffer {};
+Mesh mshFsq {};
 
 Shader shdDefault {};
+Shader shdSky {};
 
 Vector3 DecodeColor(const std::string& col)
 {
@@ -78,23 +73,6 @@ int ComputeMipCount(int w, int h)
 	const int m0 = std::min(__builtin_clz(w), __builtin_clz(h));
 	return m1 - m0;
 }
-
-/*
-sg_filter GetMinFilter(bool linear, bool mipmaps)
-{
-		if (linear)
-				return mipmaps ? SG_FILTER_LINEAR_MIPMAP_LINEAR :
-SG_FILTER_LINEAR; return mipmaps ? SG_FILTER_NEAREST_MIPMAP_NEAREST :
-SG_FILTER_NEAREST;
-}
-
-sg_filter GetMagFilter(bool linear)
-{
-		if (linear)
-				return SG_FILTER_LINEAR;
-		return SG_FILTER_NEAREST;
-}
-*/
 
 std::optional<PixelFormat> GetFormatFromDDS(tinyddsloader::DDSFile::DXGIFormat fmt)
 {
@@ -187,254 +165,8 @@ Texture MakeSkyDome(
 }
 
 /*
-template <class T>
-T GetFogParams()
-{
-	T fog;
-	fog.fogColor = DecodeColor(UserProperties::Get().Strings.Get("FogColor", "1b669b"));
-	fog.thickNess = UserProperties::Get().Floats.Get("FogThickness", 0.0002);
-	return fog;
-}
-*/
-
-/*
-struct ModelRenderData {
-	bool Init()
-	{
-		return true;
-	}
-
-	void Release()
-	{
-	}
-};
-
-struct GroundRenderData {
-	bool Init()
-	{
-	}
-
-	void Release()
-	{
-	}
-};
-
-struct FullscreenSky {
-	bool Init()
-	{
-		{
-			const float N = -1.0f;
-			const float P = -N;
-			const float Z = 1.0f;
-			const float vertices[] = {
-				N,
-				P,
-				Z,
-				P,
-				P,
-				Z,
-				N,
-				N,
-				Z,
-				P,
-				P,
-				Z,
-				P,
-				N,
-				Z,
-				N,
-				N,
-				Z,
-			};
-			sg_buffer_desc bdesc {};
-			bdesc.data = SG_RANGE(vertices);
-			vbuf = sg_make_buffer(&bdesc);
-		}
-
-		{
-			sg_pipeline_desc pdesc {};
-			pdesc.shader = shd;
-			pdesc.depth.write_enabled = false;
-			pdesc.depth.compare = SG_COMPAREFUNC_EQUAL;
-			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
-			pip = sg_make_pipeline(&pdesc);
-		}
-
-		bind.vertex_buffers[0] = vbuf;
-
-		return true;
-	}
-
-	bool Release()
-	{
-		sg_destroy_buffer(vbuf);
-		sg_destroy_pipeline(pip);
-		sg_destroy_shader(shd);
-		return true;
-	}
-};
-
-struct FullscreenClouds {
-	sg_buffer vbuf {};
-	sg_shader shd {};
-	sg_pipeline pip {};
-	sg_bindings bind {};
-
-	bool Init()
-	{
-		sg_shader_desc sd = *clouds_shader_desc(sg_query_backend());
-		shd = sg_make_shader(sd);
-
-		{
-			const float N = -1.0f;
-			const float P = -N;
-			const float Z = 1.0f;
-			const float vertices[] = {
-				N,
-				P,
-				Z,
-				P,
-				P,
-				Z,
-				N,
-				N,
-				Z,
-				P,
-				P,
-				Z,
-				P,
-				N,
-				Z,
-				N,
-				N,
-				Z,
-			};
-			sg_buffer_desc bdesc {};
-			bdesc.data = SG_RANGE(vertices);
-			vbuf = sg_make_buffer(&bdesc);
-		}
-
-		{
-			sg_pipeline_desc pdesc {};
-			pdesc.shader = shd;
-			pdesc.depth.pixel_format = SG_PIXELFORMAT_NONE;
-			pdesc.depth.write_enabled = false;
-			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
-			pdesc.colors[0].blend = {
-				true,
-				SG_BLENDFACTOR_SRC_ALPHA,
-				SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-				SG_BLENDOP_ADD,
-				SG_BLENDFACTOR_ZERO,
-				SG_BLENDFACTOR_ONE,
-				SG_BLENDOP_ADD,
-			};
-			pip = sg_make_pipeline(&pdesc);
-		}
-
-		bind.vertex_buffers[0] = vbuf;
-
-		return true;
-	}
-
-	void Release()
-	{
-		sg_destroy_buffer(vbuf);
-		sg_destroy_pipeline(pip);
-		sg_destroy_shader(shd);
-	}
-};
-
-struct FullscreenBitmapData {
-	sg_buffer vbuf {};
-	sg_shader shd {};
-	sg_pipeline pip {};
-
-	bool Init()
-	{
-		shd = sg_make_shader(bitmap_shader_desc(sg_query_backend()));
-
-		{
-			const float N = -1.0f;
-			const float P = -N;
-			const float Z = 0.5f;
-			const float vertices[] = {
-				N,
-				P,
-				Z,
-				P,
-				P,
-				Z,
-				N,
-				N,
-				Z,
-				P,
-				P,
-				Z,
-				P,
-				N,
-				Z,
-				N,
-				N,
-				Z,
-			};
-			sg_buffer_desc bdesc {};
-			bdesc.data = SG_RANGE(vertices);
-			vbuf = sg_make_buffer(&bdesc);
-		}
-
-		{
-			sg_pipeline_desc pdesc {};
-			pdesc.shader = shd;
-			pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
-			pip = sg_make_pipeline(&pdesc);
-		}
-
-		return true;
-	}
-
-	void DrawImage(sg_image img, float fade = 0.0f, Vector2 xy = { 1.0f, -1.0f })
-	{
-		int cur_width {}, cur_height {};
-		glfwGetFramebufferSize(win, &cur_width, &cur_height);
-
-		sg_pass_action pass_action = { 0 };
-		pass_action.colors[0].load_action = SG_LOADACTION_LOAD;
-		sg_begin_default_pass(&pass_action, cur_width, cur_height);
-
-		sg_apply_pipeline(pip);
-
-		fsq_vs_params_t params;
-		params.pcolor = { 1.0f - fade, 1.0f - fade, 1.0f - fade };
-		params.xy = xy;
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_fsq_vs_params,
-			{ &params, sizeof(params) });
-
-		sg_bindings bind {};
-		bind.vertex_buffers[0] = vbuf;
-		bind.fs.samplers[SLOT_fs_bitmap_smp] = samplerScreen;
-		bind.fs.images[SLOT_fs_bitmap_tex] = img;
-
-		sg_apply_bindings(bind);
-
-		sg_draw(0, 6, 1);
-
-		sg_end_pass();
-	}
-
-	void Release()
-	{
-		sg_destroy_buffer(vbuf);
-		sg_destroy_pipeline(pip);
-		sg_destroy_shader(shd);
-	}
-};
-
-FullscreenBitmapData FbdRender;
-FullscreenSky FullscreenSky;
-FullscreenClouds FullscreenClouds;
-ModelRenderData ModelRender;
-GroundRenderData GroundRender;
+fog.fogColor = DecodeColor(UserProperties::Get().Strings.Get("FogColor", "1b669b"));
+fog.thickNess = UserProperties::Get().Floats.Get("FogThickness", 0.0002);
 */
 
 template <class K, class V>
@@ -467,7 +199,6 @@ ObjectCacheManager<RSEntity, Model> cacheEntityToModel;
 ObjectCacheManager<AreaBlock, Model> cacheBlockToModel;
 
 SCRenderer::SCRenderer()
-	: initialized(false)
 {
 }
 
@@ -505,6 +236,9 @@ void SCRenderer::Init()
 	int32_t height = 200;
 
 	shdDefault = rlt::MakeShader("default", "default");
+	shdSky = rlt::MakeShader("fsq", "sky");
+
+	mshFsq = rlt::FSQ();
 
 	// Load the default palette
 	palette = *RSPalette::LoadFromFile("PALETTE.IFF").GetColorPalette();
@@ -512,11 +246,12 @@ void SCRenderer::Init()
 	// camera.SetPersective(50.0f, width / (float)height, 0.1f, 2000.0f);
 	lightDir = Vector3Normalize({ 1, 1, 1 });
 
+	texWhite = rlt::CreateColorTexture(4, 4, WHITE);
+
 	/*
 	std::vector<uint32_t> pixels = { 0xffffffffu };
 	white = MakeImage(1, 1, SG_PIXELFORMAT_RGBA8, SG_USAGE_IMMUTABLE, 0, pixels);
 	noise = LoadDDS("assets/noise.dds").value_or(white);
-	debugFont = LoadDDS("assets/font.dds").value_or(white);
 	*/
 
 	/*
@@ -537,16 +272,6 @@ void SCRenderer::Init()
 		return FractalNoiseSkyDome(d, seeds, PerlinNoise<sz>, gradients);
 	});
 	*/
-
-	/*
-	ModelRender.Init();
-	FullscreenSky.Init();
-	FullscreenClouds.Init();
-	GroundRender.Init();
-	FbdRender.Init();
-	*/
-
-	initialized = true;
 }
 
 void SCRenderer::ClearCache()
@@ -560,14 +285,6 @@ void SCRenderer::ClearCache()
 void SCRenderer::Release()
 {
 	ClearCache();
-
-	/*
-	FbdRender.Release();
-	GroundRender.Release();
-	FullscreenClouds.Release();
-	FullscreenSky.Release();
-	ModelRender.Release();
-	*/
 }
 
 void SCRenderer::Log(const char* tag, uint32_t log_level, uint32_t log_item_id,
@@ -580,75 +297,40 @@ void SCRenderer::Log(const char* tag, uint32_t log_level, uint32_t log_item_id,
 	exit(-1);
 }
 
-void SCRenderer::MakeContext()
-{
-}
-
 void SCRenderer::Draw3D(const Render3DParams& params,
 	std::function<void()>&& f)
 {
+	if (params.flags & Render3DParams::CLEAR_COLORS) {
+		ClearBackground(PINK);
+	}
+
 	f();
 
-	/*
-	const bool renderSky = (params.flags & Render3DParams::SKY) != 0;
-	if (renderSky) {
-		sg_pass_action pass_action = { 0 };
-		pass_action.colors[0].load_action = SG_LOADACTION_LOAD;
-		pass_action.depth.load_action = SG_LOADACTION_LOAD;
-		sg_begin_pass(renderPassScene1, pass_action);
-		RenderSky();
-		sg_end_pass();
+	if (params.flags & Render3DParams::SKY) {
+		auto t = rlt::GetCameraTransform(params.camera, GetScreenWidth(), GetScreenHeight());
+		auto m = LoadMaterialDefault();
+		m.shader = shdSky;
+		DrawMesh(mshFsq, m, t);
 	}
-
-	const bool renderClouds = (params.flags & Render3DParams::CLOUDS) != 0;
-	if (renderClouds) {
-		sg_pass_action screenPassAction = { 0 };
-		screenPassAction.colors[0] = {
-			SG_LOADACTION_LOAD, SG_STOREACTION_STORE, { 0, 0, 1, 0 }
-		};
-		sg_begin_pass(renderPassScreen, screenPassAction);
-		RenderClouds();
-		sg_end_pass();
-	}
-
-	FbdRender.DrawImage(renderTargetColor.img, 0.0f, { 1, 1 });
-	*/
 }
 
 void SCRenderer::UpdateBitmapQuad(Color* data, uint32_t width, uint32_t height, float fade)
 {
-	if (screen.width != width || screen.height != height) {
-		if (screen.width != 0)
-			UnloadTexture(screen);
+	if (texScreen.width != width || texScreen.height != height) {
+		if (texScreen.width != 0)
+			UnloadTexture(texScreen);
 		Image img = GenImageColor(width, height, WHITE);
-		screen = LoadTextureFromImage(img);
+		texScreen = LoadTextureFromImage(img);
 		UnloadImage(img);
 	}
-	UpdateTexture(screen, data);
-	DrawTexturePro(screen, { 0, 0, float(screen.width), float(screen.height) }, { 0, 0, float(GetScreenWidth()), float(GetScreenHeight()) }, {}, {}, WHITE);
-}
-
-bool SCRenderer::CreateTextureInGPU(RSTexture* texture)
-{
-	return true;
+	UpdateTexture(texScreen, data);
+	DrawTexturePro(texScreen, { 0, 0, float(texScreen.width), float(texScreen.height) }, { 0, 0, float(GetScreenWidth()), float(GetScreenHeight()) }, {}, {}, WHITE);
 }
 
 bool SCRenderer::UploadTextureContentToGPU(RSTexture* texture)
 {
 	UpdateTexture(texture->tex, texture->img.data);
 	return true;
-}
-
-void SCRenderer::DeleteTextureInGPU(RSTexture* texture)
-{
-}
-
-void SCRenderer::RenderSky()
-{
-}
-
-void SCRenderer::RenderClouds()
-{
 }
 
 Vector3 SCRenderer::GetNormal(const RSEntity* object,
@@ -939,7 +621,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 
 void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const Matrix& world)
 {
-	if (!initialized || object == nullptr || lodLevel >= object->lods.size())
+	if (object == nullptr || lodLevel >= object->lods.size())
 		return;
 
 	Model& model = cacheEntityToModel.GetData(
@@ -984,20 +666,28 @@ void SCRenderer::RenderTexturedTriangle(
 	// in the 64x64 textures.
 	constexpr float OFFSET = (1.1f / 64.0f);
 	constexpr float textTrianCoo64[2][3][2] = {
-		{ { TEX_ZERO, TEX_ZERO + OFFSET },
+		{
+			{ TEX_ZERO, TEX_ZERO + OFFSET },
 			{ TEX_ONE - 2 * OFFSET, TEX_ONE - OFFSET },
-			{ TEX_ZERO, TEX_ONE - OFFSET } }, // LOWER_TRIANGE
-		{ { TEX_ZERO + 2 * OFFSET, TEX_ZERO + OFFSET },
+			{ TEX_ZERO, TEX_ONE - OFFSET },
+		}, // LOWER_TRIANGE
+		{
+			{ TEX_ZERO + 2 * OFFSET, TEX_ZERO + OFFSET },
 			{ TEX_ONE, TEX_ZERO + OFFSET },
-			{ TEX_ONE, TEX_ONE - OFFSET } } // UPPER_TRIANGE
+			{ TEX_ONE, TEX_ONE - OFFSET },
+		} // UPPER_TRIANGE
 	};
 	constexpr float textTrianCoo[2][3][2] = {
-		{ { TEX_ZERO, TEX_ZERO },
+		{
+			{ TEX_ZERO, TEX_ZERO },
 			{ TEX_ONE, TEX_ONE },
-			{ TEX_ZERO, TEX_ONE } }, // LOWER_TRIANGE
-		{ { TEX_ZERO, TEX_ZERO },
+			{ TEX_ZERO, TEX_ONE },
+		}, // LOWER_TRIANGE
+		{
+			{ TEX_ZERO, TEX_ZERO },
 			{ TEX_ONE, TEX_ZERO },
-			{ TEX_ONE, TEX_ONE } } // UPPER_TRIANGE
+			{ TEX_ONE, TEX_ONE },
+		} // UPPER_TRIANGE
 	};
 
 	RSImage* image = NULL;
@@ -1027,7 +717,6 @@ void SCRenderer::RenderColoredTriangle(const AddVertex& vfunc,
 	const MapVertex& tri1,
 	const MapVertex& tri2)
 {
-	/*
 	const float noUv[2] = { 0.5f, 0.5f };
 	if (tri0.type != tri1.type || tri0.type != tri2.type) {
 		const MapVertex* tri {};
@@ -1040,15 +729,14 @@ void SCRenderer::RenderColoredTriangle(const AddVertex& vfunc,
 			tri = &tri0;
 		else
 			tri = &tri2;
-		vfunc(PASS_VCOLOR, tri0.v, tri0.n, tri->color, noUv);
-		vfunc(PASS_VCOLOR, tri1.v, tri1.n, tri->color, noUv);
-		vfunc(PASS_VCOLOR, tri2.v, tri2.n, tri->color, noUv);
+		vfunc(texWhite, tri0.v, tri0.n, tri->color, noUv);
+		vfunc(texWhite, tri1.v, tri1.n, tri->color, noUv);
+		vfunc(texWhite, tri2.v, tri2.n, tri->color, noUv);
 	} else {
-		vfunc(PASS_VCOLOR, tri0.v, tri0.n, tri0.color, noUv);
-		vfunc(PASS_VCOLOR, tri1.v, tri1.n, tri1.color, noUv);
-		vfunc(PASS_VCOLOR, tri2.v, tri2.n, tri2.color, noUv);
+		vfunc(texWhite, tri0.v, tri0.n, tri0.color, noUv);
+		vfunc(texWhite, tri1.v, tri1.n, tri1.color, noUv);
+		vfunc(texWhite, tri2.v, tri2.n, tri2.color, noUv);
 	}
-	*/
 }
 
 void SCRenderer::RenderQuad(const AddVertex& vfunc, const RSArea& area,
@@ -1058,18 +746,15 @@ void SCRenderer::RenderQuad(const AddVertex& vfunc, const RSArea& area,
 	const MapVertex& bottomVertex, bool renderTexture)
 {
 	if (!renderTexture) {
-		// if (currentVertex->lowerImageID == 0xFF )
-		RenderColoredTriangle(vfunc, currentVertex, bottomRightVertex,
-			bottomVertex);
-		// if (currentVertex->upperImageID == 0xFF )
+		// if (currentVertex.lowerImageID == 0xFF)
+		RenderColoredTriangle(vfunc, currentVertex, bottomRightVertex, bottomVertex);
+		// if (currentVertex.upperImageID == 0xFF )
 		RenderColoredTriangle(vfunc, currentVertex, rightVertex, bottomRightVertex);
 	} else {
 		if (currentVertex.lowerImageID != 0xFF)
-			RenderTexturedTriangle(vfunc, area, currentVertex, bottomRightVertex,
-				bottomVertex, LOWER_TRIANGE);
+			RenderTexturedTriangle(vfunc, area, currentVertex, bottomRightVertex, bottomVertex, LOWER_TRIANGE);
 		if (currentVertex.upperImageID != 0xFF)
-			RenderTexturedTriangle(vfunc, area, currentVertex, rightVertex,
-				bottomRightVertex, UPPER_TRIANGE);
+			RenderTexturedTriangle(vfunc, area, currentVertex, rightVertex, bottomRightVertex, UPPER_TRIANGE);
 	}
 }
 
@@ -1085,8 +770,7 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area,
 			const MapVertex& rightVertex = block.vertice[(x + 1) + y * sideSize];
 			const MapVertex& bottomRightVertex = block.vertice[(x + 1) + (y + 1) * sideSize];
 			const MapVertex& bottomVertex = block.vertice[x + (y + 1) * sideSize];
-			RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex,
-				bottomVertex, renderTexture);
+			RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex, bottomVertex, renderTexture);
 		}
 	}
 
@@ -1099,8 +783,7 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area,
 			const MapVertex& rightVertex = *rightBlock.GetVertice(0, y);
 			const MapVertex& bottomRightVertex = *rightBlock.GetVertice(0, y + 1);
 			const MapVertex& bottomVertex = *currentBlock.GetVertice(currentBlock.sideSize - 1, y + 1);
-			RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex,
-				bottomVertex, renderTexture);
+			RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex, bottomVertex, renderTexture);
 		}
 	}
 
@@ -1113,8 +796,7 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area,
 			const MapVertex& rightVertex = *currentBlock.GetVertice(x + 1, currentBlock.sideSize - 1);
 			const MapVertex& bottomRightVertex = *bottomBlock.GetVertice(x + 1, 0);
 			const MapVertex& bottomVertex = *bottomBlock.GetVertice(x, 0);
-			RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex,
-				bottomVertex, renderTexture);
+			RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex, bottomVertex, renderTexture);
 		}
 	}
 
@@ -1124,43 +806,38 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area,
 		const AreaBlock& rightBlock = area.GetAreaBlockByID(LOD, i + 1);
 		const AreaBlock& rightBottonBlock = area.GetAreaBlockByID(LOD, i + 1 + BLOCK_PER_MAP_SIDE);
 		const AreaBlock& bottomBlock = area.GetAreaBlockByID(LOD, i + BLOCK_PER_MAP_SIDE);
-		const MapVertex& currentVertex = *currentBlock.GetVertice(
-			currentBlock.sideSize - 1, currentBlock.sideSize - 1);
+		const MapVertex& currentVertex = *currentBlock.GetVertice(currentBlock.sideSize - 1, currentBlock.sideSize - 1);
 		const MapVertex& rightVertex = *rightBlock.GetVertice(0, currentBlock.sideSize - 1);
 		const MapVertex& bottomRightVertex = *rightBottonBlock.GetVertice(0, 0);
 		const MapVertex& bottomVertex = *bottomBlock.GetVertice(currentBlock.sideSize - 1, 0);
-		RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex,
-			bottomVertex, renderTexture);
+		RenderQuad(vfunc, area, currentVertex, rightVertex, bottomRightVertex, bottomVertex, renderTexture);
 	}
 }
 
 void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
 {
-	running = true;
 	RenderWorldGround(area, LOD, gtime);
 	RenderWorldModels(area, LOD, gtime);
 }
 
 void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 {
-#if 1
 	static std::vector<Model> ground;
 	ground.resize(0);
 	for (int i = 0; i < BLOCKS_PER_MAP; i++) {
 		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
 		const Model& model = cacheBlockToModel.GetData(
-			&block, [&](const AreaBlock* block, Model& meshes) {
+			&block, [&](const AreaBlock* block, Model& mdata) {
 				struct AreaVertex {
 					Vector3 pos;
 					Vector3 normal;
 					Vector2 uv;
 					std::array<uint8_t, 4> col;
 				};
+
 				using BlockCache = std::map<Texture*, ObjVertexData>;
 				BlockCache tmp;
-				AddVertex vadd = [&](Texture& tex, const Vector3& pos,
-									 const Vector3& n, const float* col,
-									 const float* uv) {
+				AddVertex vadd = [&](Texture& tex, const Vector3& pos, const Vector3& n, const float* col, const float* uv) {
 					auto& vert = tmp[&tex];
 					const auto r = col[0];
 					const auto g = col[1];
@@ -1171,188 +848,72 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 						vert.pos.push_back(pos);
 						vert.normal.push_back(n);
 						vert.uv.push_back({ uv[0], uv[1] });
-						vert.col.push_back({ toByte(r), toByte(g), toByte(b), toByte(col[3]) });
+						vert.col.push_back({ toByte(r), toByte(g), toByte(b), 255 /*toByte(col[3])*/ });
 					}
 				};
+
 				RenderBlock(vadd, area, LOD, i, false);
 				RenderBlock(vadd, area, LOD, i, true);
-				/*
-				const auto& data = tmp[PASS_VCOLOR];
-				if (data.size() != 0) {
-					auto& msh = meshes.emplace_back();
-					msh.texture = white.img;
-					msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER,
-						SG_USAGE_IMMUTABLE, data);
-					msh.pcount = data.size();
-				}
-				for (const auto& kv : tmp) {
-					if (kv.first == PASS_VCOLOR)
-						continue;
-					const auto& data = kv.second;
-					if (data.size() != 0) {
-						auto& msh = meshes.emplace_back();
-						msh.texture = { kv.first };
-						msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER,
-							SG_USAGE_IMMUTABLE, data);
-						msh.pcount = data.size();
+
+				std::vector<Mesh> finalMeshes;
+				std::vector<Material> materials;
+				std::vector<int> mshMat;
+
+				{
+					const auto& data = tmp[&texWhite];
+					if (data.pos.size() != 0) {
+						std::vector<uint16_t> indices(data.pos.size());
+						for (size_t i = 0; i < indices.size(); i += 3) {
+							indices[i] = uint16_t(i + 1);
+							indices[i + 1] = uint16_t(i);
+							indices[i + 2] = uint16_t(i + 2);
+						}
+						finalMeshes.push_back(rlt::MakeMesh(data.pos, data.normal, data.uv, data.col, indices));
+						Material& m = materials.emplace_back(LoadMaterialDefault());
+						m.shader = shdDefault;
+						m.maps[MATERIAL_MAP_ALBEDO].texture = texWhite;
+						mshMat.push_back(int(mshMat.size()));
 					}
 				}
-				*/
+
+				for (const auto& kv : tmp) {
+					if (kv.first == &texWhite)
+						continue;
+					const auto& data = kv.second;
+					if (data.pos.size() != 0) {
+						std::vector<uint16_t> indices(data.pos.size());
+						for (size_t i = 0; i < indices.size(); i += 3) {
+							indices[i] = uint16_t(i + 1);
+							indices[i + 1] = uint16_t(i);
+							indices[i + 2] = uint16_t(i + 2);
+						}
+						finalMeshes.push_back(rlt::MakeMesh(data.pos, data.normal, data.uv, data.col, indices));
+						Material& m = materials.emplace_back(LoadMaterialDefault());
+						m.shader = shdDefault;
+						m.maps[MATERIAL_MAP_ALBEDO].texture = *kv.first;
+						mshMat.push_back(int(mshMat.size()));
+					}
+				}
+
+				mdata = {};
+				mdata.transform = MatrixIdentity();
+				mdata.meshCount = finalMeshes.size();
+				mdata.materialCount = materials.size();
+				mdata.meshes = rlt::AllocCopy<Mesh>(finalMeshes);
+				mdata.materials = rlt::AllocCopy<Material>(materials);
+				mdata.meshMaterial = rlt::AllocCopy<int>(mshMat);
 			});
 
 		ground.push_back(model);
 	}
 
 	if (!ground.empty()) {
-		/*
-		std::sort(ground.begin(), ground.end(),
-			[](const Model& a, const Model& b) {
-				if (a.texture.id != b.texture.id)
-					return a.texture.id < b.texture.id;
-				return false;
-			});
-
-		ground_vs_params_t params;
-		params.view = camera.getView();
-		params.proj = camera.getProj();
-		params.world = HMM_Mat4d(1.0f);
-		params.pcampos = camera.getPosition();
-		params.plightdir = lightDir;
-		params.gtime = float(gtime);
-
-		sg_apply_pipeline(GroundRender.pip);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params,
-			{ &params, sizeof(params) });
-
-#if 0
-		const auto fog = GetFogParams<ground_fog_params_t>();
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_ground_fog_params, { &fog, sizeof(fog) });
-#endif
-
-		sg_bindings bind {};
-		bind.fs.samplers[SLOT_water_smp] = samplerScreen;
-		bind.fs.images[SLOT_water_tex] = noise.img;
-		for (const auto& msh : groundMeshes) {
-			bind.vertex_buffers[0] = msh.vbuf;
-			bind.fs.samplers[SLOT_ground_bitmap_smp] = samplerScreen;
-			bind.fs.images[SLOT_ground_bitmap_tex] = msh.texture;
-			sg_apply_bindings(bind);
-			sg_draw(0, msh.pcount, 1);
-		}
-		*/
-	}
-#else
-	static std::vector<GroundRenderData::MeshItem> groundMeshes;
-	groundMeshes.resize(0);
-
-	for (int i = 0; i < BLOCKS_PER_MAP; i++) {
-		const AreaBlock& block = area.GetAreaBlockByID(LOD, i);
-		const GroundRenderData::Mesh& meshes = cacheBlockToModel.GetData(
-			&block, [&](const AreaBlock* block, GroundRenderData::Mesh& meshes) {
-				// struct PointComparator
-				//{
-				//	bool operator() (const Vector3& a, const Vector3& b) const {
-				//		if (a.X != b.X) return a.X < b.X;
-				//		if (a.Y != b.Y) return a.Y < b.Y;
-				//		return a.Z < b.Z;
-				//	}
-				// };
-				// std::map<Vector3, uint32_t, PointComparator> pointToIndex;
-				struct AreaVertex {
-					Vector3 pos;
-					Vector3 normal;
-					Vector2 uv;
-					std::array<uint8_t, 4> col;
-				};
-				using BlockCache = std::map<uint32_t, std::vector<AreaVertex>>;
-				BlockCache tmp;
-				AddVertex vadd = [&](uint32_t texId, const Vector3& pos,
-									 const Vector3& n, const float* col,
-									 const float* uv) {
-					// uint32_t& idx = pointToIndex[pos];
-					// if (idx == 0)
-					//	idx = pointToIndex.size();
-					auto& vert = tmp[texId];
-					const auto r = col[0];
-					const auto g = col[1];
-					const auto b = col[2];
-					// const bool useVertex = std::abs(pos.Y) > 0.01f || texId !=
-					// PASS_VCOLOR || b < r || b < g;
-					const bool useVertex = true;
-					auto toByte = [](float v) { return uint8_t(v * 255.99f); };
-					if (useVertex)
-						vert.push_back(
-							{ pos,
-								n,
-								{ uv[0], uv[1] },
-								{ toByte(r), toByte(g), toByte(b), toByte(col[3]) } });
-				};
-				RenderBlock(vadd, area, LOD, i, false);
-				RenderBlock(vadd, area, LOD, i, true);
-				const auto& data = tmp[PASS_VCOLOR];
-				if (data.size() != 0) {
-					auto& msh = meshes.emplace_back();
-					msh.texture = white.img;
-					msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER,
-						SG_USAGE_IMMUTABLE, data);
-					msh.pcount = data.size();
-				}
-				for (const auto& kv : tmp) {
-					if (kv.first == PASS_VCOLOR)
-						continue;
-					const auto& data = kv.second;
-					if (data.size() != 0) {
-						auto& msh = meshes.emplace_back();
-						msh.texture = { kv.first };
-						msh.vbuf = MakeBuffer(SG_BUFFERTYPE_VERTEXBUFFER,
-							SG_USAGE_IMMUTABLE, data);
-						msh.pcount = data.size();
-					}
-				}
-			});
-
-		for (const auto& msh : meshes)
-			groundMeshes.push_back(msh);
-	}
-
-	if (!groundMeshes.empty()) {
-		std::sort(groundMeshes.begin(), groundMeshes.end(),
-			[](const GroundRenderData::MeshItem& a,
-				const GroundRenderData::MeshItem& b) {
-				if (a.texture.id != b.texture.id)
-					return a.texture.id < b.texture.id;
-				return false;
-			});
-
-		ground_vs_params_t params;
-		params.view = camera.getView();
-		params.proj = camera.getProj();
-		params.world = HMM_Mat4d(1.0f);
-		params.pcampos = camera.getPosition();
-		params.plightdir = lightDir;
-		params.gtime = float(gtime);
-
-		sg_apply_pipeline(GroundRender.pip);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_ground_vs_params,
-			{ &params, sizeof(params) });
-
-#if 0
-		const auto fog = GetFogParams<ground_fog_params_t>();
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_ground_fog_params, { &fog, sizeof(fog) });
-#endif
-
-		sg_bindings bind {};
-		bind.fs.samplers[SLOT_water_smp] = samplerScreen;
-		bind.fs.images[SLOT_water_tex] = noise.img;
-		for (const auto& msh : groundMeshes) {
-			bind.vertex_buffers[0] = msh.vbuf;
-			bind.fs.samplers[SLOT_ground_bitmap_smp] = samplerScreen;
-			bind.fs.images[SLOT_ground_bitmap_tex] = msh.texture;
-			sg_apply_bindings(bind);
-			sg_draw(0, msh.pcount, 1);
+		auto world = MatrixIdentity();
+		for (const auto& model : ground) {
+			for (int i = 0; i < model.meshCount; ++i)
+				DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], world);
 		}
 	}
-#endif
 }
 
 void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)

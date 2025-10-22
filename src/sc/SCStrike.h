@@ -33,7 +33,7 @@ struct Jet {
 class SCStrike : public IActivity {
 public:
 	SCStrike();
-	~SCStrike();
+	virtual ~SCStrike();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;

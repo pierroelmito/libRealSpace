@@ -45,7 +45,7 @@ public:
 	GTime creationTime; // Used to check when a frame expires.
 
 	inline void SetExpired(bool exp) { this->expired = exp; }
-	inline bool IsExpired(void) { return this->expired; }
+	inline bool IsExpired() { return this->expired; }
 
 private:
 	bool expired;
@@ -54,24 +54,24 @@ private:
 class SCConvPlayer : public IActivity {
 public:
 	SCConvPlayer();
-	~SCConvPlayer();
+	virtual ~SCConvPlayer();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;
 	void SetID(int32_t id);
-	virtual void Focus(void) override;
+	virtual void Focus() override;
 
 private:
 	void ReadNextFrame(const FrameParams& p);
 	void SetArchive(const PakEntry* conv);
-	void ReadtNextFrame(void);
-	void DrawText(void);
+	void ReadtNextFrame();
+	void DrawText();
 	void CheckFrameExpired(const FrameParams& p);
 
 	int32_t conversationID { 0 };
-	ByteStream conv;
-	size_t size; // In bytes
-	uint8_t* end; // In bytes
-	ConvFrame currentFrame;
-	bool initialized { false };
+	ByteStream conv {};
+	size_t size {}; // In bytes
+	uint8_t* end {}; // In bytes
+	ConvFrame currentFrame {};
+	bool initialized {};
 };

@@ -39,15 +39,12 @@ public:
 
 	bool Decompress(const char* dstDirectory, const char* extension);
 
-	size_t GetNumEntries(void) const;
+	size_t GetNumEntries() const;
 	const PakEntry& GetEntry(size_t index) const;
 
 	void List(FILE* output);
 
-	void GuessContent(FILE* output);
-	void GuessPakEntryContent(PakEntry& entry);
-
-	const char* GetName(void) const { return path; }
+	const char* GetName() const { return path; }
 
 	bool IsReady() const { return ready; }
 	uint8_t* GetData() const { return this->data; }
@@ -57,12 +54,12 @@ private:
 
 	ByteStream stream;
 
-	void Parse(void);
-	uint8_t* data;
-	size_t size;
-	char path[512];
+	void Parse();
+	uint8_t* data {};
+	size_t size {};
+	char path[512] {};
 	std::vector<PakEntry> entries;
 
 	// allows to know if we should free the TRE data
-	bool initalizedFromFile { false };
+	bool initalizedFromFile {};
 };

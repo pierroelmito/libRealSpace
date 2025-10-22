@@ -17,14 +17,16 @@ class SCButton {
 public:
 	using ActionFunction = std::function<void()>;
 
-	enum Appearance { APR_UP,
-		APR_DOWN };
+	enum Appearance {
+		APR_UP,
+		APR_DOWN,
+	};
 
 	SCButton();
 	~SCButton();
 
-	Point2D position;
-	Point2D dimension;
+	Point2D position {};
+	Point2D dimension {};
 
 	void InitBehavior(Point2D position, Point2D dimension, ActionFunction&& fct); // functor last for readibility
 	void OnAction(void);

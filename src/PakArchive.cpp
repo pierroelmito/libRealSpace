@@ -24,7 +24,7 @@ PakArchive::~PakArchive()
 		delete[] this->data;
 }
 
-void PakArchive::Parse(void)
+void PakArchive::Parse()
 {
 	uint32_t advertisedSize = stream.ReadUInt32LE();
 
@@ -199,7 +199,7 @@ bool PakArchive::Decompress(const char* dstDirectory, const char* unkExtension)
 	return true;
 }
 
-size_t PakArchive::GetNumEntries(void) const
+size_t PakArchive::GetNumEntries() const
 {
 	return this->entries.size();
 }
@@ -222,14 +222,4 @@ void PakArchive::List(FILE* output)
 		}
 		fprintf(output, "\n");
 	}
-}
-
-void PakArchive::GuessPakEntryContent(PakEntry& entry)
-{
-}
-
-void PakArchive::GuessContent(FILE* output)
-{
-	for (size_t i = 0; i < entries.size(); i++)
-		GuessPakEntryContent(entries[i]);
 }

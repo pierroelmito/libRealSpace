@@ -13,7 +13,7 @@
 class SCMainMenu : public IActivity {
 public:
 	SCMainMenu();
-	~SCMainMenu();
+	virtual ~SCMainMenu();
 
 	virtual void Init();
 	virtual void RunFrame(const FrameParams& p) override;

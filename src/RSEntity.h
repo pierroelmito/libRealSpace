@@ -93,7 +93,7 @@ protected:
 
 private:
 	BoudingBox bb;
-	void CalcBoundingBox(void);
+	void CalcBoundingBox();
 
 	void ParseVERT(IffChunk* chunk);
 	void ParseLVL(IffChunk* chunk);

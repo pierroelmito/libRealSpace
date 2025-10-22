@@ -30,11 +30,8 @@ public:
 	void Init();
 	void Release();
 	void ClearCache();
-	void MakeContext();
 	void DrawModel(const RSEntity* object, size_t lodLevel, const Matrix& world);
-	bool CreateTextureInGPU(RSTexture* texture);
 	bool UploadTextureContentToGPU(RSTexture* texture);
-	void DeleteTextureInGPU(RSTexture* texture);
 
 	static void UpdateBitmapQuad(Color* data, uint32_t width, uint32_t height,
 		float fade);
@@ -59,8 +56,6 @@ public:
 	void RenderWorldSolid(const RSArea& area, int LOD, double gtime);
 	void RenderWorldGround(const RSArea& area, int LOD, double gtime);
 	void RenderWorldModels(const RSArea& area, int LOD, double gtime);
-	void RenderSky();
-	void RenderClouds();
 
 	struct Render3DParams {
 		enum Flags {
@@ -68,6 +63,7 @@ public:
 			SKY = 2,
 			CLOUDS = 4,
 		};
+		Camera3D camera {};
 		uint32_t flags { CLEAR_COLORS };
 	};
 
@@ -91,10 +87,7 @@ private:
 	RSCamera camera;
 	Vector3 lightDir;
 
-	bool initialized { false };
-	bool running{};
-	bool paused{};
+	bool paused {};
 };
 
 using R3Dp = SCRenderer::Render3DParams;
-

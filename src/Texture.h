@@ -71,7 +71,6 @@ public:
 	Texture tex {};
 
 	char name[8];
-	uint8_t locFlag {};
 	void Set(RSImage& image);
 	void UpdateContent(RSImage& image);
 };

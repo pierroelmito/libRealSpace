@@ -16,7 +16,7 @@ class RSFont;
 class SCObjectViewer : public IActivity {
 public:
 	SCObjectViewer();
-	~SCObjectViewer();
+	virtual ~SCObjectViewer();
 
 	void Init();
 	void RunFrame(const FrameParams& p) override;

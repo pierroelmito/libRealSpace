@@ -22,8 +22,7 @@ void GameEngine::Init()
 
 	Assets.Init(); // Load all TREs and PAKs
 	FontManager.Init(Assets.tres[AssetManager::TRE_MISC]);
-	ConvAssets
-		.Init(); // Load assets needed for Conversations (char and background)
+	ConvAssets.Init(); // Load assets needed for Conversations (char and background)
 	Screen.Init(scale); // Load Main Palette and Initialize the GL
 	VGA.Init();
 	Audio.Init();
@@ -50,9 +49,6 @@ void GameEngine::Run()
 	while (Screen.StartFrame() && activities.size() > 0) {
 		// Audio.Update();
 
-		const auto w = GetScreenWidth();
-		const auto h = GetScreenHeight();
-
 		Vector2 mpos = GetMousePosition();
 		Mouse.SetPosition({ int(mpos.x) / Screen.scale, int(mpos.y) / Screen.scale });
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -68,8 +64,9 @@ void GameEngine::Run()
 			const GTime t = GetTime();
 			const GTime dt = t - pt;
 			pt = t;
-			currentActivity->RunFrame(
-				{ t, t - currentActivity->GetStartTime(), dt, 0, w, h });
+			const auto w = GetScreenWidth();
+			const auto h = GetScreenHeight();
+			currentActivity->RunFrame({ t, t - currentActivity->GetStartTime(), dt, 0, w, h });
 			currentActivity->UnFocus();
 		} else {
 			activities.pop();
@@ -92,12 +89,5 @@ void GameEngine::AddActivity(IActivity* activity)
 
 void GameEngine::StopTopActivity()
 {
-	IActivity* currentActivity;
-	currentActivity = activities.top();
-	currentActivity->Stop();
-}
-
-IActivity* GameEngine::GetCurrentActivity()
-{
-	return activities.top();
+	activities.top()->Stop();
 }

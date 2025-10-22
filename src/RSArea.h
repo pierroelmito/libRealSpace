@@ -82,10 +82,10 @@ public:
 	float elevation[BLOCKS_PER_MAP];
 
 private:
-	void ParseMetadata(void);
-	void ParseObjects(void);
+	void ParseMetadata();
+	void ParseObjects();
 	// Temporary name: I don't know yet what is in there.
-	void ParseHeightMap(void);
+	void ParseHeightMap();
 	void ParseBlocks(size_t lod, const PakEntry* entry, size_t verticePerBlock);
 	void ParseElevations();
 

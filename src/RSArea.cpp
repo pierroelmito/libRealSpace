@@ -545,7 +545,7 @@ void RSArea::ParseElevations()
 	}
 }
 
-void RSArea::ParseHeightMap(void)
+void RSArea::ParseHeightMap()
 {
 	// char title[512];
 

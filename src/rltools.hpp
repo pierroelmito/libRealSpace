@@ -15,6 +15,7 @@
 
 #include <raylib.h>
 #include <raymath.h>
+#include <rlgl.h>
 
 namespace rlt {
 
@@ -74,6 +75,14 @@ inline Matrix MakeMat4(const float (&v)[4][4])
 	return r;
 }
 
+inline Texture CreateColorTexture(int w, int h, Color c)
+{
+	Image img = GenImageColor(w, h, c);
+	Texture tex = LoadTextureFromImage(img);
+	UnloadImage(img);
+	return tex;
+}
+
 template <typename R, typename T>
 inline R* AllocCopy(const std::vector<T>& v)
 {
@@ -103,6 +112,17 @@ inline Mesh MakeMesh(const std::vector<Vector3>& vertice,
 	return mesh;
 }
 
+inline Mesh FSQ()
+{
+	const std::vector<Vector3> vertice {
+		{ -1, -1, 1 },
+		{ 1, -1, 1 },
+		{ 1, 1, 1 },
+		{ -1, 1, 1 },
+	};
+	return MakeMesh(vertice, {}, {}, {}, { 0, 1, 3, 1, 2, 3 });
+}
+
 template <class T0 = std::initializer_list<std::pair<size_t, const char*>>,
 	class T1 = std::initializer_list<std::pair<size_t, const char*>>>
 inline Shader MakeShader(std::string_view vs, std::string_view fs,
@@ -125,6 +145,29 @@ template <class T>
 inline void SetUniform(Shader& shd, int loc, T* t, ShaderUniformDataType type)
 {
 	SetShaderValue(shd, shd.locs[loc], t, type);
+}
+
+inline Matrix GetCameraTransform(const Camera& cam, float width, float height)
+{
+	const float near = RL_CULL_DISTANCE_NEAR;
+	const float fovy = cam.fovy * PI / 180.0f;
+	const float ay = tanf(0.5f * fovy);
+	const float ratio = width / height;
+	const float cf = near;
+	const float cx = cf * ay * ratio;
+	const float cy = cf * ay;
+	const float cw = near;
+	const auto& dir = Vector3Normalize(cam.target - cam.position);
+	const auto& strafe = Vector3Normalize(Vector3CrossProduct(dir, cam.up));
+	const auto& up = Vector3Normalize(Vector3CrossProduct(strafe, dir));
+	const auto cp = cam.position;
+	const auto matFsq = rlt::MakeMat4({
+		{ cx * strafe.x, cy * up.x, cw * dir.x, cp.x },
+		{ cx * strafe.y, cy * up.y, cw * dir.y, cp.y },
+		{ cx * strafe.z, cy * up.z, cw * dir.z, cp.z },
+		{ 0, 0, 0, 1 },
+	});
+	return matFsq;
 }
 
 inline void UpdateRtSize(RenderTexture& rt, int w, int h)

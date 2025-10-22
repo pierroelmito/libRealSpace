@@ -182,7 +182,7 @@ void RSEntity::InitFromIFF(IffLexer* lexer)
 	CalcBoundingBox();
 }
 
-void RSEntity::CalcBoundingBox(void)
+void RSEntity::CalcBoundingBox()
 {
 	this->bb.min.x = FLT_MAX;
 	this->bb.min.y = FLT_MAX;
