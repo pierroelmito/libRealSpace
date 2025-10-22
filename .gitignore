@@ -1,5 +1,19 @@
-data/*
-.xmake/*
+*.TRE
+*.PAK
+*.EXE
+*.IFF
+*.SHP
+*.CFG
+*.LST
+*.ADV
+*.TXT
+*.OVL
+*.UNP
+*.TMP
+*.xmake/*
+.cache
+.vscode
+data/xt
 
 # OS X
 .DS_Store
