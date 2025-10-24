@@ -23,6 +23,11 @@
 #define TINYDDSLOADER_IMPLEMENTATION
 #include "tinyddsloader.h"
 
+typedef enum {
+	START = SHADER_LOC_BONE_MATRICES,
+	SHADER_LOC_MAPS_CLOUD_DENSITY
+} UserLocationIndex;
+
 struct ObjVertexData {
 	std::vector<Vector3> pos;
 	std::vector<Vector3> normal;
@@ -40,11 +45,14 @@ Texture texScreen {};
 Texture texWhite {};
 Texture texWater {};
 Texture texGrass {};
+Texture texCloudDensity {};
 
 Mesh mshFsq {};
 
 Shader shdDefault {};
 Shader shdSky {};
+
+// int locYolo {};
 
 Vector3 DecodeColor(const std::string& col)
 {
@@ -67,13 +75,6 @@ Vector3 DecodeColor(const std::string& col)
 	for (char c : col)
 		v = (v << 4) | charToColor(c);
 	return { a[2] / 255.0f, a[1] / 255.0f, a[0] / 255.0f };
-}
-
-int ComputeMipCount(int w, int h)
-{
-	const int m1 = 32;
-	const int m0 = std::min(__builtin_clz(w), __builtin_clz(h));
-	return m1 - m0;
 }
 
 std::optional<PixelFormat> GetFormatFromDDS(tinyddsloader::DDSFile::DXGIFormat fmt)
@@ -126,12 +127,6 @@ std::optional<Texture> LoadDDS(const char* path)
 	return {};
 #endif
 }
-
-enum ImageFlags {
-	IFMipMaps = 1,
-	IFLinear = 2,
-	IFRenderTarget = 4,
-};
 
 std::vector<uint32_t> ComputeSkyDome(
 	int w, int h,
@@ -237,20 +232,30 @@ void SCRenderer::Init()
 	int32_t width = 320;
 	int32_t height = 200;
 
-	shdDefault = rlt::MakeShader("default", "default");
-	shdSky = rlt::MakeShader("fsq", "sky");
+	std::vector<std::pair<size_t, const char*>> shdUniforms = {
+		{ SHADER_LOC_MAP_OCCLUSION, "cloudDensity" },
+	};
+
+	shdDefault = rlt::MakeShader("default", "default", shdUniforms);
+	shdSky = rlt::MakeShader("fsq", "sky", shdUniforms);
 
 	mshFsq = rlt::FSQ();
 
 	// Load the default palette
 	palette = *RSPalette::LoadFromFile("PALETTE.IFF").GetColorPalette();
 
-	// camera.SetPersective(50.0f, width / (float)height, 0.1f, 2000.0f);
 	lightDir = Vector3Normalize({ 1, 1, 1 });
 
 	texWhite = rlt::CreateColorTexture(4, 4, WHITE);
 	texWater = rlt::CreateColorTexture(4, 4, BLUE);
 	texGrass = rlt::CreateColorTexture(4, 4, GREEN);
+
+	{
+		texCloudDensity = LoadTexture("assets/clouddensity00.png");
+		GenTextureMipmaps(&texCloudDensity);
+		SetTextureFilter(texCloudDensity, TEXTURE_FILTER_BILINEAR);
+		SetTextureWrap(texCloudDensity, TEXTURE_WRAP_REPEAT);
+	}
 
 	/*
 	std::vector<uint32_t> pixels = { 0xffffffffu };
@@ -308,12 +313,27 @@ void SCRenderer::Draw3D(const Render3DParams& params,
 		ClearBackground(PINK);
 	}
 
+	// BeginShaderMode(shdSky);
+	// SetShaderValueTexture(shdSky, shdSky.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
+	// EndShaderMode();
+	// BeginShaderMode(shdDefault);
+	// SetShaderValueTexture(shdDefault, shdDefault.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
+	// EndShaderMode();
+
 	f();
+
+	// BeginShaderMode(shdSky);
+	// SetShaderValueTexture(shdSky, shdSky.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
+	// EndShaderMode();
+	// SetShaderValueTexture(shdDefault, shdDefault.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
+	// BeginShaderMode(shdDefault);
+	// EndShaderMode();
 
 	if (params.flags & Render3DParams::SKY) {
 		auto t = rlt::GetCameraTransform(params.camera, GetScreenWidth(), GetScreenHeight());
 		auto m = LoadMaterialDefault();
 		m.shader = shdSky;
+		m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
 		DrawMesh(mshFsq, m, t);
 	}
 }
@@ -595,6 +615,7 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 		m.shader = shdDefault;
 		if (tex)
 			m.maps[MATERIAL_MAP_ALBEDO].texture = *tex;
+		m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
 		mshMat.push_back(int(mshMat.size()));
 	}
 
@@ -870,6 +891,7 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 						Material& m = materials.emplace_back(LoadMaterialDefault());
 						m.shader = shdDefault;
 						m.maps[MATERIAL_MAP_ALBEDO].texture = texWhite;
+						m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
 						mshMat.push_back(int(mshMat.size()));
 					}
 				}
@@ -889,6 +911,7 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 						Material& m = materials.emplace_back(LoadMaterialDefault());
 						m.shader = shdDefault;
 						m.maps[MATERIAL_MAP_ALBEDO].texture = *kv.first;
+						m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
 						mshMat.push_back(int(mshMat.size()));
 					}
 				}
@@ -906,11 +929,18 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 	}
 
 	if (!ground.empty()) {
+		// BeginShaderMode(shdDefault);
+		//  SetShaderValueTexture(shdDefault, shdDefault.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
+		// SetShaderValueTexture(shdDefault, locYolo, texCloudDensity);
 		auto world = MatrixIdentity();
 		for (const auto& model : ground) {
-			for (int i = 0; i < model.meshCount; ++i)
-				DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], world);
+			for (int i = 0; i < model.meshCount; ++i) {
+				auto& mat = model.materials[model.meshMaterial[i]];
+				mat.shader = shdDefault;
+				DrawMesh(model.meshes[i], mat, world);
+			}
 		}
+		// EndShaderMode();
 	}
 }
 

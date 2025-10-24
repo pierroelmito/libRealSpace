@@ -134,10 +134,16 @@ inline Shader MakeShader(std::string_view vs, std::string_view fs,
 	TraceLog(LOG_INFO, "shader: %s / %s", fvs.c_str(), ffs.c_str());
 	Shader r = LoadShader(vs.empty() ? nullptr : fvs.c_str(),
 		fs.empty() ? nullptr : ffs.c_str());
-	for (const auto& uniform : uniforms)
-		r.locs[uniform.first] = GetShaderLocation(r, uniform.second);
-	for (const auto& attrib : attribs)
-		r.locs[attrib.first] = GetShaderLocationAttrib(r, attrib.second);
+	for (const auto& uniform : uniforms) {
+		auto loc = GetShaderLocation(r, uniform.second);
+		TraceLog(LOG_INFO, "loc %s: [%d] = %d", uniform.second, uniform.first, loc);
+		r.locs[uniform.first] = loc;
+	}
+	for (const auto& attrib : attribs) {
+		auto loc = GetShaderLocationAttrib(r, attrib.second);
+		TraceLog(LOG_INFO, "loc %s: [%d] = %d", attrib.second, attrib.first, loc);
+		r.locs[attrib.first] = loc;
+	}
 	return r;
 }
 

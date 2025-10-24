@@ -11,8 +11,6 @@ MACRO(#,version 330)
 #define VAR in
 #endif
 
-#include "common.glsl"
-
 #if PP
 
 VAR vec3 fragCamPos;
@@ -44,6 +42,8 @@ void main()
 out vec4 finalColor;
 
 uniform sampler2D texture0;
+
+#include "common.glsl"
 
 void main()
 {
@@ -78,7 +78,7 @@ uniform mat4 matModel;
 uniform mat4 matView;
 
 vec4 fixZB(vec4 p) {
-    float nz = 1 - exp(-0.001 * (p.z));
+    float nz = 1 - exp(-0.0003 * (p.z));
     p.z = nz * p.w;
     return p;
 }
@@ -109,6 +109,8 @@ out vec4 finalColor;
 
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
+
+#include "common.glsl"
 
 //vec3 light(vec3 normal, vec3 lightDir, vec3 lightColor, vec3 ambientColor)
 //{
