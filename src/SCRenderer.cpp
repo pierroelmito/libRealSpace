@@ -938,7 +938,7 @@ void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)
 		const float bx = float(id % 18) + ofs0;
 		const float by = float(id / 18) + ofs1;
 
-		const float offset[3] = {
+		const Vector3 offset = {
 			bx * BLOCK_WIDTH,
 			// area.elevation[id] / (2 * (float)HEIGHT_DIVIDER),
 			2.0f * area.elevation[id] / (float)(1 << 8),
@@ -947,17 +947,12 @@ void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)
 
 		for (const MapObject& object : objects) {
 			// const float factorXZ = BLOCK_WIDTH;
-			const float localDelta[3] = {
+			const Vector3 localDelta = {
 				object.position[axisX] * factorX,
 				0.5f * object.position[2] / (float)HEIGHT_DIVIDER,
 				object.position[axisZ] * factorZ,
 			};
-			const float toDraw[3] = {
-				localDelta[0] + offset[0],
-				localDelta[1] + offset[1],
-				localDelta[2] + offset[2],
-			};
-			const Vector3 wp { toDraw[0], toDraw[1], toDraw[2] };
+			const Vector3 wp = localDelta + offset;
 			const auto& t = object.transform;
 			const auto s = objScale;
 			const Matrix mworld = rlt::MakeMat4({

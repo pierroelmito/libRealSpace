@@ -111,44 +111,20 @@ Matrix SCStrike::ComputeTransform(bool cockpit, bool lookAt)
 	const Matrix t = MatrixTranslate(pos.x, pos.y, pos.z);
 
 	if (cockpit) {
-		const Matrix r = {
-			n.x,
-			n.y,
-			n.z,
-			0,
-			u.x,
-			u.y,
-			u.z,
-			0,
-			d.x,
-			d.y,
-			d.z,
-			0,
-			0,
-			0,
-			0,
-			1,
-		};
+		const Matrix r = rlt::MakeMat4({
+			{ n.x, n.y, n.z, 0 },
+			{ u.x, u.y, u.z, 0 },
+			{ d.x, d.y, d.z, 0 },
+			{ 0, 0, 0, 1 },
+		});
 		return t * r;
 	} else {
-		const Matrix r = {
-			n.x,
-			u.x,
-			d.x,
-			0,
-			n.y,
-			u.y,
-			d.y,
-			0,
-			n.z,
-			u.z,
-			d.z,
-			0,
-			0,
-			0,
-			0,
-			1,
-		};
+		const Matrix r = rlt::MakeMat4({
+			{ n.x, u.x, d.x, 0 },
+			{ n.y, u.y, d.y, 0 },
+			{ n.z, u.z, d.z, 0 },
+			{ 0, 0, 0, 1 },
+		});
 		return r * t;
 	}
 }
@@ -200,14 +176,12 @@ void SCStrike::RunFrame(const FrameParams& p)
 			Renderer.DrawModel(jet.entity.get(), LOD_LEVEL_MAX, world);
 		}
 
-		/*
 		// cockpit
 		if (1) {
 			const float sc = props.Floats.Get("CockpitScale", 0.05f);
-			const Matrix mdl = HMM_Scale({ sc, sc, sc }) * HMM_Rotate(90.0f, { 0, 1, 0 }) * HMM_Translate({ 0, -3, 0 });
+			const Matrix mdl = MatrixScale(sc, sc, sc) * MatrixRotate({ 0, 1, 0 }, 90.0f) * MatrixTranslate(0, -3, 0);
 			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, cockpit * mdl);
 		}
-		*/
 	});
 
 	EndMode3D();
