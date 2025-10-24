@@ -46,7 +46,7 @@ public:
 	void RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock);
 #endif
 
-	using AddVertex = std::function<void(Texture&, const Vector3&, const Vector3&, const float*, const float*)>;
+	using AddVertex = std::function<void(Texture&, const Vector3&, const Vector3&, Color, const Vector2&)>;
 
 	bool IsTextured(const MapVertex* tri0, const MapVertex* tri1, const MapVertex* tri2);
 	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area, const MapVertex& tri0, const MapVertex& tri1, const MapVertex& tri2, int triangleType);

@@ -34,7 +34,7 @@ protected:
 	};
 	std::vector<RSShowCase> showCases;
 	uint32_t currentObject;
-	Vector2 angles{};
-	float dist{};
+	Vector2 angles {};
+	float dist {};
 	RSFont* _font;
 };

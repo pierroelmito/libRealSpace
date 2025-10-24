@@ -500,12 +500,7 @@ void RSArea::ParseBlocks(size_t lod, const PakEntry* entry, size_t blockDim)
 
 			const uint8_t paletteColor = 16 * typeToPal(vertex->type);
 			const Color& t = Renderer.GetPalette().GetRGBColor(paletteColor + shade);
-			vertex->color[0] = t.r / 255.0f; //*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
-			vertex->color[1] = t.g / 255.0f;
-			; //*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
-			vertex->color[2] = t.b / 255.0f;
-			; //*1-(vertex->z/(float)(BLOCK_WIDTH*blockDim))/2;
-			vertex->color[3] = paletteColor / 255.0f;
+			vertex->color = { t.r, t.g, t.b, paletteColor };
 		}
 	}
 

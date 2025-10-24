@@ -38,6 +38,8 @@ Texture texNoise {};
 Texture texSkydome {};
 Texture texScreen {};
 Texture texWhite {};
+Texture texWater {};
+Texture texGrass {};
 
 Mesh mshFsq {};
 
@@ -247,6 +249,8 @@ void SCRenderer::Init()
 	lightDir = Vector3Normalize({ 1, 1, 1 });
 
 	texWhite = rlt::CreateColorTexture(4, 4, WHITE);
+	texWater = rlt::CreateColorTexture(4, 4, BLUE);
+	texGrass = rlt::CreateColorTexture(4, 4, GREEN);
 
 	/*
 	std::vector<uint32_t> pixels = { 0xffffffffu };
@@ -658,14 +662,12 @@ void SCRenderer::RenderTexturedTriangle(
 	const AddVertex& vfunc, const RSArea& area, const MapVertex& tri0,
 	const MapVertex& tri1, const MapVertex& tri2, int triangleType)
 {
-	constexpr float white[4] { 1, 1, 1, 1 };
-
 	constexpr float TEX_ZERO = 0.0f;
 	constexpr float TEX_ONE = 1.0f;
 	// What is this offset ? It is used to get rid of the red delimitations
 	// in the 64x64 textures.
 	constexpr float OFFSET = (1.1f / 64.0f);
-	constexpr float textTrianCoo64[2][3][2] = {
+	constexpr Vector2 textTrianCoo64[2][3] = {
 		{
 			{ TEX_ZERO, TEX_ZERO + OFFSET },
 			{ TEX_ONE - 2 * OFFSET, TEX_ONE - OFFSET },
@@ -677,7 +679,7 @@ void SCRenderer::RenderTexturedTriangle(
 			{ TEX_ONE, TEX_ONE - OFFSET },
 		} // UPPER_TRIANGE
 	};
-	constexpr float textTrianCoo[2][3][2] = {
+	constexpr Vector2 textTrianCoo[2][3] = {
 		{
 			{ TEX_ZERO, TEX_ZERO },
 			{ TEX_ONE, TEX_ONE },
@@ -707,9 +709,9 @@ void SCRenderer::RenderTexturedTriangle(
 	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
 
 	auto& tex = image->GetTexture()->tex;
-	vfunc(tex, tri0.v, tri0.n, white, ttc[triangleType][0]);
-	vfunc(tex, tri1.v, tri1.n, white, ttc[triangleType][1]);
-	vfunc(tex, tri2.v, tri2.n, white, ttc[triangleType][2]);
+	vfunc(tex, tri0.v, tri0.n, WHITE, ttc[triangleType][0]);
+	vfunc(tex, tri1.v, tri1.n, WHITE, ttc[triangleType][1]);
+	vfunc(tex, tri2.v, tri2.n, WHITE, ttc[triangleType][2]);
 }
 
 void SCRenderer::RenderColoredTriangle(const AddVertex& vfunc,
@@ -717,7 +719,7 @@ void SCRenderer::RenderColoredTriangle(const AddVertex& vfunc,
 	const MapVertex& tri1,
 	const MapVertex& tri2)
 {
-	const float noUv[2] = { 0.5f, 0.5f };
+	const Vector2 noUv { 0.5f, 0.5f };
 	if (tri0.type != tri1.type || tri0.type != tri2.type) {
 		const MapVertex* tri {};
 		if (tri1.type > tri0.type)
@@ -837,18 +839,14 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 
 				using BlockCache = std::map<Texture*, ObjVertexData>;
 				BlockCache tmp;
-				AddVertex vadd = [&](Texture& tex, const Vector3& pos, const Vector3& n, const float* col, const float* uv) {
+				AddVertex vadd = [&](Texture& tex, const Vector3& pos, const Vector3& n, Color col, const Vector2& uv) {
 					auto& vert = tmp[&tex];
-					const auto r = col[0];
-					const auto g = col[1];
-					const auto b = col[2];
 					const bool useVertex = true;
-					auto toByte = [](float v) { return uint8_t(v * 255.99f); };
 					if (useVertex) {
 						vert.pos.push_back(pos);
 						vert.normal.push_back(n);
-						vert.uv.push_back({ uv[0], uv[1] });
-						vert.col.push_back({ toByte(r), toByte(g), toByte(b), 255 /*toByte(col[3])*/ });
+						vert.uv.push_back(uv);
+						vert.col.push_back({ col.r, col.g, col.b, 255 });
 					}
 				};
 

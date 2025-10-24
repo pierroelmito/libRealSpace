@@ -60,4 +60,3 @@ public:
 private:
 	std::stack<IActivity*> activities;
 };
-

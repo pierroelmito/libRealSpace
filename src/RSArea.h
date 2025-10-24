@@ -46,7 +46,7 @@ struct MapVertex {
 	uint8_t type;
 	uint8_t lowerImageID;
 	uint8_t upperImageID;
-	float color[4];
+	Color color;
 };
 
 struct AreaBlock {

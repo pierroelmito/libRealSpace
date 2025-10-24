@@ -48,8 +48,7 @@ uniform sampler2D texture0;
 void main()
 {
 	vec3 vd = normalize(fragViewdir);
-	finalColor.rgb = skyColor(1.0, fragCamPos, vd);
-	finalColor.a = 1;
+	finalColor = domeSkyColor(1.0, fragCamPos, vd);
 }
 
 #endif
@@ -79,7 +78,7 @@ uniform mat4 matModel;
 uniform mat4 matView;
 
 vec4 fixZB(vec4 p) {
-    float nz = 0.99999 - exp(-0.001 * (p.z));
+    float nz = 1 - exp(-0.001 * (p.z));
     p.z = nz * p.w;
     return p;
 }
@@ -139,8 +138,8 @@ void main()
 	finalColor.xyz *= diffuseLight;
 	if (finalColor.a < 0.1)
 		discard;
-	vec3 fogColor = skyColor(fragFog, fragCamPos, viewDir);
-	finalColor.xyz = mix(finalColor.xyz, fogColor, fragFog);
+	vec4 fogColor = sceneSkyColor(fragFog, fragCamPos, viewDir, fragWorldPos);
+	finalColor.xyz = mix(finalColor.xyz, fogColor.xyz, fogColor.a);
 }
 
 #endif

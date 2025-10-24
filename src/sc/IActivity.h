@@ -75,8 +75,8 @@ protected:
 	std::vector<std::unique_ptr<SCButton>> buttons;
 	std::vector<RSSoundInstance> sounds;
 	GTime startTime {};
-	bool running{};
-	bool focused{};
+	bool running {};
+	bool focused {};
 
 	IActivity();
 
@@ -93,5 +93,4 @@ protected:
 	bool InitShape(RLEShape& shp, const char* label, const ByteSlice& entry);
 	bool InitShape(SceneSchape& shp, const char* label, const ByteSlice& entry);
 	void InitShapeAt(RLEShape& shp, const Point2D& position, const char* label, const ByteSlice& entry);
-
 };

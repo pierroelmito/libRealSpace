@@ -27,4 +27,3 @@ extern AssetManager Assets;
 extern SCRenderer Renderer;
 extern ConvAssetManager ConvAssets;
 extern RSFontManager FontManager;
-

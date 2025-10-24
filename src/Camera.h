@@ -18,4 +18,3 @@ public:
 protected:
 	Camera3D cam {};
 };
-
