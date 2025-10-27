@@ -45,9 +45,11 @@ void RSScreen::SetTitle(const char* title)
 
 bool RSScreen::StartFrame()
 {
+	if (WindowShouldClose())
+		return false;
 	BeginDrawing();
 	ClearBackground(PINK);
-	return !WindowShouldClose();
+	return true;
 }
 
 void RSScreen::EndFrame()

@@ -47,8 +47,9 @@ uniform sampler2D texture0;
 
 void main()
 {
+	vec3 lightDir = normalize(vec3(0.5, -1.0, 0.3));
 	vec3 vd = normalize(fragViewdir);
-	finalColor = domeSkyColor(1.0, fragCamPos, vd);
+	finalColor = vec4(domeSkyColor(lightDir, 1.0, fragCamPos, vd), 1.0);
 }
 
 #endif
@@ -140,8 +141,7 @@ void main()
 	finalColor.xyz *= diffuseLight;
 	if (finalColor.a < 0.1)
 		discard;
-	vec4 fogColor = sceneSkyColor(fragFog, fragCamPos, viewDir, fragWorldPos);
-	finalColor.xyz = mix(finalColor.xyz, fogColor.xyz, fogColor.a);
+	finalColor.xyz = sceneSkyColor(lightDir, finalColor.xyz, fragFog, fragCamPos, viewDir, fragWorldPos);
 }
 
 #endif
