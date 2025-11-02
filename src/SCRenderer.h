@@ -46,6 +46,17 @@ public:
 	void RenderWorldPoints(const RSArea& area, int LOD, int verticesPerBlock);
 #endif
 
+	struct Render3DParams {
+		enum Flags {
+			CLEAR_COLORS = 1,
+			SKY = 2,
+			CLOUDS = 4,
+		};
+		Vector3 camPos {};
+		Camera3D camera {};
+		uint32_t flags { CLEAR_COLORS };
+	};
+
 	using AddVertex = std::function<void(Texture&, const Vector3&, const Vector3&, Color, const Vector2&)>;
 
 	bool IsTextured(const MapVertex* tri0, const MapVertex* tri1, const MapVertex* tri2);
@@ -53,21 +64,11 @@ public:
 	void RenderColoredTriangle(const AddVertex& vfunc, const MapVertex& tri0, const MapVertex& tri1, const MapVertex& tri2);
 	void RenderQuad(const AddVertex& vfunc, const RSArea& area, const MapVertex& currentVertex, const MapVertex& rightVertex, const MapVertex& bottomRightVertex, const MapVertex& bottomVertex, bool renderTexture);
 	void RenderBlock(const AddVertex& vfunc, const RSArea& area, int LOD, int blockID, bool renderTexture);
-	void RenderWorldSolid(const RSArea& area, int LOD, double gtime);
-	void RenderWorldGround(const RSArea& area, int LOD, double gtime);
-	void RenderWorldModels(const RSArea& area, int LOD, double gtime);
+	void RenderWorldSolid(const Render3DParams& params,const RSArea& area, int LOD, double gtime);
+	void RenderWorldGround(const Render3DParams& params,const RSArea& area, int LOD, double gtime);
+	void RenderWorldModels(const Render3DParams& params,const RSArea& area, int LOD, double gtime);
 
-	struct Render3DParams {
-		enum Flags {
-			CLEAR_COLORS = 1,
-			SKY = 2,
-			CLOUDS = 4,
-		};
-		Camera3D camera {};
-		uint32_t flags { CLEAR_COLORS };
-	};
-
-	void Draw3D(const Render3DParams& params, std::function<void()>&& f);
+	void Draw3D(const Render3DParams& params, std::function<void(const Render3DParams& params)>&& f);
 
 	RSCamera& GetCamera() { return camera; }
 	void SetLight(const Vector3& position);

@@ -25,7 +25,7 @@
 
 typedef enum {
 	START = SHADER_LOC_BONE_MATRICES,
-	SHADER_LOC_MAPS_CLOUD_DENSITY
+	SHADER_LOC_CAMERA_INFO
 } UserLocationIndex;
 
 struct ObjVertexData {
@@ -38,6 +38,8 @@ struct ObjVertexData {
 struct CompTexture {
 	bool operator()(Texture* a, Texture* b) const { return a->id < b->id; }
 };
+
+RenderTexture rtScene {};
 
 Texture texNoise {};
 Texture texSkydome {};
@@ -234,6 +236,8 @@ void SCRenderer::Init()
 
 	std::vector<std::pair<size_t, const char*>> shdUniforms = {
 		{ SHADER_LOC_MAP_OCCLUSION, "cloudDensity" },
+		{ SHADER_LOC_MAP_HEIGHT, "depthMap" },
+		{ SHADER_LOC_CAMERA_INFO, "camInfo" },
 	};
 
 	shdDefault = rlt::MakeShader("default", "default", shdUniforms);
@@ -306,35 +310,89 @@ void SCRenderer::Log(const char* tag, uint32_t log_level, uint32_t log_item_id,
 	exit(-1);
 }
 
-void SCRenderer::Draw3D(const Render3DParams& params,
-	std::function<void()>&& f)
+namespace {
+
+RenderTexture2D LoadRenderTextureDepthTex(int width, int height)
 {
-	if (params.flags & Render3DParams::CLEAR_COLORS) {
-		ClearBackground(PINK);
+	RenderTexture2D target = { 0 };
+
+	target.id = rlLoadFramebuffer();
+
+	if (target.id > 0) {
+		rlEnableFramebuffer(target.id);
+
+		target.texture.id = rlLoadTexture(0, width, height, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+		target.texture.width = width;
+		target.texture.height = height;
+		target.texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+		target.texture.mipmaps = 1;
+
+		target.depth.id = rlLoadTextureDepth(width, height, false);
+		target.depth.width = width;
+		target.depth.height = height;
+		target.depth.format = 19; // DEPTH_COMPONENT_24BIT: Not defined in raylib
+		target.depth.mipmaps = 1;
+
+		rlFramebufferAttach(target.id, target.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+		rlFramebufferAttach(target.id, target.depth.id, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
+
+		if (rlFramebufferComplete(target.id))
+			TRACELOG(LOG_INFO, "FBO: [ID %i] Framebuffer object created successfully", target.id);
+
+		rlDisableFramebuffer();
+	} else {
+		TRACELOG(LOG_WARNING, "FBO: Framebuffer object can not be created");
 	}
 
-	// BeginShaderMode(shdSky);
-	// SetShaderValueTexture(shdSky, shdSky.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
-	// EndShaderMode();
-	// BeginShaderMode(shdDefault);
-	// SetShaderValueTexture(shdDefault, shdDefault.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
-	// EndShaderMode();
+	return target;
+}
 
-	f();
+void UnloadRenderTextureDepthTex(RenderTexture2D target)
+{
+	if (target.id > 0) {
+		rlUnloadTexture(target.texture.id);
+		rlUnloadTexture(target.depth.id);
+		rlUnloadFramebuffer(target.id);
+	}
+}
 
-	// BeginShaderMode(shdSky);
-	// SetShaderValueTexture(shdSky, shdSky.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
-	// EndShaderMode();
-	// SetShaderValueTexture(shdDefault, shdDefault.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
-	// BeginShaderMode(shdDefault);
-	// EndShaderMode();
+}
+
+void SCRenderer::Draw3D(const Render3DParams& params,
+	std::function<void(const Render3DParams& params)>&& f)
+{
+	const auto [w, h] = std::pair { GetScreenWidth(), GetScreenHeight() };
+
+	if (rtScene.texture.width != w || rtScene.texture.height != h) {
+		if (rtScene.texture.width != 0 && rtScene.texture.height != 0)
+			UnloadRenderTextureDepthTex(rtScene);
+		rtScene = LoadRenderTextureDepthTex(w, h);
+	}
+
+	BeginTextureMode(rtScene);
+	BeginMode3D(params.camera);
+
+	if (params.flags & Render3DParams::CLEAR_COLORS) {
+		ClearBackground({ 255, 0, 0, 0 });
+	}
+
+	f(params);
+
+	EndMode3D();
+	EndTextureMode();
 
 	if (params.flags & Render3DParams::SKY) {
-		auto t = rlt::GetCameraTransform(params.camera, GetScreenWidth(), GetScreenHeight());
+		BeginMode3D(params.camera);
+		const auto t = rlt::GetCameraTransform(params.camera, w, h);
 		auto m = LoadMaterialDefault();
 		m.shader = shdSky;
 		m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
+		m.maps[MATERIAL_MAP_ALBEDO].texture = rtScene.texture;
+		m.maps[MATERIAL_MAP_HEIGHT].texture = rtScene.depth;
 		DrawMesh(mshFsq, m, t);
+		EndMode3D();
+	} else {
+		rlt::DrawRt(rtScene, w, h);
 	}
 }
 
@@ -837,13 +895,13 @@ void SCRenderer::RenderBlock(const AddVertex& vfunc, const RSArea& area,
 	}
 }
 
-void SCRenderer::RenderWorldSolid(const RSArea& area, int LOD, double gtime)
+void SCRenderer::RenderWorldSolid(const Render3DParams& params, const RSArea& area, int LOD, double gtime)
 {
-	RenderWorldGround(area, LOD, gtime);
-	RenderWorldModels(area, LOD, gtime);
+	RenderWorldModels(params, area, LOD, gtime);
+	RenderWorldGround(params, area, LOD, gtime);
 }
 
-void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
+void SCRenderer::RenderWorldGround(const Render3DParams& params, const RSArea& area, int LOD, double gtime)
 {
 	static std::vector<Model> ground;
 	ground.resize(0);
@@ -858,12 +916,20 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 					std::array<uint8_t, 4> col;
 				};
 
+				const float maxv = std::numeric_limits<float>::max();
+				const float minv = std::numeric_limits<float>::min();
+				Vector4 aabb { maxv, maxv, minv, minv };
+
 				using BlockCache = std::map<Texture*, ObjVertexData>;
 				BlockCache tmp;
 				AddVertex vadd = [&](Texture& tex, const Vector3& pos, const Vector3& n, Color col, const Vector2& uv) {
 					auto& vert = tmp[&tex];
 					const bool useVertex = true;
 					if (useVertex) {
+						aabb.x = std::min(aabb.x, pos.x);
+						aabb.y = std::min(aabb.y, pos.z);
+						aabb.z = std::min(aabb.z, pos.x);
+						aabb.w = std::min(aabb.w, pos.z);
 						vert.pos.push_back(pos);
 						vert.normal.push_back(n);
 						vert.uv.push_back(uv);
@@ -873,6 +939,14 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 
 				RenderBlock(vadd, area, LOD, i, false);
 				RenderBlock(vadd, area, LOD, i, true);
+
+				const Vector3 center { 0.5f * (aabb.x + aabb.z), 0, 0.5f * (aabb.y + aabb.w) };
+
+				for (auto& kv : tmp) {
+					auto& data = kv.second;
+					for (Vector3& p : data.pos)
+						p -= center;
+				}
 
 				std::vector<Mesh> finalMeshes;
 				std::vector<Material> materials;
@@ -917,7 +991,7 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 				}
 
 				mdata = {};
-				mdata.transform = MatrixIdentity();
+				mdata.transform = MatrixTranslate(center.x, center.y, center.z);
 				mdata.meshCount = finalMeshes.size();
 				mdata.materialCount = materials.size();
 				mdata.meshes = rlt::AllocCopy<Mesh>(finalMeshes);
@@ -929,22 +1003,19 @@ void SCRenderer::RenderWorldGround(const RSArea& area, int LOD, double gtime)
 	}
 
 	if (!ground.empty()) {
-		// BeginShaderMode(shdDefault);
-		//  SetShaderValueTexture(shdDefault, shdDefault.locs[SHADER_LOC_MAPS_CLOUD_DENSITY], texCloudDensity);
-		// SetShaderValueTexture(shdDefault, locYolo, texCloudDensity);
-		auto world = MatrixIdentity();
+		auto p = params.camPos * -1;
+		auto world = MatrixTranslate(p.x, p.y, p.z);
 		for (const auto& model : ground) {
 			for (int i = 0; i < model.meshCount; ++i) {
 				auto& mat = model.materials[model.meshMaterial[i]];
 				mat.shader = shdDefault;
-				DrawMesh(model.meshes[i], mat, world);
+				DrawMesh(model.meshes[i], mat, model.transform * world);
 			}
 		}
-		// EndShaderMode();
 	}
 }
 
-void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)
+void SCRenderer::RenderWorldModels(const Render3DParams& params, const RSArea& area, int LOD, double gtime)
 {
 #if 1
 	const auto& userInts = UserProperties::Get().Ints;
@@ -980,7 +1051,8 @@ void SCRenderer::RenderWorldModels(const RSArea& area, int LOD, double gtime)
 				0.5f * object.position[2] / (float)HEIGHT_DIVIDER,
 				object.position[axisZ] * factorZ,
 			};
-			const Vector3 wp = localDelta + offset;
+			auto p = params.camPos * -1;
+			const Vector3 wp = localDelta + offset + p;
 			const auto& t = object.transform;
 			const auto s = objScale;
 			const Matrix mworld = rlt::MakeMat4({

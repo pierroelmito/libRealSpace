@@ -153,20 +153,18 @@ void SCStrike::RunFrame(const FrameParams& p)
 	// pilot._a = 0.09f * cosf(p.activityTime);
 	// pilot._b = 0.09f * sinf(p.activityTime);
 
+	Vector3 camPos = plane.pos;
+
 	Camera rcam {};
-	rcam.position = plane.pos;
-	rcam.target = plane.pos + lookAt;
-	// rcam.position = { 0, 8.5, 0 };
-	// rcam.target = lookAt;
+	rcam.position = {};
+	rcam.target = lookAt;
 	rcam.up = plane.up;
 	rcam.fovy = 45.0f;
 	rcam.projection = CAMERA_PERSPECTIVE;
-	BeginMode3D(rcam);
 
-	Renderer.Draw3D({ rcam, R3Dp::CLEAR_COLORS | R3Dp::SKY /*| R3Dp::CLOUDS*/ }, [&]() {
+	Renderer.Draw3D({ camPos, rcam, R3Dp::CLEAR_COLORS | R3Dp::SKY | R3Dp::CLOUDS }, [&](const SCRenderer::Render3DParams& params) {
 		// world
-		Renderer.RenderWorldSolid(area, BLOCK_LOD_MAX, p.totalTime);
-
+		Renderer.RenderWorldSolid(params, area, BLOCK_LOD_MAX, p.totalTime);
 		// jets
 		for (auto&& jet : jets) {
 			Matrix world = QuaternionToMatrix(jet.orientation) * MatrixScale(OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE);
@@ -175,7 +173,6 @@ void SCStrike::RunFrame(const FrameParams& p)
 			world.m14 = jet.position.z;
 			Renderer.DrawModel(jet.entity.get(), LOD_LEVEL_MAX, world);
 		}
-
 		// cockpit
 		if (1) {
 			const float sc = props.Floats.Get("CockpitScale", 0.05f);
@@ -183,8 +180,6 @@ void SCStrike::RunFrame(const FrameParams& p)
 			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, cockpit * mdl);
 		}
 	});
-
-	EndMode3D();
 
 	int y = 10;
 	y = rlt::MyDrawText(10, y, WHITE, 20, "SCStrike - libRealSpace Demo");

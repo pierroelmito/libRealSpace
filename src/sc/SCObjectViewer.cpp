@@ -525,16 +525,11 @@ void SCObjectViewer::RunFrame(const FrameParams& p)
 	rcam.up = { 0, 1, 0 };
 	rcam.fovy = 45.0f;
 	rcam.projection = CAMERA_PERSPECTIVE;
-	BeginMode3D(rcam);
-	BeginScissorMode(0, 40 * p.ScHeight / 240, p.ScWidth, 150 * p.ScHeight / 240);
 
 	Renderer.SetLight(light);
-	Renderer.Draw3D({ rcam, 0 }, [&]() {
+	Renderer.Draw3D({ {}, rcam, SCRenderer::Render3DParams::CLEAR_COLORS }, [&](const SCRenderer::Render3DParams& params) {
 		Renderer.DrawModel(showCases[currentObject].entity.get(), LOD_LEVEL_MAX, id);
 	});
-
-	EndScissorMode();
-	EndMode3D();
 
 	if (!running)
 		Renderer.ClearCache();
