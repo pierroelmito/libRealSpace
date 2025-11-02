@@ -75,7 +75,7 @@ void main()
 		vec3 wpos = makeWPos(fragCamPos, vd, depth);
 		vec3 dc = vec3(fract(depth));
 		finalColor = vec4(bg.xyz, 1);
-		//finalColor.xyz = mix(finalColor.xyz, sky.xyz, depth);
+		finalColor.xyz = mix(finalColor.xyz, sky.xyz, 1 - exp(-0.001 * depth));
 		//finalColor.xyz = mix(finalColor.xyz, 0.5 * (1 + sin(wpos.xyz / 2)), 0.5);
 		//finalColor.xyz = mix(finalColor.xyz, dc, 0.9);
 	}
@@ -154,7 +154,7 @@ void main()
 	finalColor = texelColor * colDiffuse * fragColor;
 	if (finalColor.a < 0.1)
 		discard;
-	finalColor.a = 1;
+	//finalColor.a = 1;
 
 	float viewDepth = length(fragWorldPos - fragCamPos);
 	vec3 viewDir = normalize(fragWorldPos - fragCamPos);
