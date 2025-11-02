@@ -155,13 +155,14 @@ inline void SetUniform(Shader& shd, int loc, T* t, ShaderUniformDataType type)
 
 inline Matrix GetCameraTransform(const Camera& cam, float width, float height)
 {
+	const float dbg = 1.0f;
 	const float near = RL_CULL_DISTANCE_NEAR;
 	const float fovy = cam.fovy * PI / 180.0f;
 	const float ay = tanf(0.5f * fovy);
 	const float ratio = width / height;
 	const float cf = near;
-	const float cx = cf * ay * ratio;
-	const float cy = cf * ay;
+	const float cx = dbg * cf * ay * ratio;
+	const float cy = dbg * cf * ay;
 	const float cw = near;
 	const auto& dir = Vector3Normalize(cam.target - cam.position);
 	const auto& strafe = Vector3Normalize(Vector3CrossProduct(dir, cam.up));

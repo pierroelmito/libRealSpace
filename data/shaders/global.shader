@@ -11,19 +11,17 @@ MACRO(#,version 330)
 #define VAR in
 #endif
 
-float CoeffZ = -0.001;
+float CoeffZ = -1.0 / (1 << 1);
 
 vec4 fixZB(vec3 cam, vec3 wpos, vec4 p) {
-    //float nz = 0.01 + 0.9 * (1 - exp(CoeffZ * p.z));
-    //p.z = nz * p.w;
+    float nz = 1 - exp(CoeffZ * (p.z / p.w));
+    p.z = nz * p.w;
     return p;
 }
 
-vec3 makeWPos(vec3 cam, vec3 v0, vec3 v1, float d0, float d1)
+vec3 makeWPos(vec3 cam, vec3 v, float d)
 {
-    //float nz = 1 - exp(CoeffZ * (p.z));
-	float z = log(1 - d1) / CoeffZ;
-	return cam + (z * v0);
+	return cam + d * v;
 }
 
 #if PP
@@ -39,17 +37,20 @@ in vec3 vertexPosition;
 uniform mat4 matModel;
 uniform mat4 matView;
 uniform mat4 mvp;
+uniform vec3 camInfo;
 
 void main()
 {
-	fragTexCoord = 0.5 * (vertexPosition.xy + 1);
+	vec3 camPos = camInfo.xyz;
 	vec3 worldPos = (matModel * vec4(vertexPosition, 0.0)).xyz;
-	fragViewdir = normalize(worldPos);
+
 	vec4 p = mvp * vec4(vertexPosition, 0.0);
 	p.z = p.w;
 	gl_Position = p;
-	vec3 camPos = vec3(inverse(matView)[3]);
+
 	fragCamPos = camPos;
+	fragViewdir = normalize(worldPos);
+	fragTexCoord = 0.5 * (vertexPosition.xy + 1);
 }
 
 #else
@@ -63,19 +64,20 @@ uniform sampler2D texture0;
 void main()
 {
 	vec4 bg = texture(texture0, fragTexCoord);
-	float d = texture(depthMap, fragTexCoord).r;
-	float depth = 2 * (d - 0.5);
+	float depth = texture(depthMap, fragTexCoord).r;
 	vec3 lightDir = normalize(vec3(0.5, -1.0, 0.3));
 	vec3 vd = normalize(fragViewdir);
-	if (d == 1.0) {
+	if (depth > 0.0) {
 		finalColor = vec4(domeSkyColor(lightDir, 1.0, fragCamPos, vd), 1.0);
 	} else {
+		depth = -depth;
 		vec3 sky = baseSkyColor(vd, lightDir);
-		vec3 wpos = makeWPos(fragCamPos, vd,  fragViewdir, d, depth);
+		vec3 wpos = makeWPos(fragCamPos, vd, depth);
+		vec3 dc = vec3(fract(depth));
 		finalColor = vec4(bg.xyz, 1);
 		//finalColor.xyz = mix(finalColor.xyz, sky.xyz, depth);
-		//finalColor.xyz = mix(finalColor.xyz, fract(wpos.xyz / 32), 0.5);
-		//finalColor.xyz = mix(finalColor.xyz, vec3(depth), 0.9);
+		//finalColor.xyz = mix(finalColor.xyz, 0.5 * (1 + sin(wpos.xyz / 2)), 0.5);
+		//finalColor.xyz = mix(finalColor.xyz, dc, 0.9);
 	}
 }
 
@@ -104,10 +106,11 @@ in mat4 instanceTransform;
 uniform mat4 mvp;
 uniform mat4 matModel;
 uniform mat4 matView;
+uniform vec3 camInfo;
 
 void main()
 {
-	vec3 camPos = vec3(inverse(matView)[3]);
+	vec3 camPos = camInfo;
 
 	fragTexCoord = vertexTexCoord;
 	fragColor = vertexColor;
@@ -120,17 +123,19 @@ void main()
 	vec3 worldPos = (matModel * tr * vec4(vertexPosition, 1.0)).xyz;
 	gl_Position = fixZB(camPos, worldPos, mvpi * vec4(vertexPosition, 1.0));
 #else
-	vec3 worldPos = (matModel * vec4(vertexPosition, 1.0)).xyz;
+	vec4 bwp = matModel * vec4(vertexPosition, 1.0);
+	vec3 worldPos = bwp.xyz / bwp.w;
 	gl_Position = fixZB(camPos, worldPos, mvp * vec4(vertexPosition, 1.0));
 #endif
 
-	fragWorldPos = worldPos;
-	fragFog = gl_Position.z / gl_Position.w;
+	fragWorldPos = camPos + worldPos;
+	fragFog = length(worldPos - camPos);
 }
 
 #else //!VS
 
-out vec4 finalColor;
+layout(location = 0) out vec4 finalColor;
+layout(location = 1) out vec4 finalDepth;
 
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
@@ -149,13 +154,18 @@ void main()
 	finalColor = texelColor * colDiffuse * fragColor;
 	if (finalColor.a < 0.1)
 		discard;
+	finalColor.a = 1;
 
+	float viewDepth = length(fragWorldPos - fragCamPos);
 	vec3 viewDir = normalize(fragWorldPos - fragCamPos);
 	vec3 sunColor = vec3(1.0, 1.0, 1.0);
 	vec3 shadowColor = vec3(0.4, 0.4, 0.4);
 	vec3 lightDir = normalize(vec3(0.5, -1.0, 0.3));
 	vec3 diffuseLight = light(fragNormal, viewDir, lightDir, sunColor, shadowColor);
+
 	finalColor.xyz *= diffuseLight;
+	finalDepth = vec4(-viewDepth, 0, 0, 1);
+
 }
 
 #endif

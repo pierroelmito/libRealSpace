@@ -40,6 +40,7 @@ struct CompTexture {
 };
 
 RenderTexture rtScene {};
+Texture rtScene_Depth {};
 
 Texture texNoise {};
 Texture texSkydome {};
@@ -312,7 +313,7 @@ void SCRenderer::Log(const char* tag, uint32_t log_level, uint32_t log_item_id,
 
 namespace {
 
-RenderTexture2D LoadRenderTextureDepthTex(int width, int height)
+RenderTexture2D LoadRenderTextureDepthTex(int width, int height, Texture& depth)
 {
 	RenderTexture2D target = { 0 };
 
@@ -327,13 +328,22 @@ RenderTexture2D LoadRenderTextureDepthTex(int width, int height)
 		target.texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
 		target.texture.mipmaps = 1;
 
+		depth.id = rlLoadTexture(0, width, height, PIXELFORMAT_UNCOMPRESSED_R32, 1);
+		depth.width = width;
+		depth.height = height;
+		depth.format = PIXELFORMAT_UNCOMPRESSED_R32;
+		depth.mipmaps = 1;
+
 		target.depth.id = rlLoadTextureDepth(width, height, false);
 		target.depth.width = width;
 		target.depth.height = height;
 		target.depth.format = 19; // DEPTH_COMPONENT_24BIT: Not defined in raylib
 		target.depth.mipmaps = 1;
 
+		rlActiveDrawBuffers(2);
+
 		rlFramebufferAttach(target.id, target.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+		rlFramebufferAttach(target.id, depth.id, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
 		rlFramebufferAttach(target.id, target.depth.id, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
 
 		if (rlFramebufferComplete(target.id))
@@ -347,12 +357,17 @@ RenderTexture2D LoadRenderTextureDepthTex(int width, int height)
 	return target;
 }
 
-void UnloadRenderTextureDepthTex(RenderTexture2D target)
+void UnloadRenderTextureDepthTex(RenderTexture2D target, Texture& depth)
 {
+	if (depth.id > 0) {
+		rlUnloadTexture(depth.id);
+		depth = {};
+	}
 	if (target.id > 0) {
 		rlUnloadTexture(target.texture.id);
 		rlUnloadTexture(target.depth.id);
 		rlUnloadFramebuffer(target.id);
+		target = {};
 	}
 }
 
@@ -365,9 +380,13 @@ void SCRenderer::Draw3D(const Render3DParams& params,
 
 	if (rtScene.texture.width != w || rtScene.texture.height != h) {
 		if (rtScene.texture.width != 0 && rtScene.texture.height != 0)
-			UnloadRenderTextureDepthTex(rtScene);
-		rtScene = LoadRenderTextureDepthTex(w, h);
+			UnloadRenderTextureDepthTex(rtScene, rtScene_Depth);
+		rtScene = LoadRenderTextureDepthTex(w, h, rtScene_Depth);
 	}
+
+	BeginShaderMode(shdDefault);
+	rlt::SetUniform(shdDefault, SHADER_LOC_CAMERA_INFO, &params.camPos, SHADER_UNIFORM_VEC3);
+	EndShaderMode();
 
 	BeginTextureMode(rtScene);
 	BeginMode3D(params.camera);
@@ -382,13 +401,19 @@ void SCRenderer::Draw3D(const Render3DParams& params,
 	EndTextureMode();
 
 	if (params.flags & Render3DParams::SKY) {
-		BeginMode3D(params.camera);
+		Camera3D cpp = params.camera;
+		// cpp.target += params.camPos;
+		// cpp.position += params.camPos;
+		BeginMode3D(cpp);
 		const auto t = rlt::GetCameraTransform(params.camera, w, h);
 		auto m = LoadMaterialDefault();
 		m.shader = shdSky;
 		m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
 		m.maps[MATERIAL_MAP_ALBEDO].texture = rtScene.texture;
-		m.maps[MATERIAL_MAP_HEIGHT].texture = rtScene.depth;
+		m.maps[MATERIAL_MAP_HEIGHT].texture = rtScene_Depth;
+		BeginShaderMode(shdSky);
+		rlt::SetUniform(shdSky, SHADER_LOC_CAMERA_INFO, &params.camPos, SHADER_UNIFORM_VEC3);
+		EndShaderMode();
 		DrawMesh(mshFsq, m, t);
 		EndMode3D();
 	} else {

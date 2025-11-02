@@ -168,13 +168,13 @@ void SCStrike::RunFrame(const FrameParams& p)
 		// jets
 		for (auto&& jet : jets) {
 			Matrix world = QuaternionToMatrix(jet.orientation) * MatrixScale(OBJECT_SCALE, OBJECT_SCALE, OBJECT_SCALE);
-			world.m12 = jet.position.x;
-			world.m13 = jet.position.y;
-			world.m14 = jet.position.z;
+			world.m12 = jet.position.x - camPos.x;
+			world.m13 = jet.position.y - camPos.y;
+			world.m14 = jet.position.z - camPos.z;
 			Renderer.DrawModel(jet.entity.get(), LOD_LEVEL_MAX, world);
 		}
 		// cockpit
-		if (1) {
+		if (0) {
 			const float sc = props.Floats.Get("CockpitScale", 0.05f);
 			const Matrix mdl = MatrixScale(sc, sc, sc) * MatrixRotate({ 0, 1, 0 }, 90.0f) * MatrixTranslate(0, -3, 0);
 			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, cockpit * mdl);
