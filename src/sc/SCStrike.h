@@ -38,7 +38,8 @@ public:
 	void Init();
 	void RunFrame(const FrameParams& p) override;
 	void ComputeMove(const Matrix& transform, GTime dt);
-	Matrix ComputeTransform(bool cockpit, bool lookAt);
+	Matrix ComputeRotation();
+	Matrix ComputeTransform();
 
 protected:
 	Pilot pilot;

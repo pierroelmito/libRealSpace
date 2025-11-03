@@ -93,59 +93,54 @@ void SCStrike::ComputeMove(const Matrix& transform, GTime dt)
 	plane.pos += (d * -(mUp + mDown) + n * -(mLeft + mRight)) * (2.0f * dt * mQuick);
 }
 
-Matrix SCStrike::ComputeTransform(bool cockpit, bool lookAt)
+Matrix SCStrike::ComputeRotation()
 {
 	Vector3 d, u, n;
-	if (lookAt) {
-		d = pilot.lookAt;
-		n = Vector3Normalize(Vector3CrossProduct(plane.up, d));
-		u = Vector3CrossProduct(d, n);
-	} else {
-		d = plane.dir;
-		u = plane.up;
-		n = Vector3CrossProduct(u, d);
-	}
+	d = plane.dir;
+	u = plane.up;
+	n = Vector3CrossProduct(u, d);
 
-	const float cT = cockpit ? -1.0f : 1.0f;
+	const float cT = 1.0f;
+	auto pos = plane.pos * -cT;
+
+	const Matrix r = rlt::MakeMat4({
+		{ n.x, u.x, d.x, 0 },
+		{ n.y, u.y, d.y, 0 },
+		{ n.z, u.z, d.z, 0 },
+		{ 0, 0, 0, 1 },
+	});
+
+	return r;
+}
+
+Matrix SCStrike::ComputeTransform()
+{
+	const float cT = 1.0f;
 	auto pos = plane.pos * -cT;
 	const Matrix t = MatrixTranslate(pos.x, pos.y, pos.z);
-
-	if (cockpit) {
-		const Matrix r = rlt::MakeMat4({
-			{ n.x, n.y, n.z, 0 },
-			{ u.x, u.y, u.z, 0 },
-			{ d.x, d.y, d.z, 0 },
-			{ 0, 0, 0, 1 },
-		});
-		return t * r;
-	} else {
-		const Matrix r = rlt::MakeMat4({
-			{ n.x, u.x, d.x, 0 },
-			{ n.y, u.y, d.y, 0 },
-			{ n.z, u.z, d.z, 0 },
-			{ 0, 0, 0, 1 },
-		});
-		return r * t;
-	}
+	return ComputeRotation() * t;
 }
 
 void SCStrike::RunFrame(const FrameParams& p)
 {
+	const Matrix oldViewPlane = ComputeTransform();
+	const Matrix viewPlane = ComputeTransform();
+	ComputeMove(oldViewPlane, p.deltaTime);
+	const Matrix rotationPlane = ComputeRotation();
+
 	// look at target
 	const bool lookAtTarget = IsKeyDown(KEY_TAB);
 	const bool usePlaneDirLookAt = jets.empty() || !lookAtTarget;
-	const Vector3 lookAt = usePlaneDirLookAt ? plane.dir : Vector3Normalize(plane.pos - jets[0].position);
+	const Vector3 lookAt = usePlaneDirLookAt ? plane.dir : (Vector3Normalize(plane.pos - jets[0].position) * -1);
 	pilot.lookAt = Vector3Normalize(lookAt * 0.3f + pilot.lookAt * 0.7f);
-
-	const Matrix viewPilot = ComputeTransform(false, true);
-	const Matrix viewPlane = ComputeTransform(false, false);
-	const Matrix cockpit = ComputeTransform(true, false);
-	ComputeMove(viewPlane, p.deltaTime);
 
 	auto& cam = Renderer.GetCamera();
 	// cam.SetView(viewPilot);
 
-	const auto& props = UserProperties::Get();
+	auto& props = UserProperties::Get();
+
+	if (IsKeyPressed(KEY_F5))
+		props.Reload();
 
 	const Vector3 light = Vector3Normalize(props.Vectors3.Get("LightDir", { 2, 3, 2 }));
 	Renderer.SetLight(light);
@@ -174,10 +169,11 @@ void SCStrike::RunFrame(const FrameParams& p)
 			Renderer.DrawModel(jet.entity.get(), LOD_LEVEL_MAX, world);
 		}
 		// cockpit
-		if (0) {
+		if (1) {
 			const float sc = props.Floats.Get("CockpitScale", 0.05f);
-			const Matrix mdl = MatrixScale(sc, sc, sc) * MatrixRotate({ 0, 1, 0 }, 90.0f) * MatrixTranslate(0, -3, 0);
-			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, cockpit * mdl);
+			// const Matrix mdl = MatrixScale(sc, sc, sc) * MatrixTranslate(-camPos.x, -camPos.y, -camPos.z); // * MatrixRotate({ 0, 1, 0 }, 90.0f) * MatrixTranslate(0, -3, 0);
+			const Matrix mdl = MatrixTranslate(0, -3.5, 0) * MatrixScale(sc, sc, sc) * MatrixRotate({ 0, 1, 0 }, -PI / 2) * rotationPlane;
+			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, mdl);
 		}
 	});
 
