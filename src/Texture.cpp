@@ -36,7 +36,7 @@ void RSTexture::Set(RSImage& image)
 	strncpy(name, image.name, 8);
 	img = GenImageColor(image.width, image.height, PINK);
 	tex = LoadTextureFromImage(img);
-	SetTextureFilter(tex, TEXTURE_FILTER_BILINEAR);
+	SetTextureFilter(tex, TEXTURE_FILTER_POINT);
 }
 
 void FillAlphaWithAppropriateColors(size_t w, size_t h, uint8_t* data)

@@ -57,7 +57,7 @@ public:
 		uint32_t flags { CLEAR_COLORS };
 	};
 
-	using AddVertex = std::function<void(Texture&, const Vector3&, const Vector3&, Color, const Vector2&)>;
+	using AddVertex = std::function<void(Texture&, uint8_t tritype, const Vector3&, const Vector3&, Color, const Vector2&)>;
 
 	bool IsTextured(const MapVertex* tri0, const MapVertex* tri1, const MapVertex* tri2);
 	void RenderTexturedTriangle(const AddVertex& vfunc, const RSArea& area, const MapVertex& tri0, const MapVertex& tri1, const MapVertex& tri2, int triangleType);

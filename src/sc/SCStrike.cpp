@@ -181,10 +181,12 @@ void SCStrike::RunFrame(const FrameParams& p)
 		}
 	});
 
+#if 0
 	int y = 10;
-	y = rlt::MyDrawText(10, y, WHITE, 20, "SCStrike - libRealSpace Demo");
-	y = rlt::MyDrawText(10, y, WHITE, 20, "SCStrike - libRealSpace Demo");
-	y = rlt::MyDrawText(10, y, WHITE, 20, "SCStrike - libRealSpace Demo");
+	y = rlt::MyDrawText(10, y, WHITE, 20, "a");
+	y = rlt::MyDrawText(10, y, WHITE, 20, "b");
+	y = rlt::MyDrawText(10, y, WHITE, 20, "c");
+#endif
 
 	if (IsKeyPressed(KEY_ESCAPE)) {
 		Renderer.ClearCache();

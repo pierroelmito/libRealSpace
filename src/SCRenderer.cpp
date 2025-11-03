@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include <algorithm>
+#include <set>
 
 #include "Math.h"
 #include "RSArea.h"
@@ -49,10 +50,13 @@ Texture texWhite {};
 Texture texWater {};
 Texture texGrass {};
 Texture texCloudDensity {};
+Texture texDetails {};
 
 Mesh mshFsq {};
 
-Shader shdDefault {};
+Shader shdModel {};
+Shader shdGroundColor {};
+Shader shdGroundTex {};
 Shader shdSky {};
 
 // int locYolo {};
@@ -241,7 +245,9 @@ void SCRenderer::Init()
 		{ SHADER_LOC_CAMERA_INFO, "camInfo" },
 	};
 
-	shdDefault = rlt::MakeShader("default", "default", shdUniforms);
+	shdModel = rlt::MakeShader("default", "model", shdUniforms);
+	shdGroundColor = rlt::MakeShader("default", "ground_color", shdUniforms);
+	shdGroundTex = rlt::MakeShader("default", "ground_tex", shdUniforms);
 	shdSky = rlt::MakeShader("fsq", "sky", shdUniforms);
 
 	mshFsq = rlt::FSQ();
@@ -260,6 +266,13 @@ void SCRenderer::Init()
 		GenTextureMipmaps(&texCloudDensity);
 		SetTextureFilter(texCloudDensity, TEXTURE_FILTER_BILINEAR);
 		SetTextureWrap(texCloudDensity, TEXTURE_WRAP_REPEAT);
+	}
+
+	{
+		texDetails = LoadTexture("assets/clouddensity00.png");
+		GenTextureMipmaps(&texDetails);
+		SetTextureFilter(texDetails, TEXTURE_FILTER_BILINEAR);
+		SetTextureWrap(texDetails, TEXTURE_WRAP_REPEAT);
 	}
 
 	/*
@@ -384,8 +397,14 @@ void SCRenderer::Draw3D(const Render3DParams& params,
 		rtScene = LoadRenderTextureDepthTex(w, h, rtScene_Depth);
 	}
 
-	BeginShaderMode(shdDefault);
-	rlt::SetUniform(shdDefault, SHADER_LOC_CAMERA_INFO, &params.camPos, SHADER_UNIFORM_VEC3);
+	BeginShaderMode(shdModel);
+	rlt::SetUniform(shdModel, SHADER_LOC_CAMERA_INFO, &params.camPos, SHADER_UNIFORM_VEC3);
+	EndShaderMode();
+	BeginShaderMode(shdGroundColor);
+	rlt::SetUniform(shdGroundColor, SHADER_LOC_CAMERA_INFO, &params.camPos, SHADER_UNIFORM_VEC3);
+	EndShaderMode();
+	BeginShaderMode(shdGroundTex);
+	rlt::SetUniform(shdGroundTex, SHADER_LOC_CAMERA_INFO, &params.camPos, SHADER_UNIFORM_VEC3);
 	EndShaderMode();
 
 	BeginTextureMode(rtScene);
@@ -695,10 +714,9 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 	for (const auto& [msh, tex] : meshes) {
 		finalMeshes.push_back(msh);
 		Material& m = materials.emplace_back(LoadMaterialDefault());
-		m.shader = shdDefault;
+		m.shader = shdModel;
 		if (tex)
 			m.maps[MATERIAL_MAP_ALBEDO].texture = *tex;
-		m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
 		mshMat.push_back(int(mshMat.size()));
 	}
 
@@ -813,9 +831,9 @@ void SCRenderer::RenderTexturedTriangle(
 	const auto& ttc = is64 ? textTrianCoo64 : textTrianCoo;
 
 	auto& tex = image->GetTexture()->tex;
-	vfunc(tex, tri0.v, tri0.n, WHITE, ttc[triangleType][0]);
-	vfunc(tex, tri1.v, tri1.n, WHITE, ttc[triangleType][1]);
-	vfunc(tex, tri2.v, tri2.n, WHITE, ttc[triangleType][2]);
+	vfunc(tex, 0, tri0.v, tri0.n, WHITE, ttc[triangleType][0]);
+	vfunc(tex, 0, tri1.v, tri1.n, WHITE, ttc[triangleType][1]);
+	vfunc(tex, 0, tri2.v, tri2.n, WHITE, ttc[triangleType][2]);
 }
 
 void SCRenderer::RenderColoredTriangle(const AddVertex& vfunc,
@@ -835,13 +853,15 @@ void SCRenderer::RenderColoredTriangle(const AddVertex& vfunc,
 			tri = &tri0;
 		else
 			tri = &tri2;
-		vfunc(texWhite, tri0.v, tri0.n, tri->color, noUv);
-		vfunc(texWhite, tri1.v, tri1.n, tri->color, noUv);
-		vfunc(texWhite, tri2.v, tri2.n, tri->color, noUv);
+		Texture* tex = &texWhite;
+		vfunc(*tex, tri->type, tri0.v, tri0.n, tri->color, noUv);
+		vfunc(*tex, tri->type, tri1.v, tri1.n, tri->color, noUv);
+		vfunc(*tex, tri->type, tri2.v, tri2.n, tri->color, noUv);
 	} else {
-		vfunc(texWhite, tri0.v, tri0.n, tri0.color, noUv);
-		vfunc(texWhite, tri1.v, tri1.n, tri1.color, noUv);
-		vfunc(texWhite, tri2.v, tri2.n, tri2.color, noUv);
+		Texture* tex = &texWhite;
+		vfunc(*tex, tri0.type, tri0.v, tri0.n, tri0.color, noUv);
+		vfunc(*tex, tri0.type, tri1.v, tri1.n, tri1.color, noUv);
+		vfunc(*tex, tri0.type, tri2.v, tri2.n, tri2.color, noUv);
 	}
 }
 
@@ -928,6 +948,8 @@ void SCRenderer::RenderWorldSolid(const Render3DParams& params, const RSArea& ar
 
 void SCRenderer::RenderWorldGround(const Render3DParams& params, const RSArea& area, int LOD, double gtime)
 {
+	std::set<uint8_t> triTypes;
+
 	static std::vector<Model> ground;
 	ground.resize(0);
 	for (int i = 0; i < BLOCKS_PER_MAP; i++) {
@@ -947,10 +969,11 @@ void SCRenderer::RenderWorldGround(const Render3DParams& params, const RSArea& a
 
 				using BlockCache = std::map<Texture*, ObjVertexData>;
 				BlockCache tmp;
-				AddVertex vadd = [&](Texture& tex, const Vector3& pos, const Vector3& n, Color col, const Vector2& uv) {
+				AddVertex vadd = [&](Texture& tex, uint8_t tritype, const Vector3& pos, const Vector3& n, Color col, const Vector2& uv) {
 					auto& vert = tmp[&tex];
 					const bool useVertex = true;
 					if (useVertex) {
+						triTypes.insert(tritype);
 						aabb.x = std::min(aabb.x, pos.x);
 						aabb.y = std::min(aabb.y, pos.z);
 						aabb.z = std::min(aabb.z, pos.x);
@@ -958,7 +981,7 @@ void SCRenderer::RenderWorldGround(const Render3DParams& params, const RSArea& a
 						vert.pos.push_back(pos);
 						vert.normal.push_back(n);
 						vert.uv.push_back(uv);
-						vert.col.push_back({ col.r, col.g, col.b, 255 });
+						vert.col.push_back({ col.r, col.g, col.b, col.a });
 					}
 				};
 
@@ -988,9 +1011,9 @@ void SCRenderer::RenderWorldGround(const Render3DParams& params, const RSArea& a
 						}
 						finalMeshes.push_back(rlt::MakeMesh(data.pos, data.normal, data.uv, data.col, indices));
 						Material& m = materials.emplace_back(LoadMaterialDefault());
-						m.shader = shdDefault;
+						m.shader = shdGroundColor;
 						m.maps[MATERIAL_MAP_ALBEDO].texture = texWhite;
-						m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
+						m.maps[MATERIAL_MAP_OCCLUSION].texture = texDetails;
 						mshMat.push_back(int(mshMat.size()));
 					}
 				}
@@ -1008,9 +1031,8 @@ void SCRenderer::RenderWorldGround(const Render3DParams& params, const RSArea& a
 						}
 						finalMeshes.push_back(rlt::MakeMesh(data.pos, data.normal, data.uv, data.col, indices));
 						Material& m = materials.emplace_back(LoadMaterialDefault());
-						m.shader = shdDefault;
+						m.shader = shdGroundTex;
 						m.maps[MATERIAL_MAP_ALBEDO].texture = *kv.first;
-						m.maps[MATERIAL_MAP_OCCLUSION].texture = texCloudDensity;
 						mshMat.push_back(int(mshMat.size()));
 					}
 				}
@@ -1033,7 +1055,6 @@ void SCRenderer::RenderWorldGround(const Render3DParams& params, const RSArea& a
 		for (const auto& model : ground) {
 			for (int i = 0; i < model.meshCount; ++i) {
 				auto& mat = model.materials[model.meshMaterial[i]];
-				mat.shader = shdDefault;
 				DrawMesh(model.meshes[i], mat, model.transform * world);
 			}
 		}

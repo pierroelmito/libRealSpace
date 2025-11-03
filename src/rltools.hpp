@@ -150,7 +150,8 @@ inline Shader MakeShader(std::string_view vs, std::string_view fs,
 template <class T>
 inline void SetUniform(Shader& shd, int loc, T* t, ShaderUniformDataType type)
 {
-	SetShaderValue(shd, shd.locs[loc], t, type);
+	if (shd.locs[loc] != -1)
+		SetShaderValue(shd, shd.locs[loc], t, type);
 }
 
 inline Matrix GetCameraTransform(const Camera& cam, float width, float height)
