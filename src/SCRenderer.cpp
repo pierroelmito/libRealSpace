@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <set>
 
-#include "Math.h"
+// #include "Math.h"
 #include "RSArea.h"
 #include "RSImage.h"
 #include "RSPalette.h"

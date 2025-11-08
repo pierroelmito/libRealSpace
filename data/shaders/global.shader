@@ -11,20 +11,28 @@ MACRO(#,version 330)
 #define VAR in
 #endif
 
+#if VS
 float CoeffZ = -1.0 / (1 << 1);
 
 vec4 fixZB(vec4 p) {
-    float nz = 1 - exp(CoeffZ * (p.z / p.w));
-    p.z = nz * p.w;
-    return p;
+	float nz = 1 - exp(CoeffZ * (p.z / p.w));
+	p.z = nz * p.w;
+	return p;
 }
+#endif
 
+#if !VS && PP
 vec3 makeWPos(vec3 cam, vec3 v, float d)
 {
 	return cam + d * v;
 }
+#endif
 
 #if PP
+
+//================================================== 
+// post process
+//================================================== 
 
 VAR vec3 fragCamPos;
 VAR vec3 fragViewdir;
@@ -35,7 +43,6 @@ VAR vec2 fragTexCoord;
 in vec3 vertexPosition;
 
 uniform mat4 matModel;
-uniform mat4 matView;
 uniform mat4 mvp;
 uniform vec3 camInfo;
 
@@ -53,13 +60,23 @@ void main()
 	fragTexCoord = 0.5 * (vertexPosition.xy + 1);
 }
 
-#else
+#else //!VS ____________________________________________________________________________________________________ 
 
 out vec4 finalColor;
 
 uniform sampler2D texture0;
 
+#define CLOUD 1
 #include "common.glsl"
+
+vec3 vignetting(vec3 c, vec2 uv)
+{
+	uv = abs(uv * 2 - 1);
+	float pv = 6;
+	float bv = 0.5;
+	float r = (1 - bv) + bv * (1 - pow(uv.x, pv)) * (1 - pow(uv.y, pv));
+	return r * c;
+}
 
 void main()
 {
@@ -75,12 +92,16 @@ void main()
 		float fog = 1 - exp(-0.001 * depth);
 		finalColor.xyz = sceneSkyColor(lightDir, bg.xyz, fog, fragCamPos, vd, wpos);
 	}
-	finalColor.a = 1;
+	finalColor = vec4(vignetting(finalColor.xyz, fragTexCoord), 1);
 }
 
 #endif
 
 #else
+
+//================================================== 
+// 3D pass
+//================================================== 
 
 VAR vec3 fragWorldPos;
 VAR vec3 fragCamPos;
@@ -101,7 +122,6 @@ in mat4 instanceTransform;
 
 uniform mat4 mvp;
 uniform mat4 matModel;
-uniform mat4 matView;
 uniform vec3 camInfo;
 
 void main()
@@ -126,7 +146,13 @@ void main()
 	fragWorldPos = camPos + worldPos;
 }
 
-#else //!VS
+#else //!VS ____________________________________________________________________________________________________ 
+
+#if MODE != 1
+#define WATER 1
+#endif
+
+#include "common.glsl"
 
 layout(location = 0) out vec4 finalColor;
 layout(location = 1) out vec4 finalDepth;
@@ -156,7 +182,7 @@ void main()
 	vec3 viewDir = normalize(fragWorldPos - fragCamPos);
 	vec3 sunColor = vec3(1.0, 1.0, 1.0);
 	vec3 shadowColor = vec3(0.4, 0.4, 0.4);
-	vec3 lightDir = normalize(vec3(0.5, -1.0, 0.3));
+	vec3 lightDir = normalize(vec3(0.5, -0.2, 0.3));
 	vec3 diffuseLight = light(fragNormal, viewDir, lightDir, sunColor, shadowColor);
 
 	vec4 baseColor = texelColor * colDiffuse * fragColor;
@@ -167,25 +193,36 @@ void main()
 
 #if MODE == 1
 	finalColor = baseColor;
+	finalColor.xyz *= diffuseLight;
 #endif
 #if MODE == 2
 	int idx = int(baseColor.a * 255.0 + 0.5);
 	if (idx == 0x5 * 16) {
 		vec4 details = texture(cloudDensity, fragWorldPos.xz / 256);
 		finalColor.xyz = baseColor.xyz * vec3(0.8 + 0.4 * details.y);
+		finalColor.xyz *= diffuseLight;
 	} else if (idx == 0xA * 16) {
+#if 0
+		finalColor.xyz = getWorldSea(fragCamPos, viewDir, -lightDir);
+#else
 		vec4 details = texture(cloudDensity, fragWorldPos.xz / 256);
 		finalColor.xyz = baseColor.xyz * vec3(0.8 + 0.4 * details.y);
+		finalColor.xyz *= diffuseLight;
+#endif
 	} else {
-		vec4 details = texture(cloudDensity, fragWorldPos.xz / 256);
-		finalColor.xyz = baseColor.xyz * vec3(0.8 + 0.4 * details.y);
+		finalColor = vec4(baseColor.xyz, 1);
+		finalColor.xyz *= diffuseLight;
 	}
 #endif
 #if MODE == 3
 	finalColor = vec4(baseColor.xyz, 1);
+	finalColor.xyz *= diffuseLight;
 #endif
 
-	finalColor.xyz *= diffuseLight;
+#if MODE == 2
+	finalColor.a = 1;
+#endif
+
 	finalDepth = vec4(-viewDepth, 0, 0, 1);
 }
 
