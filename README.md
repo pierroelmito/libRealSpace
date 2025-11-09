@@ -31,16 +31,17 @@ The long term goal is to be able to play Strike Commander with a Virtual Reality
 Dependencies :
 ==============
 
-- [GLFW](https://www.glfw.org/)
-- [Sokol GFX/Audio](https://github.com/floooh/sokol)
-- [HandmadeMath](https://github.com/HandmadeMath/Handmade-Math)
+- [Raylib](https://www.raylib.com)
+- [Open Asset Import Library (assimp)](https://github.com/assimp/assimp)
 - [TinyDDSLoader](https://github.com/benikabocha/tinyddsloader)
 
 Building :
 ==============
 
-- MSYS2 and linux are both working. GLFW and xmake need to be installed first, then just run "xmake"
-- Copy or link the "assets" directory in the game directory.
+Both MSYS2 and linux builds are supported
+- Install mcpp, raylib, assimp and xmake.
+- Copy the original game data into data/gamefiles
+- Run "xmake run"
 
 Eye Candies :
 =============
