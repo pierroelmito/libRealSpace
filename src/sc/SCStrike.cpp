@@ -95,28 +95,22 @@ void SCStrike::ComputeMove(const Matrix& transform, GTime dt)
 
 Matrix SCStrike::ComputeRotation()
 {
-	Vector3 d, u, n;
-	d = plane.dir;
-	u = plane.up;
-	n = Vector3CrossProduct(u, d);
-
-	const float cT = 1.0f;
-	auto pos = plane.pos * -cT;
-
+	const Vector3 d = plane.dir;
+	const Vector3 u = plane.up;
+	const Vector3 n = Vector3CrossProduct(u, d);
 	const Matrix r = rlt::MakeMat4({
-		{ n.x, u.x, d.x, 0 },
-		{ n.y, u.y, d.y, 0 },
-		{ n.z, u.z, d.z, 0 },
-		{ 0, 0, 0, 1 },
+		{ n.x, u.x, d.x, 0.0 },
+		{ n.y, u.y, d.y, 0.0 },
+		{ n.z, u.z, d.z, 0.0 },
+		{ 0.0, 0.0, 0.0, 1.0 },
 	});
-
 	return r;
 }
 
 Matrix SCStrike::ComputeTransform()
 {
 	const float cT = 1.0f;
-	auto pos = plane.pos * -cT;
+	const auto pos = plane.pos * -cT;
 	const Matrix t = MatrixTranslate(pos.x, pos.y, pos.z);
 	return ComputeRotation() * t;
 }
@@ -124,7 +118,6 @@ Matrix SCStrike::ComputeTransform()
 void SCStrike::RunFrame(const FrameParams& p)
 {
 	const Matrix oldViewPlane = ComputeTransform();
-	const Matrix viewPlane = ComputeTransform();
 	ComputeMove(oldViewPlane, p.deltaTime);
 	const Matrix rotationPlane = ComputeRotation();
 
@@ -134,9 +127,6 @@ void SCStrike::RunFrame(const FrameParams& p)
 	const Vector3 lookAt = usePlaneDirLookAt ? plane.dir : (Vector3Normalize(plane.pos - jets[0].position) * -1);
 	pilot.lookAt = Vector3Normalize(lookAt * 0.3f + pilot.lookAt * 0.7f);
 
-	auto& cam = Renderer.GetCamera();
-	// cam.SetView(viewPilot);
-
 	auto& props = UserProperties::Get();
 
 	if (IsKeyPressed(KEY_F5))
@@ -145,17 +135,18 @@ void SCStrike::RunFrame(const FrameParams& p)
 	const Vector3 light = Vector3Normalize(props.Vectors3.Get("LightDir", { 2, 3, 2 }));
 	Renderer.SetLight(light);
 
-	// pilot._a = 0.09f * cosf(p.activityTime);
-	// pilot._b = 0.09f * sinf(p.activityTime);
-
 	Vector3 camPos = plane.pos;
 
 	Camera rcam {};
-	rcam.position = {};
-	rcam.target = lookAt;
-	rcam.up = plane.up;
-	rcam.fovy = 45.0f;
-	rcam.projection = CAMERA_PERSPECTIVE;
+
+	{
+		const float fov = props.Floats.Get("CamFovY", 45.0f);
+		rcam.position = {};
+		rcam.target = pilot.lookAt;
+		rcam.up = plane.up;
+		rcam.fovy = fov;
+		rcam.projection = CAMERA_PERSPECTIVE;
+	}
 
 	Renderer.Draw3D({ camPos, rcam, R3Dp::CLEAR_COLORS | R3Dp::SKY | R3Dp::CLOUDS }, [&](const SCRenderer::Render3DParams& params) {
 		// world
@@ -171,8 +162,10 @@ void SCStrike::RunFrame(const FrameParams& p)
 		// cockpit
 		if (1) {
 			const float sc = props.Floats.Get("CockpitScale", 0.05f);
+			const float cy = props.Floats.Get("CockpitY", -3.5f);
+			const float cz = props.Floats.Get("CockpitZ", 5.0f);
 			// const Matrix mdl = MatrixScale(sc, sc, sc) * MatrixTranslate(-camPos.x, -camPos.y, -camPos.z); // * MatrixRotate({ 0, 1, 0 }, 90.0f) * MatrixTranslate(0, -3, 0);
-			const Matrix mdl = MatrixTranslate(0, -3.5, 0) * MatrixScale(sc, sc, sc) * MatrixRotate({ 0, 1, 0 }, -PI / 2) * rotationPlane;
+			const Matrix mdl = MatrixTranslate(cz, cy, 0) * MatrixScale(sc, sc, sc) * MatrixRotate({ 0, 1, 0 }, -PI / 2) * rotationPlane;
 			Renderer.DrawModel(_cockpit.get(), LOD_LEVEL_MAX, mdl);
 		}
 	});

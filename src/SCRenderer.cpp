@@ -22,7 +22,7 @@
 #include "RSImage.h"
 #include "RSPalette.h"
 #include "UserProperties.h"
-#include "main.h"
+// #include "main.h"
 #include "rltools.hpp"
 
 #define TINYDDSLOADER_IMPLEMENTATION
@@ -169,36 +169,53 @@ T* allocFromVec(const std::vector<T>& from)
 	return r;
 }
 
-void TestSaveModel(const std::string& name, const BaseMeshData& data)
+template <typename TO, typename FROM>
+TO* allocFromPtr(const FROM* from, size_t sz, size_t stride, TO (*f)(const FROM*))
+{
+	if (from == nullptr)
+		return nullptr;
+	TO* r = allocBuffer<TO>(sz);
+	for (size_t i = 0; i < sz; ++i)
+		r[i] = f(from + i * stride);
+	return r;
+}
+
+bool TestSaveModel(const std::string& name, const Model& mdl, std::map<int, Image*> texIdToImage = {})
 {
 	std::vector<aiMesh*> meshes;
 	std::vector<unsigned int> meshIndex;
-	meshIndex.push_back(meshes.size());
 
-	aiMesh* msh = meshes.emplace_back(new aiMesh {});
-	msh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
-	msh->mNumVertices = data.vertexData.pos.size();
-	msh->mVertices = allocFromVec<aiVector3D, Vector3>(data.vertexData.pos, [](const auto& p) -> aiVector3D { return { p.x, p.y, p.z }; });
-	msh->mNormals = allocFromVec<aiVector3D, Vector3>(data.vertexData.normal, [](const auto& p) -> aiVector3D { return { p.x, p.y, p.z }; });
-	msh->mTextureCoords[0] = allocFromVec<aiVector3D, Vector2>(data.vertexData.uv, [](const auto& p) -> aiVector3D { return { p.x, p.y, 0.0f }; });
-	msh->mColors[0] = allocFromVec<aiColor4D, Color>(data.vertexData.col, [](const auto& p) -> aiColor4D { return { p.r / 255.0f, p.g / 255.0f, p.b / 255.0f, p.a / 255.0f }; });
-	msh->mNumFaces = data.indice.size() / 3;
-	msh->mFaces = allocBuffer<aiFace>(msh->mNumFaces);
-	for (int i = 0; i < msh->mNumFaces; ++i) {
-		aiFace& f = msh->mFaces[i];
-		f.mNumIndices = 3;
-		const auto i0 = data.indice[i * 3 + 0];
-		const auto i1 = data.indice[i * 3 + 1];
-		const auto i2 = data.indice[i * 3 + 2];
-		const std::vector<uint16_t> face { i0, i1, i2 };
-		f.mIndices = allocFromVec<unsigned int, uint16_t>(face, [](const uint16_t& idx) -> unsigned int { return idx; });
+	for (int mesh = 0; mesh < mdl.meshCount; ++mesh) {
+		const Mesh& meshData = mdl.meshes[mesh];
+		meshIndex.push_back(meshes.size());
+		aiMesh* msh = meshes.emplace_back(new aiMesh {});
+		const auto vc = meshData.vertexCount;
+		const auto tc = meshData.triangleCount;
+		msh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
+		msh->mNumVertices = vc;
+		msh->mVertices = allocFromPtr<aiVector3D, float>(meshData.vertices, vc, 3, [](const auto* p) -> aiVector3D { return { p[0], p[1], p[2] }; });
+		msh->mNormals = allocFromPtr<aiVector3D, float>(meshData.normals, vc, 3, [](const auto* p) -> aiVector3D { return { p[0], p[1], p[2] }; });
+		msh->mTextureCoords[0] = allocFromPtr<aiVector3D, float>(meshData.texcoords, vc, 2, [](const auto* p) -> aiVector3D { return { p[0], p[1], 0.0f }; });
+		msh->mColors[0] = allocFromPtr<aiColor4D, unsigned char>(meshData.colors, vc, 4, [](const auto* p) -> aiColor4D { return { p[0] / 255.0f, p[1] / 255.0f, p[2] / 255.0f, p[3] / 255.0f }; });
+		msh->mNumFaces = tc;
+		msh->mFaces = allocBuffer<aiFace>(msh->mNumFaces);
+		for (int i = 0; i < msh->mNumFaces; ++i) {
+			aiFace& f = msh->mFaces[i];
+			f.mNumIndices = 3;
+			const auto i0 = meshData.indices[i * 3 + 0];
+			const auto i1 = meshData.indices[i * 3 + 1];
+			const auto i2 = meshData.indices[i * 3 + 2];
+			const std::vector<uint16_t> face { i0, i1, i2 };
+			f.mIndices = allocFromVec<unsigned int, uint16_t>(face, [](const uint16_t& idx) -> unsigned int { return idx; });
+		}
 	}
+
+	if (meshes.empty())
+		return false;
 
 	aiNode* root = new aiNode {};
 	aiScene scene {};
 	scene.mRootNode = root;
-	if (meshes.empty())
-		return;
 
 	scene.mNumMeshes = meshes.size();
 	scene.mMeshes = allocFromVec(meshes);
@@ -208,6 +225,8 @@ void TestSaveModel(const std::string& name, const BaseMeshData& data)
 	const auto path = std::format("data/models/model_{}.gltf", name);
 	Assimp::Exporter exporter;
 	aiReturn result = exporter.Export(&scene, "gltf2", path.c_str());
+
+	return result == aiReturn_SUCCESS;
 }
 
 std::vector<uint32_t> ComputeSkyDome(
@@ -311,9 +330,6 @@ FractalNoiseSkyDome(const Vector3& v, const std::array<Vector2, N>& seeds,
 
 void SCRenderer::Init()
 {
-	int32_t width = 320;
-	int32_t height = 200;
-
 	std::vector<std::pair<size_t, const char*>> shdUniforms = {
 		{ SHADER_LOC_MAP_OCCLUSION, "cloudDensity" },
 		{ SHADER_LOC_MAP_HEIGHT, "depthMap" },
@@ -755,8 +771,8 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 			//  printf("opt: %s...\n", opt ? "yes" : "no");
 			computeNormals(opaque);
 
-			if (!object->name.empty())
-				TestSaveModel(object->name, opaque);
+			// if (!object->name.empty())
+			//	TestSaveModel(object->name, opaque);
 
 			mshOpaque = rlt::MakeMesh(
 				opaque.vertexData.pos,
@@ -769,8 +785,8 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 	}
 
 	{
-		auto& [mshBlend, tex] = meshes.emplace_back();
 		if (!blend.indice.empty()) {
+			auto& [mshBlend, tex] = meshes.emplace_back();
 			// const bool opt = blend.total != blend.vertexData.pos.size();
 			//  printf("opt: %s...\n", opt ? "yes" : "no");
 			computeNormals(blend);
@@ -803,6 +819,9 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 	mdata.meshes = rlt::AllocCopy<Mesh>(finalMeshes);
 	mdata.materials = rlt::AllocCopy<Material>(materials);
 	mdata.meshMaterial = rlt::AllocCopy<int>(mshMat);
+
+	if (!object->name.empty())
+		TestSaveModel(object->name, mdata);
 
 	/*
 	printf("prop0\n");
@@ -1159,8 +1178,10 @@ void SCRenderer::RenderWorldModels(const Render3DParams& params, const RSArea& a
 	for (int id = 0; id < BLOCKS_PER_MAP; id++) {
 		const std::vector<MapObject>& objects = area.objects[id];
 
-		const float bx = float(id % 18) + ofs0;
-		const float by = float(id / 18) + ofs1;
+		const int ix = id % 18;
+		const int iy = id / 18;
+		const float bx = ix + ofs0;
+		const float by = iy + ofs1;
 
 		const Vector3 offset = {
 			bx * BLOCK_WIDTH,

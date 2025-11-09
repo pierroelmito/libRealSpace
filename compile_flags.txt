@@ -1,6 +1,7 @@
 -xc++
--std=c++17
+-std=c++20
 -Wall
 -I./src
 -I./src/sc
 -I./src/ext
+-DUSE_SHADER_PIPELINE=1
