@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 {
 	UserProperties::Get().ReadFromFile("assets/properties.def");
 
-	Assets.SetBase("./data");
+	Assets.SetBase("./data/gamefiles");
 	Game.Init();
 	// Add MainMenu activity on the game stack.
 	Game.MakeActivity<SCMainMenu>();

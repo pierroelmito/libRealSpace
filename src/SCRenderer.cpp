@@ -205,7 +205,7 @@ void TestSaveModel(const std::string& name, const BaseMeshData& data)
 	root->mNumMeshes = meshIndex.size();
 	root->mMeshes = allocFromVec(meshIndex);
 
-	const auto path = std::format("model_{}.gltf", name);
+	const auto path = std::format("data/models/model_{}.gltf", name);
 	Assimp::Exporter exporter;
 	aiReturn result = exporter.Export(&scene, "gltf2", path.c_str());
 }
