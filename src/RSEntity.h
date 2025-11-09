@@ -62,6 +62,8 @@ public:
 	RSEntity();
 	~RSEntity();
 
+	std::string name{};
+
 	static std::unique_ptr<RSEntity> LoadFromRAM(const ByteSlice& bytes);
 
 	void InitFromIFF(IffLexer* lexer);

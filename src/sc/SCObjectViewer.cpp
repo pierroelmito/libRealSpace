@@ -322,6 +322,7 @@ void SCObjectViewer::ParseObjList(IffLexer* lexer)
 		}
 
 		showCase.entity = RSEntity::LoadFromRAM(*entry);
+		showCase.entity->name = objName;
 
 		const uint32_t fixedPointDist = stream.ReadInt32LE();
 		showCase.cameraDist = (fixedPointDist >> 8) + (fixedPointDist & 0xFF) / 255.0f;

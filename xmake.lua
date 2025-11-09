@@ -24,7 +24,7 @@ target("sc")
 	add_files("src/**.cpp")
 	add_files("data/shaders/*.args")
 	add_defines("USE_SHADER_PIPELINE=1")
-	add_links("raylib")
+	add_links({ "raylib", "assimp" })
 	set_rundir("data")
 	--[[
 	if is_plat("mingw") then

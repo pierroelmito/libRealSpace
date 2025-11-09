@@ -11,7 +11,11 @@
 #include <cassert>
 
 #include <algorithm>
+#include <format>
 #include <set>
+
+#include <assimp/Exporter.hpp>
+#include <assimp/scene.h>
 
 // #include "Math.h"
 #include "RSArea.h"
@@ -34,6 +38,11 @@ struct ObjVertexData {
 	std::vector<Vector3> normal;
 	std::vector<Vector2> uv;
 	std::vector<Color> col;
+};
+
+struct BaseMeshData {
+	ObjVertexData vertexData {};
+	std::vector<uint16_t> indice {};
 };
 
 struct CompTexture {
@@ -133,6 +142,72 @@ std::optional<Texture> LoadDDS(const char* path)
 #else
 	return {};
 #endif
+}
+
+template <typename TO>
+TO* allocBuffer(size_t sz)
+{
+	TO* r = new TO[sz];
+	return r;
+}
+
+template <typename TO, typename FROM>
+TO* allocFromVec(const std::vector<FROM>& from, TO (*f)(const FROM&))
+{
+	TO* r = allocBuffer<TO>(from.size());
+	for (size_t i = 0; i < from.size(); ++i)
+		r[i] = f(from[i]);
+	return r;
+}
+
+template <typename T>
+T* allocFromVec(const std::vector<T>& from)
+{
+	T* r = allocBuffer<T>(from.size());
+	for (size_t i = 0; i < from.size(); ++i)
+		r[i] = from[i];
+	return r;
+}
+
+void TestSaveModel(const std::string& name, const BaseMeshData& data)
+{
+	std::vector<aiMesh*> meshes;
+	std::vector<unsigned int> meshIndex;
+	meshIndex.push_back(meshes.size());
+
+	aiMesh* msh = meshes.emplace_back(new aiMesh {});
+	msh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
+	msh->mNumVertices = data.vertexData.pos.size();
+	msh->mVertices = allocFromVec<aiVector3D, Vector3>(data.vertexData.pos, [](const auto& p) -> aiVector3D { return { p.x, p.y, p.z }; });
+	msh->mNormals = allocFromVec<aiVector3D, Vector3>(data.vertexData.normal, [](const auto& p) -> aiVector3D { return { p.x, p.y, p.z }; });
+	msh->mTextureCoords[0] = allocFromVec<aiVector3D, Vector2>(data.vertexData.uv, [](const auto& p) -> aiVector3D { return { p.x, p.y, 0.0f }; });
+	msh->mColors[0] = allocFromVec<aiColor4D, Color>(data.vertexData.col, [](const auto& p) -> aiColor4D { return { p.r / 255.0f, p.g / 255.0f, p.b / 255.0f, p.a / 255.0f }; });
+	msh->mNumFaces = data.indice.size() / 3;
+	msh->mFaces = allocBuffer<aiFace>(msh->mNumFaces);
+	for (int i = 0; i < msh->mNumFaces; ++i) {
+		aiFace& f = msh->mFaces[i];
+		f.mNumIndices = 3;
+		const auto i0 = data.indice[i * 3 + 0];
+		const auto i1 = data.indice[i * 3 + 1];
+		const auto i2 = data.indice[i * 3 + 2];
+		const std::vector<uint16_t> face { i0, i1, i2 };
+		f.mIndices = allocFromVec<unsigned int, uint16_t>(face, [](const uint16_t& idx) -> unsigned int { return idx; });
+	}
+
+	aiNode* root = new aiNode {};
+	aiScene scene {};
+	scene.mRootNode = root;
+	if (meshes.empty())
+		return;
+
+	scene.mNumMeshes = meshes.size();
+	scene.mMeshes = allocFromVec(meshes);
+	root->mNumMeshes = meshIndex.size();
+	root->mMeshes = allocFromVec(meshIndex);
+
+	const auto path = std::format("model_{}.gltf", name);
+	Assimp::Exporter exporter;
+	aiReturn result = exporter.Export(&scene, "gltf2", path.c_str());
 }
 
 std::vector<uint32_t> ComputeSkyDome(
@@ -325,7 +400,6 @@ void SCRenderer::Log(const char* tag, uint32_t log_level, uint32_t log_item_id,
 }
 
 namespace {
-
 RenderTexture2D LoadRenderTextureDepthTex(int width, int height, Texture& depth)
 {
 	RenderTexture2D target = { 0 };
@@ -505,10 +579,8 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 		}
 	};
 
-	struct MeshData {
+	struct MeshData : public BaseMeshData {
 		std::map<VKey, uint16_t> lookup {};
-		ObjVertexData vertexData {};
-		std::vector<uint16_t> indice {};
 		size_t total = 0;
 	};
 
@@ -682,6 +754,10 @@ void PrepareModel(SCRenderer& r, const RSEntity* object, size_t lodLevel, Model&
 			// const bool opt = opaque.total != opaque.vertexData.pos.size();
 			//  printf("opt: %s...\n", opt ? "yes" : "no");
 			computeNormals(opaque);
+
+			if (!object->name.empty())
+				TestSaveModel(object->name, opaque);
+
 			mshOpaque = rlt::MakeMesh(
 				opaque.vertexData.pos,
 				opaque.vertexData.normal,
@@ -759,7 +835,10 @@ void SCRenderer::DrawModel(const RSEntity* object, size_t lodLevel, const Matrix
 		DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], world);
 }
 
-void SCRenderer::SetLight(const Vector3& l) { this->lightDir = l; }
+void SCRenderer::SetLight(const Vector3& l)
+{
+	this->lightDir = l;
+}
 
 void SCRenderer::Prepare(RSEntity* object)
 {
