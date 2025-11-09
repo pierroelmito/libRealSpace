@@ -128,7 +128,7 @@ template <class T0 = std::initializer_list<std::pair<size_t, const char*>>,
 inline Shader MakeShader(std::string_view vs, std::string_view fs,
 	T0 uniforms = {}, T1 attribs = {})
 {
-	const std::string path = "shaders/";
+	const std::string path = "data/shaders/";
 	const std::string fvs = path + std::string(vs) + ".vs.glsl";
 	const std::string ffs = path + std::string(fs) + ".fs.glsl";
 	TraceLog(LOG_INFO, "shader: %s / %s", fvs.c_str(), ffs.c_str());
